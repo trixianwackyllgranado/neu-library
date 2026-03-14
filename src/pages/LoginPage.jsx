@@ -26,6 +26,8 @@ const BG = {
 };
 
 function formatId(raw) {
+  // If already formatted (QR scan delivers "24-12998-121"), pass through as-is
+  if (raw.includes('-')) return raw.trim();
   const d = raw.replace(/\D/g, '').slice(0, 10);
   if (d.length <= 2) return d;
   if (d.length <= 7) return `${d.slice(0,2)}-${d.slice(2)}`;
@@ -55,25 +57,45 @@ function Footer() {
 // ── QR scanner modal ──────────────────────────────────────────────────────────
 function QRScanner({ onResult, onClose }) {
   const scannerRef = useRef(null);
-  const liveRef    = useRef(false);
+  const doneRef    = useRef(false);
 
   useEffect(() => {
-    liveRef.current = true;
-    const scanner = new Html5Qrcode('qr-login-reader');
-    scannerRef.current = scanner;
-
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 12, qrbox: { width: 220, height: 220 } },
-      (text) => { if (liveRef.current) onResult(text.trim()); },
-      () => {},
-    ).catch(() => {});
+    // Small delay so the modal DOM is fully painted before we attach
+    const timer = setTimeout(async () => {
+      const scanner = new Html5Qrcode('qr-login-reader', { verbose: false });
+      scannerRef.current = scanner;
+      try {
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          (text) => {
+            if (doneRef.current) return;
+            doneRef.current = true;
+            // Stop cleanly before calling onResult so the DOM element survives
+            scanner.stop().catch(() => {}).finally(() => {
+              try { scanner.clear(); } catch {}
+              onResult(text.trim());
+            });
+          },
+          () => {},
+        );
+      } catch {
+        onClose(); // camera denied — close modal gracefully
+      }
+    }, 120);
 
     return () => {
-      liveRef.current = false;
-      scanner.isRunning() && scanner.stop().catch(() => {});
+      clearTimeout(timer);
+      doneRef.current = true;
+      const sc = scannerRef.current;
+      if (sc) {
+        try {
+          if (sc.isRunning()) sc.stop().catch(() => {}).finally(() => { try { sc.clear(); } catch {} });
+          else sc.clear();
+        } catch {}
+      }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.88)', padding: '16px' }}>
@@ -90,7 +112,10 @@ function QRScanner({ onResult, onClose }) {
               ✕
             </button>
           </div>
-          <div id="qr-login-reader" style={{ borderRadius: '10px', overflow: 'hidden', background: '#000' }} />
+          <div id="qr-login-reader" style={{ borderRadius: '10px', overflow: 'hidden', background: '#000', minHeight: '260px' }} />
+          <p style={{ ...MONO, fontSize: '10px', color: C.muted, textAlign: 'center', marginTop: '10px' }}>
+            Point camera at your library QR code
+          </p>
         </div>
       </div>
     </div>

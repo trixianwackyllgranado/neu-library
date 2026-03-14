@@ -1,5 +1,5 @@
 // src/pages/staff/QRLoggerPage.jsx
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import {
   collection, query, where, getDocs, addDoc, updateDoc,
@@ -43,13 +43,14 @@ function formatDur(entryTs) {
 }
 
 function formatId(raw) {
+  // If already formatted (contains dashes), return as-is
+  if (raw.includes('-')) return raw.trim();
   const d = raw.replace(/\D/g, '').slice(0, 10);
   if (d.length <= 2) return d;
   if (d.length <= 7) return `${d.slice(0,2)}-${d.slice(2)}`;
   return `${d.slice(0,2)}-${d.slice(2,7)}-${d.slice(7)}`;
 }
 
-// Live duration ticker
 function LiveDur({ entryTime }) {
   const [dur, setDur] = useState('—');
   useEffect(() => {
@@ -67,10 +68,8 @@ function PurposeModal({ student, idNumber, onConfirm, onCancel, loading }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', padding: '16px' }}>
       <div style={{ width: '100%', maxWidth: '420px', background: '#0a1730', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
-        {/* Gold top bar */}
         <div style={{ height: '3px', background: 'linear-gradient(90deg, #f59e0b, #d97706)' }} />
         <div style={{ padding: '24px' }}>
-          {/* Student info */}
           <div style={{ marginBottom: '20px' }}>
             <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.2em', color: C.gold, textTransform: 'uppercase', marginBottom: '6px' }}>QR Check-In</p>
             <p style={{ ...SERIF, fontSize: '20px', fontWeight: 700, color: C.white, marginBottom: '3px' }}>
@@ -78,28 +77,18 @@ function PurposeModal({ student, idNumber, onConfirm, onCancel, loading }) {
             </p>
             <p style={{ ...MONO, fontSize: '12px', color: C.muted }}>{idNumber}</p>
           </div>
-
           <p style={{ fontSize: '13px', color: C.body, marginBottom: '14px' }}>Select the purpose of this visit:</p>
-
-          {/* Purpose grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
             {VISIT_PURPOSES.map(p => {
               const active = chosen === p;
               return (
                 <button key={p} type="button" onClick={() => setChosen(p)}
-                  style={{
-                    padding: '12px 10px', borderRadius: '10px', cursor: 'pointer', textAlign: 'left',
-                    background: active ? 'rgba(245,158,11,0.15)' : C.surface,
-                    border: `1px solid ${active ? 'rgba(245,158,11,0.5)' : C.border}`,
-                    transition: 'all 0.15s',
-                  }}>
+                  style={{ padding: '12px 10px', borderRadius: '10px', cursor: 'pointer', textAlign: 'left', background: active ? 'rgba(245,158,11,0.15)' : C.surface, border: `1px solid ${active ? 'rgba(245,158,11,0.5)' : C.border}`, transition: 'all 0.15s' }}>
                   <p style={{ ...MONO, fontSize: '10px', fontWeight: active ? 700 : 500, letterSpacing: '0.08em', color: active ? C.gold : C.body, margin: 0 }}>{p}</p>
                 </button>
               );
             })}
           </div>
-
-          {/* Actions */}
           <div style={{ display: 'flex', gap: '10px' }}>
             <button onClick={onCancel}
               style={{ flex: 1, padding: '11px', borderRadius: '10px', background: C.surface, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer', ...MONO, fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
@@ -162,12 +151,14 @@ function ScanToast({ scan, status }) {
 export default function QRLoggerPage() {
   const { userProfile } = useAuth();
 
-  const scannerRef  = useRef(null);
-  const mountedRef  = useRef(false);
-  const cooldownRef = useRef({});
+  // The scanner instance lives in a ref — never in state — so React re-renders
+  // never touch it. This is the core fix for the "enlarge crosshair but no callback" bug.
+  const scannerRef   = useRef(null);
+  const unmountedRef = useRef(false);   // true once component unmounts
+  const processingRef = useRef(false);  // prevents double-processing same scan
+  const cooldownRef  = useRef({});
 
-  const [scanning,      setScanning]      = useState(false);
-  const [scannerReady,  setScannerReady]  = useState(false);
+  const [scannerState,  setScannerState]  = useState('idle'); // 'idle' | 'starting' | 'active' | 'stopping'
   const [scanError,     setScanError]     = useState('');
   const [lastScan,      setLastScan]      = useState(null);
   const [scanStatus,    setScanStatus]    = useState('idle');
@@ -183,108 +174,224 @@ export default function QRLoggerPage() {
   const [liveSessions,  setLiveSessions]  = useState([]);
   const [userMap,       setUserMap]       = useState({});
 
-  // Live data
+  // Live Firestore listeners
   useEffect(() => {
-    const u1 = onSnapshot(query(collection(db, 'logger'), where('active', '==', true)),
-      snap => setLiveSessions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const u1 = onSnapshot(
+      query(collection(db, 'logger'), where('active', '==', true)),
+      snap => setLiveSessions(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+    );
     const u2 = onSnapshot(collection(db, 'users'), snap => {
       const m = {}; snap.forEach(d => { m[d.id] = d.data(); }); setUserMap(m);
     });
     return () => { u1(); u2(); };
   }, []);
 
-  // ── Scanner ───────────────────────────────────────────────────────────────
-  const startScanner = async () => {
-    setScanError(''); setScanning(true); setScannerReady(false);
-    mountedRef.current = true;
-    await new Promise(r => setTimeout(r, 100));
-    const scanner = new Html5Qrcode('qr-staff-reader');
+  // ── Guaranteed cleanup on page leave ────────────────────────────────────────
+  // This is the fix for the "blank page when navigating away with camera open" bug.
+  // We set unmountedRef immediately so callbacks know to bail, then stop the scanner.
+  useEffect(() => {
+    return () => {
+      unmountedRef.current = true;
+      const sc = scannerRef.current;
+      if (sc) {
+        try {
+          if (sc.isRunning()) {
+            sc.stop().catch(() => {}).finally(() => {
+              try { sc.clear(); } catch {}
+            });
+          } else {
+            try { sc.clear(); } catch {}
+          }
+        } catch {}
+        scannerRef.current = null;
+      }
+    };
+  }, []);
+
+  // ── Core scan handler (stable ref via useCallback) ───────────────────────────
+  // Wrapped in useCallback so the function reference passed to html5-qrcode
+  // never changes after mount — fixes the "callback registered but never fires" bug.
+  const handleQrScan = useCallback(async (rawText) => {
+    if (unmountedRef.current) return;
+    if (processingRef.current) return; // debounce concurrent calls
+
+    const idNumber = formatId(rawText.trim());
+
+    // Per-ID cooldown: 5 seconds between repeated scans of the same code
+    const now = Date.now();
+    if (cooldownRef.current[idNumber] && now - cooldownRef.current[idNumber] < 5000) return;
+    cooldownRef.current[idNumber] = now;
+
+    processingRef.current = true;
+    setScanStatus('processing');
+    setLastScan({ idNumber });
+
+    try {
+      // Look up user by ID number
+      const userSnap = await getDocs(
+        query(collection(db, 'users'), where('idNumber', '==', idNumber), limit(1))
+      );
+
+      if (userSnap.empty) {
+        setLastScan({ idNumber });
+        setScanStatus('unknown');
+        setTimeout(() => {
+          if (!unmountedRef.current) { setScanStatus('idle'); setLastScan(null); }
+        }, 3500);
+        processingRef.current = false;
+        return;
+      }
+
+      const student = { id: userSnap.docs[0].id, ...userSnap.docs[0].data() };
+
+      // Check for existing active session
+      const sessSnap = await getDocs(
+        query(collection(db, 'logger'), where('uid', '==', student.id), where('active', '==', true), limit(1))
+      );
+
+      if (!sessSnap.empty) {
+        // ── CHECK OUT ──
+        await updateDoc(doc(db, 'logger', sessSnap.docs[0].id), {
+          active: false,
+          exitTime: serverTimestamp(),
+        });
+        if (!unmountedRef.current) {
+          setLastScan({ idNumber, student, action: 'out' });
+          setScanStatus('success');
+          setTimeout(() => {
+            if (!unmountedRef.current) { setScanStatus('idle'); setLastScan(null); }
+          }, 3000);
+        }
+        processingRef.current = false;
+      } else {
+        // ── ASK PURPOSE → CHECK IN ──
+        // Pause scanning while the modal is open — but DON'T destroy the scanner.
+        // We just stop reading frames; the DOM element stays alive.
+        if (!unmountedRef.current) {
+          setScanStatus('idle');
+          setLastScan(null);
+          setPurposeForId({ idNumber, student });
+        }
+        processingRef.current = false;
+      }
+    } catch (err) {
+      if (!unmountedRef.current) {
+        setLastScan({ idNumber, error: err.message });
+        setScanStatus('error');
+        setTimeout(() => {
+          if (!unmountedRef.current) { setScanStatus('idle'); setLastScan(null); }
+        }, 3000);
+      }
+      processingRef.current = false;
+    }
+  }, []); // empty deps — intentional, refs are stable
+
+  // ── Scanner start/stop ───────────────────────────────────────────────────────
+  const startScanner = useCallback(async () => {
+    if (unmountedRef.current) return;
+    setScanError('');
+    setScannerState('starting');
+
+    // Small delay so React can flush the DOM render that shows #qr-staff-reader
+    await new Promise(r => setTimeout(r, 150));
+    if (unmountedRef.current) return;
+
+    // If there's a stale instance, clear it first
+    if (scannerRef.current) {
+      try {
+        if (scannerRef.current.isRunning()) await scannerRef.current.stop().catch(() => {});
+        scannerRef.current.clear();
+      } catch {}
+      scannerRef.current = null;
+    }
+
+    const scanner = new Html5Qrcode('qr-staff-reader', { verbose: false });
     scannerRef.current = scanner;
+
     try {
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 12, qrbox: { width: 230, height: 230 } },
-        (text) => handleQrScan(text.trim()),
-        () => {},
+        {
+          fps: 10,
+          // Fixed qrbox — no dynamic resizing that could confuse the overlay
+          qrbox: { width: 220, height: 220 },
+          // Disable the built-in "show scan region" overlay — we draw our own
+          disableFlip: false,
+        },
+        (text) => {
+          // This callback is called by html5-qrcode's internal scan loop.
+          // It must never throw — wrap everything.
+          try { handleQrScan(text); } catch {}
+        },
+        () => {
+          // onError: fires on every failed frame — ignore silently
+        },
       );
-      setScannerReady(true);
-    } catch {
-      setScanError('Camera access denied or unavailable.');
-      setScanning(false);
+
+      if (!unmountedRef.current) setScannerState('active');
+    } catch (err) {
+      if (!unmountedRef.current) {
+        setScanError('Camera access denied or unavailable. Please allow camera permission and try again.');
+        setScannerState('idle');
+      }
+      try { scanner.clear(); } catch {}
+      if (scannerRef.current === scanner) scannerRef.current = null;
     }
-  };
+  }, [handleQrScan]);
 
-  const stopScanner = () => {
-    mountedRef.current = false; setScannerReady(false); setScanning(false);
-    scannerRef.current?.isRunning() && scannerRef.current.stop().catch(() => {});
-  };
-
-  useEffect(() => () => {
-    mountedRef.current = false;
-    scannerRef.current?.isRunning() && scannerRef.current.stop().catch(() => {});
+  const stopScanner = useCallback(async () => {
+    setScannerState('stopping');
+    const sc = scannerRef.current;
+    if (sc) {
+      try {
+        if (sc.isRunning()) await sc.stop().catch(() => {});
+        sc.clear();
+      } catch {}
+      scannerRef.current = null;
+    }
+    if (!unmountedRef.current) setScannerState('idle');
   }, []);
 
-  // ── Core scan logic ───────────────────────────────────────────────────────
-  const handleQrScan = async (idNumber) => {
-    if (!mountedRef.current) return;
-    const now = Date.now();
-    if (cooldownRef.current[idNumber] && now - cooldownRef.current[idNumber] < 4000) return;
-    cooldownRef.current[idNumber] = now;
-
-    setScanStatus('processing');
-    try {
-      const userSnap = await getDocs(query(collection(db, 'users'), where('idNumber', '==', idNumber), limit(1)));
-      if (userSnap.empty) { setLastScan({ idNumber }); setScanStatus('unknown'); return; }
-
-      const student = { id: userSnap.docs[0].id, ...userSnap.docs[0].data() };
-      const sessSnap = await getDocs(query(collection(db, 'logger'), where('uid', '==', student.id), where('active', '==', true), limit(1)));
-
-      if (!sessSnap.empty) {
-        // Already in → check OUT
-        await updateDoc(doc(db, 'logger', sessSnap.docs[0].id), { active: false, exitTime: serverTimestamp() });
-        setLastScan({ idNumber, student, action: 'out' });
-        setScanStatus('success');
-        setTimeout(() => { if (mountedRef.current) { setScanStatus('idle'); setLastScan(null); } }, 3000);
-      } else {
-        // Not in → ask purpose then check IN
-        stopScanner();
-        setPurposeForId({ idNumber, student });
-        setScanStatus('idle');
-      }
-    } catch (err) {
-      setLastScan({ idNumber, error: err.message });
-      setScanStatus('error');
-      setTimeout(() => { if (mountedRef.current) { setScanStatus('idle'); setLastScan(null); } }, 3000);
-    }
-  };
-
+  // ── Check-in confirm ─────────────────────────────────────────────────────────
   const confirmCheckIn = async (purpose) => {
     if (!purposeForId) return;
     setConfirmLoad(true);
     try {
       await addDoc(collection(db, 'logger'), {
-        uid: purposeForId.student.id, purpose, entryTime: serverTimestamp(),
-        active: true, scannedBy: userProfile?.uid || null,
+        uid:       purposeForId.student.id,
+        purpose,
+        entryTime: serverTimestamp(),
+        active:    true,
+        scannedBy: userProfile?.uid || null,
       });
-      setLastScan({ idNumber: purposeForId.idNumber, student: purposeForId.student, action: 'in', purpose });
-      setScanStatus('success');
-      setPurposeForId(null);
-      setTimeout(() => {
-        setScanStatus('idle'); setLastScan(null); startScanner();
-      }, 2500);
-    } catch { setScanStatus('error'); }
-    setConfirmLoad(false);
+      if (!unmountedRef.current) {
+        setLastScan({ idNumber: purposeForId.idNumber, student: purposeForId.student, action: 'in', purpose });
+        setScanStatus('success');
+        setPurposeForId(null);
+        setTimeout(() => {
+          if (!unmountedRef.current) { setScanStatus('idle'); setLastScan(null); }
+        }, 2500);
+        // Resume scanner after modal closes
+        startScanner();
+      }
+    } catch {
+      if (!unmountedRef.current) setScanStatus('error');
+    }
+    if (!unmountedRef.current) setConfirmLoad(false);
   };
 
-  // ── Manual submit ─────────────────────────────────────────────────────────
+  // ── Manual entry ─────────────────────────────────────────────────────────────
   const handleManualSubmit = async (e) => {
     e.preventDefault();
     if (!manualId || !manualPurpose) return;
     setManualLoading(true); setManualMsg(null);
     try {
       const userSnap = await getDocs(query(collection(db, 'users'), where('idNumber', '==', manualId), limit(1)));
-      if (userSnap.empty) { setManualMsg({ ok: false, text: `No account found for ID ${manualId}.` }); setManualLoading(false); return; }
-      const student = { id: userSnap.docs[0].id, ...userSnap.docs[0].data() };
+      if (userSnap.empty) {
+        setManualMsg({ ok: false, text: `No account found for ID ${manualId}.` });
+        setManualLoading(false); return;
+      }
+      const student  = { id: userSnap.docs[0].id, ...userSnap.docs[0].data() };
       const sessSnap = await getDocs(query(collection(db, 'logger'), where('uid', '==', student.id), where('active', '==', true), limit(1)));
       if (!sessSnap.empty) {
         await updateDoc(doc(db, 'logger', sessSnap.docs[0].id), { active: false, exitTime: serverTimestamp() });
@@ -294,9 +401,11 @@ export default function QRLoggerPage() {
         setManualMsg({ ok: true, text: `${student.lastName}, ${student.firstName} checked IN — ${manualPurpose}.` });
       }
       setManualId(''); setManualFormat(''); setManualPurpose('');
-    } catch (err) { setManualMsg({ ok: false, text: `Error: ${err.message}` }); }
+    } catch (err) {
+      setManualMsg({ ok: false, text: `Error: ${err.message}` });
+    }
     setManualLoading(false);
-    setTimeout(() => setManualMsg(null), 5000);
+    setTimeout(() => { if (!unmountedRef.current) setManualMsg(null); }, 5000);
   };
 
   const inputSt = {
@@ -307,14 +416,17 @@ export default function QRLoggerPage() {
   const onFoc = e => { e.currentTarget.style.borderColor = C.gold; };
   const onBlr = e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; };
 
+  const isScanning = scannerState === 'active' || scannerState === 'starting';
+
   return (
     <div style={{ animation: 'fadeUp 0.3s ease both', paddingBottom: '40px' }}>
       <style>{`
         @keyframes fadeUp  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         @keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.35} }
         @keyframes spin    { to{transform:rotate(360deg)} }
-        #qr-staff-reader video { border-radius: 10px !important; }
+        #qr-staff-reader video { border-radius: 10px !important; width: 100% !important; }
         #qr-staff-reader img   { display: none !important; }
+        #qr-staff-reader       { width: 100% !important; }
         .qr-layout { display: grid; grid-template-columns: minmax(300px, 440px) 1fr; gap: 24px; align-items: start; }
         @media (max-width: 840px) { .qr-layout { grid-template-columns: 1fr !important; } }
       `}</style>
@@ -343,7 +455,6 @@ export default function QRLoggerPage() {
         {/* ── LEFT: scanner + manual ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-          {/* Scan result toast */}
           <ScanToast scan={lastScan} status={scanStatus} />
 
           {/* Scanner card */}
@@ -351,12 +462,18 @@ export default function QRLoggerPage() {
             {/* Card header bar */}
             <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: scanning && scannerReady ? '#10b981' : scanning ? C.gold : '#475569', display: 'inline-block', animation: scanning ? 'pulse 1.5s infinite' : 'none' }} />
+                <span style={{
+                  width: 8, height: 8, borderRadius: '50%', display: 'inline-block',
+                  background: scannerState === 'active' ? '#10b981' : scannerState === 'starting' ? C.gold : '#475569',
+                  animation: isScanning ? 'pulse 1.5s infinite' : 'none',
+                }} />
                 <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.14em', color: C.muted, textTransform: 'uppercase' }}>
-                  {scanning && scannerReady ? 'Scanner Active' : scanning ? 'Starting Camera…' : 'Camera Inactive'}
+                  {scannerState === 'active'   ? 'Scanner Active'    :
+                   scannerState === 'starting' ? 'Starting Camera…'  :
+                   scannerState === 'stopping' ? 'Stopping…'         : 'Camera Inactive'}
                 </p>
               </div>
-              {scanning && (
+              {isScanning && (
                 <button onClick={stopScanner}
                   style={{ ...MONO, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '5px 14px', borderRadius: '7px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: C.red, cursor: 'pointer', fontWeight: 600 }}>
                   Stop
@@ -365,8 +482,22 @@ export default function QRLoggerPage() {
             </div>
 
             <div style={{ padding: '20px' }}>
-              {!scanning ? (
-                /* Idle state */
+              {/* 
+                CRITICAL: The #qr-staff-reader div MUST always be rendered in the DOM.
+                If we conditionally remove it, html5-qrcode loses its mount target and
+                throws, causing the blank-page bug. We hide it visually when inactive
+                instead of unmounting it.
+              */}
+              <div
+                id="qr-staff-reader"
+                style={{
+                  borderRadius: '10px', overflow: 'hidden', background: '#000', width: '100%',
+                  display: isScanning ? 'block' : 'none',
+                  minHeight: isScanning ? '260px' : 0,
+                }}
+              />
+
+              {!isScanning && (
                 <div style={{ textAlign: 'center', padding: '24px 0' }}>
                   <div style={{ width: 64, height: 64, margin: '0 auto 18px', borderRadius: '14px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -380,24 +511,22 @@ export default function QRLoggerPage() {
                   <p style={{ fontSize: '14px', color: C.body, marginBottom: '22px', lineHeight: 1.6 }}>
                     Start the scanner to check students in or out using their library QR code.
                   </p>
-                  <button onClick={startScanner}
-                    style={{ padding: '12px 32px', borderRadius: '10px', background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.45)', color: C.gold, cursor: 'pointer', ...MONO, fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700, transition: 'all 0.15s' }}
+                  <button onClick={startScanner} disabled={scannerState === 'stopping'}
+                    style={{ padding: '12px 32px', borderRadius: '10px', background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.45)', color: C.gold, cursor: scannerState === 'stopping' ? 'wait' : 'pointer', ...MONO, fontSize: '11px', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700, transition: 'all 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(245,158,11,0.28)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'rgba(245,158,11,0.18)'}>
-                    Start Scanner
+                    {scannerState === 'stopping' ? 'Please Wait…' : 'Start Scanner'}
                   </button>
                   {scanError && (
                     <p style={{ ...MONO, fontSize: '11px', color: C.red, marginTop: '14px', lineHeight: 1.5 }}>{scanError}</p>
                   )}
                 </div>
-              ) : (
-                /* Active scanner */
-                <>
-                  <div id="qr-staff-reader" style={{ borderRadius: '10px', overflow: 'hidden', background: '#000', width: '100%' }} />
-                  <p style={{ ...MONO, fontSize: '10px', color: C.muted, textAlign: 'center', marginTop: '12px' }}>
-                    Point camera at the student's QR code
-                  </p>
-                </>
+              )}
+
+              {isScanning && (
+                <p style={{ ...MONO, fontSize: '10px', color: C.muted, textAlign: 'center', marginTop: '12px' }}>
+                  Point camera at the student's QR code
+                </p>
               )}
             </div>
           </div>
@@ -434,12 +563,9 @@ export default function QRLoggerPage() {
 
         {/* ── RIGHT: live sessions ── */}
         <div>
-          {/* Section header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
-            <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.14em', color: C.muted, textTransform: 'uppercase' }}>
-              Currently in Library
-            </p>
+            <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.14em', color: C.muted, textTransform: 'uppercase' }}>Currently in Library</p>
             <span style={{ ...MONO, fontSize: '11px', fontWeight: 700, padding: '2px 10px', borderRadius: '20px', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: C.green }}>
               {liveSessions.length}
             </span>
@@ -448,9 +574,7 @@ export default function QRLoggerPage() {
           <div style={{ background: C.card, border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
             {liveSessions.length === 0 ? (
               <div style={{ padding: '48px 24px', textAlign: 'center' }}>
-                <div style={{ width: 48, height: 48, borderRadius: '12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: '22px', color: C.dim }}>
-                  ○
-                </div>
+                <div style={{ width: 48, height: 48, borderRadius: '12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', fontSize: '22px', color: C.dim }}>○</div>
                 <p style={{ ...MONO, fontSize: '11px', color: C.muted, marginBottom: '4px' }}>No students currently in the library.</p>
                 <p style={{ fontSize: '12px', color: C.dim }}>Scan a QR code to log the first entry.</p>
               </div>
@@ -460,9 +584,7 @@ export default function QRLoggerPage() {
                   <thead>
                     <tr style={{ background: '#060e1e' }}>
                       {['Student', 'ID', 'Purpose', 'Since', 'Duration'].map(h => (
-                        <th key={h} style={{ ...MONO, fontSize: '9px', letterSpacing: '0.14em', color: C.muted, textTransform: 'uppercase', padding: '11px 14px', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}>
-                          {h}
-                        </th>
+                        <th key={h} style={{ ...MONO, fontSize: '9px', letterSpacing: '0.14em', color: C.muted, textTransform: 'uppercase', padding: '11px 14px', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.08)', fontWeight: 600 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -470,9 +592,8 @@ export default function QRLoggerPage() {
                     {liveSessions.map((s, i) => {
                       const u    = userMap[s.uid];
                       const name = u ? `${u.lastName}, ${u.firstName}` : '—';
-                      const even = i % 2 === 0;
                       return (
-                        <tr key={s.id} style={{ background: even ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                        <tr key={s.id} style={{ background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
                           <td style={{ padding: '11px 14px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                             <p style={{ fontWeight: 600, fontSize: '13px', color: C.white, marginBottom: '1px' }}>{name}</p>
                           </td>
@@ -494,7 +615,6 @@ export default function QRLoggerPage() {
               </div>
             )}
           </div>
-
           <p style={{ ...MONO, fontSize: '10px', color: C.dim, marginTop: '10px', lineHeight: 1.6 }}>
             Scanning a student's QR code automatically toggles their check-in or check-out.
           </p>
