@@ -88,7 +88,7 @@ export default function AppLayout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [collapsed,      setCollapsed]      = useState(false);
+  const [collapsed,      setCollapsed]      = useState(() => localStorage.getItem('neu-sidebar-collapsed') === 'true');
   const [mobileOpen,     setMobileOpen]     = useState(false);
   const [showSignOut,    setShowSignOut]     = useState(false);
   const [signingOut,     setSigningOut]      = useState(false);
@@ -136,7 +136,7 @@ export default function AppLayout({ children }) {
           </div>
         )}
         {!mob && (
-          <button onClick={()=>setCollapsed(c=>!c)} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:7,width:26,height:26,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text-muted)',flexShrink:0,transition:'all 0.15s'}}>
+          <button onClick={()=>setCollapsed(c=>{ const next=!c; localStorage.setItem('neu-sidebar-collapsed',String(next)); return next; })} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:7,width:26,height:26,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text-muted)',flexShrink:0,transition:'all 0.15s'}}>
             {collapsed ? Ico.chRight : Ico.chLeft}
           </button>
         )}
