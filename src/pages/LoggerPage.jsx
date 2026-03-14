@@ -93,17 +93,17 @@ function LiveDuration({ entryTime }) {
   }, [entryTime]);
   return (
     <div>
-      <span style={{ ...S, fontSize: '13px', color: '#e2e8f0', fontWeight: 600 }}>{formatHHMM(secs)}</span>
-      <span style={{ ...S, display: 'block', fontSize: '10px', color: '#475569', marginTop: '1px' }}>{formatReadable(secs)}</span>
+      <span style={{ ...S, fontSize: '13px', color: 'var(--text-body)', fontWeight: 600 }}>{formatHHMM(secs)}</span>
+      <span style={{ ...S, display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px' }}>{formatReadable(secs)}</span>
     </div>
   );
 }
 
 function MiniStat({ label, value }) {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '14px 16px' }}>
-      <p style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>{label}</p>
-      <p style={{ ...D, fontSize: '26px', fontWeight: 700, color: '#f1f5f9' }}>{value}</p>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '12px', padding: '14px 16px' }}>
+      <p style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>{label}</p>
+      <p style={{ ...D, fontSize: '26px', fontWeight: 700, color: 'var(--text-primary)' }}>{value}</p>
     </div>
   );
 }
@@ -137,35 +137,35 @@ function CallModal({ student, sentByName, sentByUid, onClose }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', padding: '16px' }}>
-      <div style={{ width: '100%', maxWidth: '440px', background: '#0d1e36', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+      <div style={{ width: '100%', maxWidth: '440px', background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
         {/* Gold stripe */}
-        <div style={{ height: '2px', background: 'linear-gradient(90deg, #f59e0b, #d97706)' }} />
+        <div style={{ height: '2px', background: 'linear-gradient(90deg, var(--gold), var(--gold-border))' }} />
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--divider)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <p style={{ ...S, fontSize: '9px', letterSpacing: '0.2em', color: '#f59e0b', textTransform: 'uppercase', marginBottom: '4px' }}>Call to Counter</p>
-            <h2 style={{ ...D, fontSize: '17px', fontWeight: 700, color: '#f1f5f9' }}>{student.displayName}</h2>
-            {student.idNumber && <p style={{ ...S, fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{student.idNumber}</p>}
+            <p style={{ ...S, fontSize: '9px', letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '4px' }}>Call to Counter</p>
+            <h2 style={{ ...D, fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)' }}>{student.displayName}</h2>
+            {student.idNumber && <p style={{ ...S, fontSize: '11px', color: 'var(--text-dim)', marginTop: '2px' }}>{student.idNumber}</p>}
           </div>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '8px', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '14px' }}>✕</button>
         </div>
 
         <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {sent ? (
-            <p style={{ ...S, fontSize: '12px', color: '#34d399', textAlign: 'center', padding: '16px 0' }}>✓ Notification sent.</p>
+            <p style={{ ...S, fontSize: '12px', color: 'var(--green)', textAlign: 'center', padding: '16px 0' }}>✓ Notification sent.</p>
           ) : (
             <>
               <div>
-                <label style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Message Template</label>
+                <label style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-dim)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Message Template</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                   {TEMPLATES.map(t => (
                     <button key={t.id} type="button" onClick={() => { setTemplateId(t.id); setCustomMsg(''); }}
                       style={{
                         padding: '9px 10px', borderRadius: '8px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s',
-                        background: templateId === t.id ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${templateId === t.id ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                        background: templateId === t.id ? 'var(--gold-soft)' : 'var(--surface)',
+                        border: `1px solid ${templateId === t.id ? 'var(--gold-border)' : 'var(--card-border)'}`,
                       }}>
-                      <p style={{ ...S, fontSize: '10px', fontWeight: 600, color: templateId === t.id ? '#f59e0b' : '#94a3b8' }}>{t.label}</p>
+                      <p style={{ ...S, fontSize: '10px', fontWeight: 600, color: templateId === t.id ? 'var(--gold)' : 'var(--text-muted)' }}>{t.label}</p>
                     </button>
                   ))}
                 </div>
@@ -173,7 +173,7 @@ function CallModal({ student, sentByName, sentByUid, onClose }) {
 
               {templateId && (
                 <div>
-                  <label style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                  <label style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-dim)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
                     {templateId === 'custom' ? 'Your Message' : 'Message Preview'}
                   </label>
                   {templateId === 'custom' ? (
@@ -181,8 +181,8 @@ function CallModal({ student, sentByName, sentByUid, onClose }) {
                       placeholder="Type your message here…"
                       value={customMsg} onChange={e => setCustomMsg(e.target.value)} maxLength={300} />
                   ) : (
-                    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px 14px' }}>
-                      <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>{finalMessage}</p>
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '12px 14px' }}>
+                      <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>{finalMessage}</p>
                     </div>
                   )}
                 </div>
@@ -190,11 +190,11 @@ function CallModal({ student, sentByName, sentByUid, onClose }) {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button onClick={onClose} disabled={sending}
-                  style={{ ...S, fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '9px 16px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#64748b', cursor: 'pointer' }}>
+                  style={{ ...S, fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '9px 16px', borderRadius: '8px', background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-dim)', cursor: 'pointer' }}>
                   Cancel
                 </button>
                 <button onClick={handleSend} disabled={sending || !templateId || (templateId === 'custom' && !customMsg.trim())}
-                  style={{ ...S, fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '9px 18px', borderRadius: '8px', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.35)', color: '#f59e0b', cursor: 'pointer', opacity: (sending || !templateId || (templateId === 'custom' && !customMsg.trim())) ? 0.4 : 1 }}>
+                  style={{ ...S, fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '9px 18px', borderRadius: '8px', background: 'var(--gold-soft)', border: '1px solid rgba(245,158,11,0.35)', color: 'var(--gold)', cursor: 'pointer', opacity: (sending || !templateId || (templateId === 'custom' && !customMsg.trim())) ? 0.4 : 1 }}>
                   {sending ? 'Sending…' : 'Send →'}
                 </button>
               </div>
@@ -208,8 +208,8 @@ function CallModal({ student, sentByName, sentByUid, onClose }) {
 
 // ── Shared input/select style ────────────────────────────────────────────────
 const inputSt = {
-  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '10px', padding: '9px 13px', fontSize: '13px', color: '#e2e8f0',
+  background: 'var(--surface)', border: '1px solid var(--card-border)',
+  borderRadius: '10px', padding: '9px 13px', fontSize: '13px', color: 'var(--text-body)',
   fontFamily: 'inherit', outline: 'none',
 };
 
@@ -349,47 +349,47 @@ export default function LoggerPage() {
     })();
 
     // Shared table container style
-    const tableWrap = { borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' };
-    const thSt = { ...S, fontSize: '9px', letterSpacing: '0.16em', color: '#475569', textTransform: 'uppercase', padding: '12px 14px', textAlign: 'left', background: '#060e1e', borderBottom: '1px solid rgba(255,255,255,0.07)', whiteSpace: 'nowrap' };
-    const tdSt = { padding: '12px 14px', fontSize: '13px', color: '#cbd5e1', borderBottom: '1px solid rgba(255,255,255,0.05)' };
+    const tableWrap = { borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--card-border)' };
+    const thSt = { ...S, fontSize: '9px', letterSpacing: '0.16em', color: 'var(--text-muted)', textTransform: 'uppercase', padding: '12px 14px', textAlign: 'left', background: 'var(--thead-bg)', borderBottom: '1px solid var(--divider)', whiteSpace: 'nowrap' };
+    const tdSt = { padding: '12px 14px', fontSize: '13px', color: 'var(--text-body)', borderBottom: '1px solid var(--row-border)' };
 
     return (
       <div style={{ animation: 'fadeSlideUp 0.4s ease both' }}>
         <style>{`
           @keyframes fadeSlideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
           @keyframes pulse-dot   { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-          tr.log-row:hover td { background: rgba(255,255,255,0.03) !important; }
+          tr.log-row:hover td { background: var(--row-hover-bg) !important; color: var(--row-hover-text) !important; }
         `}</style>
 
         {/* Header */}
         <div style={{ marginBottom: '24px' }}>
-          <p style={{ ...S, fontSize: '9px', letterSpacing: '0.22em', color: '#f59e0b', textTransform: 'uppercase', marginBottom: '6px' }}>Attendance</p>
-          <h1 style={{ ...D, fontSize: 'clamp(22px,4vw,30px)', fontWeight: 700, color: '#f1f5f9' }}>Library Logger</h1>
-          <div style={{ marginTop: '16px', height: '1px', background: 'linear-gradient(90deg, #f59e0b22, #f59e0b44, transparent)' }} />
+          <p style={{ ...S, fontSize: '9px', letterSpacing: '0.22em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '6px' }}>Attendance</p>
+          <h1 style={{ ...D, fontSize: 'clamp(22px,4vw,30px)', fontWeight: 700, color: 'var(--text-primary)' }}>Library Logger</h1>
+          <div style={{ marginTop: '16px', height: '1px', background: 'linear-gradient(90deg, var(--gold-border), var(--gold-soft), transparent)' }} />
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0' }}>
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', borderBottom: '1px solid var(--divider)', paddingBottom: '0' }}>
           {[
             { key: 'live',    label: 'Live Now',      badge: liveSessions.length, pulse: true },
             { key: 'history', label: 'Visit History', badge: histLoaded ? history.length : null },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               style={{
-                padding: '10px 18px', borderBottom: `2px solid ${activeTab === tab.key ? '#f59e0b' : 'transparent'}`,
+                padding: '10px 18px', borderBottom: `2px solid ${activeTab === tab.key ? 'var(--gold)' : 'transparent'}`,
                 marginBottom: '-1px', background: 'none', border: 'none', cursor: 'pointer',
                 borderBottomWidth: '2px', borderBottomStyle: 'solid',
-                borderBottomColor: activeTab === tab.key ? '#f59e0b' : 'transparent',
+                borderBottomColor: activeTab === tab.key ? 'var(--gold)' : 'transparent',
                 display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s',
               }}>
               {tab.pulse && (
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', display: 'inline-block', animation: 'pulse-dot 1.5s infinite' }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', animation: 'pulse-dot 1.5s infinite' }} />
               )}
-              <span style={{ ...S, fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: activeTab === tab.key ? 700 : 400, color: activeTab === tab.key ? '#f59e0b' : '#475569' }}>
+              <span style={{ ...S, fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: activeTab === tab.key ? 700 : 400, color: activeTab === tab.key ? 'var(--gold)' : 'var(--text-muted)' }}>
                 {tab.label}
               </span>
               {tab.badge != null && (
-                <span style={{ ...S, fontSize: '9px', fontWeight: 700, padding: '1px 7px', borderRadius: '20px', background: activeTab === tab.key ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.06)', color: activeTab === tab.key ? '#f59e0b' : '#64748b' }}>
+                <span style={{ ...S, fontSize: '9px', fontWeight: 700, padding: '1px 7px', borderRadius: '20px', background: activeTab === tab.key ? 'var(--gold-soft)' : 'var(--surface)', color: activeTab === tab.key ? 'var(--gold)' : 'var(--text-dim)' }}>
                   {tab.badge}
                 </span>
               )}
@@ -402,16 +402,16 @@ export default function LoggerPage() {
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', animation: 'pulse-dot 1.5s infinite' }} />
-                <span style={{ fontSize: '13px', color: '#94a3b8' }}>
-                  <strong style={{ color: '#e2e8f0' }}>{liveSessions.length}</strong> student{liveSessions.length !== 1 ? 's' : ''} currently in library
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', display: 'inline-block', animation: 'pulse-dot 1.5s infinite' }} />
+                <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  <strong style={{ color: 'var(--text-body)' }}>{liveSessions.length}</strong> student{liveSessions.length !== 1 ? 's' : ''} currently in library
                 </span>
                 {filteredLive.length !== liveSessions.length && (
-                  <span style={{ ...S, fontSize: '10px', color: '#475569' }}>— showing {filteredLive.length}</span>
+                  <span style={{ ...S, fontSize: '10px', color: 'var(--text-muted)' }}>— showing {filteredLive.length}</span>
                 )}
               </div>
               {liveSessions.filter(s => s.webSignedOut).length > 0 && (
-                <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b' }}>
+                <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--gold-soft)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--gold)' }}>
                   {liveSessions.filter(s => s.webSignedOut).length} web signed out
                 </span>
               )}
@@ -431,7 +431,7 @@ export default function LoggerPage() {
               </select>
               {(logSearch || logPurpose || logCourse) && (
                 <button onClick={() => { setLogSearch(''); setLogPurpose(''); setLogCourse(''); }}
-                  style={{ ...S, fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '9px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#64748b', cursor: 'pointer' }}>
+                  style={{ ...S, fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '9px 14px', borderRadius: '10px', background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-dim)', cursor: 'pointer' }}>
                   Clear
                 </button>
               )}
@@ -441,7 +441,7 @@ export default function LoggerPage() {
             <div style={tableWrap}>
               {liveSessions.length === 0 ? (
                 <div style={{ padding: '48px 24px', textAlign: 'center' }}>
-                  <p style={{ ...S, fontSize: '12px', color: '#334155' }}>No students currently in the library.</p>
+                  <p style={{ ...S, fontSize: '12px', color: 'var(--text-body)' }}>No students currently in the library.</p>
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
@@ -455,7 +455,7 @@ export default function LoggerPage() {
                     </thead>
                     <tbody>
                       {filteredLive.length === 0 ? (
-                        <tr><td colSpan={7} style={{ ...tdSt, textAlign: 'center', color: '#334155', ...S, fontSize: '11px', padding: '24px' }}>No students match your filters.</td></tr>
+                        <tr><td colSpan={7} style={{ ...tdSt, textAlign: 'center', color: 'var(--text-body)', ...S, fontSize: '11px', padding: '24px' }}>No students match your filters.</td></tr>
                       ) : filteredLive.map(s => {
                         const user = userMap[s.uid];
                         const name = user ? `${user.lastName}, ${user.firstName}` : '—';
@@ -465,42 +465,42 @@ export default function LoggerPage() {
                             <td style={tdSt}>
                               <button
                                 onClick={() => navigate('/staff/students', { state: { openStudentId: s.uid } })}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f59e0b', fontSize: '13px', fontWeight: 600, textAlign: 'left', padding: 0, textDecoration: 'none' }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gold)', fontSize: '13px', fontWeight: 600, textAlign: 'left', padding: 0, textDecoration: 'none' }}
                                 onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
                                 onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>
                                 {name}
                               </button>
                               {s.webSignedOut && (
-                                <span style={{ ...S, fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', marginLeft: '8px', padding: '2px 7px', borderRadius: '20px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b', verticalAlign: 'middle' }}>
+                                <span style={{ ...S, fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', marginLeft: '8px', padding: '2px 7px', borderRadius: '20px', background: 'var(--gold-soft)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--gold)', verticalAlign: 'middle' }}>
                                   Web Signed Out
                                 </span>
                               )}
                             </td>
-                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: '#94a3b8' }}>{user?.idNumber ?? '—'}</td>
-                            <td style={{ ...tdSt, fontSize: '12px', color: '#94a3b8' }}>{user?.course ?? '—'}</td>
+                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{user?.idNumber ?? '—'}</td>
+                            <td style={{ ...tdSt, fontSize: '12px', color: 'var(--text-muted)' }}>{user?.course ?? '—'}</td>
                             <td style={tdSt}>
-                              <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'rgba(100,116,139,0.15)', border: '1px solid rgba(100,116,139,0.2)', color: '#94a3b8' }}>
+                              <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--badge-gray-bg)', border: '1px solid rgba(100,116,139,0.2)', color: 'var(--text-muted)' }}>
                                 {s.purpose}
                               </span>
                             </td>
-                            <td style={{ ...tdSt, ...S, fontSize: '12px', color: '#94a3b8' }}>
+                            <td style={{ ...tdSt, ...S, fontSize: '12px', color: 'var(--text-muted)' }}>
                               {entryDate ? entryDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
                             </td>
                             <td style={tdSt}><LiveDuration entryTime={s.entryTime} /></td>
                             <td style={tdSt}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {activeNotifMap[s.uid] ? (
-                                  <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: '8px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#f59e0b' }}>
+                                  <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: '8px', background: 'var(--gold-soft)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--gold)' }}>
                                     Notified
                                   </span>
                                 ) : (
                                   <button onClick={() => setCallTarget({ uid: s.uid, displayName: name, idNumber: user?.idNumber ?? '' })}
-                                    style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 12px', borderRadius: '8px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', cursor: 'pointer' }}>
+                                    style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 12px', borderRadius: '8px', background: 'var(--blue-soft)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--blue)', cursor: 'pointer' }}>
                                     Call
                                   </button>
                                 )}
                                 <button onClick={() => handleForceOut(s.id, name)}
-                                  style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 12px', borderRadius: '8px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', cursor: 'pointer' }}>
+                                  style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 12px', borderRadius: '8px', background: 'var(--red-soft)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--red)', cursor: 'pointer' }}>
                                   Log Out
                                 </button>
                               </div>
@@ -539,9 +539,9 @@ export default function LoggerPage() {
                       style={{
                         ...S, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: histDate === val ? 700 : 400,
                         padding: '8px 14px', borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s',
-                        background: histDate === val ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${histDate === val ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                        color: histDate === val ? '#f59e0b' : '#64748b',
+                        background: histDate === val ? 'var(--gold-soft)' : 'var(--surface)',
+                        border: `1px solid ${histDate === val ? 'var(--gold-border)' : 'var(--card-border)'}`,
+                        color: histDate === val ? 'var(--gold)' : 'var(--text-dim)',
                       }}>{lbl}</button>
                   ))}
                 </div>
@@ -561,19 +561,19 @@ export default function LoggerPage() {
                   <option value="forced">Force-Exited</option>
                 </select>
                 <button onClick={() => exportHistoryCSV(filteredHistory, userMap)}
-                  style={{ ...S, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, padding: '9px 16px', borderRadius: '8px', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#60a5fa', cursor: 'pointer', marginLeft: 'auto' }}>
+                  style={{ ...S, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600, padding: '9px 16px', borderRadius: '8px', background: 'var(--blue-soft)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--blue)', cursor: 'pointer', marginLeft: 'auto' }}>
                   Export CSV
                 </button>
                 {(histSearch || histPurpose || histCourse || histStatus !== 'all' || histDate !== 'all') && (
                   <button onClick={() => { setHistSearch(''); setHistPurpose(''); setHistCourse(''); setHistStatus('all'); setHistDate('all'); }}
-                    style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '9px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#64748b', cursor: 'pointer' }}>
+                    style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '9px 14px', borderRadius: '8px', background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-dim)', cursor: 'pointer' }}>
                     Clear
                   </button>
                 )}
               </div>
               {histLoaded && (
-                <p style={{ ...S, fontSize: '10px', color: '#334155' }}>
-                  Showing <strong style={{ color: '#94a3b8' }}>{filteredHistory.length}</strong> of {history.length} visits
+                <p style={{ ...S, fontSize: '10px', color: 'var(--text-body)' }}>
+                  Showing <strong style={{ color: 'var(--text-muted)' }}>{filteredHistory.length}</strong> of {history.length} visits
                 </p>
               )}
             </div>
@@ -581,13 +581,13 @@ export default function LoggerPage() {
             {/* History table */}
             <div style={tableWrap}>
               {histLoading ? (
-                <p style={{ ...S, fontSize: '11px', color: '#334155', padding: '24px', textAlign: 'center' }}>Loading visit history…</p>
+                <p style={{ ...S, fontSize: '11px', color: 'var(--text-body)', padding: '24px', textAlign: 'center' }}>Loading visit history…</p>
               ) : history.length === 0 ? (
                 <div style={{ padding: '48px 24px', textAlign: 'center' }}>
-                  <p style={{ ...S, fontSize: '12px', color: '#334155' }}>No completed visits yet.</p>
+                  <p style={{ ...S, fontSize: '12px', color: 'var(--text-body)' }}>No completed visits yet.</p>
                 </div>
               ) : filteredHistory.length === 0 ? (
-                <p style={{ ...S, fontSize: '11px', color: '#334155', padding: '24px', textAlign: 'center' }}>No visits match your filters.</p>
+                <p style={{ ...S, fontSize: '11px', color: 'var(--text-body)', padding: '24px', textAlign: 'center' }}>No visits match your filters.</p>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse' }}>
@@ -606,26 +606,26 @@ export default function LoggerPage() {
                           <tr key={r.id} className="log-row">
                             <td style={tdSt}>
                               <button onClick={() => navigate('/staff/students', { state: { openStudentId: r.uid } })}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f59e0b', fontSize: '13px', fontWeight: 600, textAlign: 'left', padding: 0 }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gold)', fontSize: '13px', fontWeight: 600, textAlign: 'left', padding: 0 }}
                                 onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
                                 onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>
                                 {u ? `${u.lastName}, ${u.firstName}` : '—'}
                               </button>
                             </td>
-                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: '#94a3b8' }}>{u?.idNumber ?? '—'}</td>
-                            <td style={{ ...tdSt, fontSize: '12px', color: '#94a3b8' }}>{u?.course ?? '—'}</td>
+                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{u?.idNumber ?? '—'}</td>
+                            <td style={{ ...tdSt, fontSize: '12px', color: 'var(--text-muted)' }}>{u?.course ?? '—'}</td>
                             <td style={tdSt}>
-                              <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'rgba(100,116,139,0.15)', border: '1px solid rgba(100,116,139,0.2)', color: '#94a3b8' }}>
+                              <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--badge-gray-bg)', border: '1px solid rgba(100,116,139,0.2)', color: 'var(--text-muted)' }}>
                                 {r.purpose}
                               </span>
                             </td>
-                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: '#94a3b8' }}>{fmtDt(r.entryTime)}</td>
-                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: '#94a3b8' }}>{fmtDt(r.exitTime)}</td>
-                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: '#94a3b8' }}>{secs != null ? formatReadable(secs) : '—'}</td>
+                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{fmtDt(r.entryTime)}</td>
+                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{fmtDt(r.exitTime)}</td>
+                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{secs != null ? formatReadable(secs) : '—'}</td>
                             <td style={tdSt}>
                               {r.forcedLogout
-                                ? <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' }}>Force-Exited</span>
-                                : <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.15)', color: '#64748b' }}>Exited</span>
+                                ? <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--red-soft)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--red)' }}>Force-Exited</span>
+                                : <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--surface)', border: '1px solid rgba(100,116,139,0.15)', color: 'var(--text-dim)' }}>Exited</span>
                               }
                             </td>
                           </tr>
@@ -657,33 +657,33 @@ export default function LoggerPage() {
       <style>{`@keyframes fadeSlideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }`}</style>
 
       <div style={{ marginBottom: '24px' }}>
-        <p style={{ ...S, fontSize: '9px', letterSpacing: '0.22em', color: '#f59e0b', textTransform: 'uppercase', marginBottom: '6px' }}>Attendance</p>
-        <h1 style={{ ...D, fontSize: 'clamp(22px,4vw,30px)', fontWeight: 700, color: '#f1f5f9' }}>Library Logger</h1>
-        <div style={{ marginTop: '16px', height: '1px', background: 'linear-gradient(90deg, #f59e0b22, #f59e0b44, transparent)' }} />
+        <p style={{ ...S, fontSize: '9px', letterSpacing: '0.22em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '6px' }}>Attendance</p>
+        <h1 style={{ ...D, fontSize: 'clamp(22px,4vw,30px)', fontWeight: 700, color: 'var(--text-primary)' }}>Library Logger</h1>
+        <div style={{ marginTop: '16px', height: '1px', background: 'linear-gradient(90deg, var(--gold-border), var(--gold-soft), transparent)' }} />
       </div>
 
       {/* Student identity card */}
       {userProfile && (
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
-          <div style={{ borderLeft: '3px solid #f59e0b', paddingLeft: '14px' }}>
-            <p style={{ ...S, fontSize: '10px', letterSpacing: '0.15em', color: '#64748b', marginBottom: '4px' }}>{userProfile.idNumber}</p>
-            <p style={{ ...D, fontSize: '20px', fontWeight: 700, color: '#f1f5f9', marginBottom: '4px' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: '14px', padding: '20px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
+          <div style={{ borderLeft: '3px solid var(--gold)', paddingLeft: '14px' }}>
+            <p style={{ ...S, fontSize: '10px', letterSpacing: '0.15em', color: 'var(--text-dim)', marginBottom: '4px' }}>{userProfile.idNumber}</p>
+            <p style={{ ...D, fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
               {userProfile.lastName}, {userProfile.firstName}{userProfile.middleInitial ? ` ${userProfile.middleInitial}.` : ''}
             </p>
             {userProfile.course && (
-              <p style={{ fontSize: '13px', color: '#94a3b8' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                 {userProfile.course}{userProfile.yearLevel ? ` — ${userProfile.yearLevel}` : ''}
               </p>
             )}
-            {userProfile.college && <p style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>{userProfile.college}</p>}
+            {userProfile.college && <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{userProfile.college}</p>}
           </div>
           <div style={{ flexShrink: 0 }}>
             {session === undefined ? (
-              <span style={{ ...S, fontSize: '9px', color: '#475569' }}>…</span>
+              <span style={{ ...S, fontSize: '9px', color: 'var(--text-muted)' }}>…</span>
             ) : session ? (
-              <span style={{ ...S, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '4px 12px', borderRadius: '20px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399' }}>In Library</span>
+              <span style={{ ...S, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '4px 12px', borderRadius: '20px', background: 'var(--green-soft)', border: '1px solid rgba(16,185,129,0.3)', color: 'var(--green)' }}>In Library</span>
             ) : (
-              <span style={{ ...S, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '4px 12px', borderRadius: '20px', background: 'rgba(100,116,139,0.12)', border: '1px solid rgba(100,116,139,0.2)', color: '#64748b' }}>Not Checked In</span>
+              <span style={{ ...S, fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '4px 12px', borderRadius: '20px', background: 'var(--surface)', border: '1px solid rgba(100,116,139,0.2)', color: 'var(--text-dim)' }}>Not Checked In</span>
             )}
           </div>
         </div>
@@ -691,28 +691,28 @@ export default function LoggerPage() {
 
       {/* Active session */}
       {session && (
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderLeft: '3px solid #f59e0b', borderRadius: '14px', padding: '20px', marginBottom: '16px' }}>
-          <p style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: '#64748b', textTransform: 'uppercase', marginBottom: '16px' }}>Active Session</p>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderLeft: '3px solid var(--gold)', borderRadius: '14px', padding: '20px', marginBottom: '16px' }}>
+          <p style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '16px' }}>Active Session</p>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
             <div>
-              <p style={{ ...S, fontSize: '10px', letterSpacing: '0.15em', color: '#64748b', textTransform: 'uppercase', marginBottom: '6px' }}>Time in Library</p>
-              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '44px', fontWeight: 600, color: '#f59e0b', lineHeight: 1, letterSpacing: '0.08em', textShadow: '0 0 30px rgba(245,158,11,0.2)' }}>
+              <p style={{ ...S, fontSize: '10px', letterSpacing: '0.15em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '6px' }}>Time in Library</p>
+              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '44px', fontWeight: 600, color: 'var(--gold)', lineHeight: 1, letterSpacing: '0.08em', textShadow: '0 0 30px rgba(245,158,11,0.2)' }}>
                 {formatHHMM(elapsed)}
               </p>
-              <p style={{ ...S, fontSize: '11px', color: '#475569', marginTop: '4px' }}>{formatReadable(elapsed)} in library</p>
+              <p style={{ ...S, fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{formatReadable(elapsed)} in library</p>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <p style={{ ...S, fontSize: '9px', letterSpacing: '0.15em', color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>Entry Time</p>
-              <p style={{ ...S, fontSize: '16px', fontWeight: 600, color: '#e2e8f0' }}>
+              <p style={{ ...S, fontSize: '9px', letterSpacing: '0.15em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '4px' }}>Entry Time</p>
+              <p style={{ ...S, fontSize: '16px', fontWeight: 600, color: 'var(--text-body)' }}>
                 {session.entryTime?.toDate?.() ? session.entryTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
               </p>
-              <p style={{ ...S, fontSize: '9px', letterSpacing: '0.15em', color: '#64748b', textTransform: 'uppercase', marginTop: '10px', marginBottom: '4px' }}>Purpose</p>
-              <p style={{ fontSize: '13px', color: '#94a3b8' }}>{session.purpose}</p>
+              <p style={{ ...S, fontSize: '9px', letterSpacing: '0.15em', color: 'var(--text-dim)', textTransform: 'uppercase', marginTop: '10px', marginBottom: '4px' }}>Purpose</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{session.purpose}</p>
             </div>
           </div>
           <button onClick={handleCheckOut} disabled={loading}
-            style={{ width: '100%', padding: '13px', borderRadius: '10px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.35)', color: '#f87171', cursor: loading ? 'not-allowed' : 'pointer', ...S, fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700, opacity: loading ? 0.6 : 1, transition: 'all 0.15s' }}
-            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'rgba(239,68,68,0.25)'; }}
+            style={{ width: '100%', padding: '13px', borderRadius: '10px', background: 'var(--red-soft)', border: '1px solid rgba(239,68,68,0.35)', color: 'var(--red)', cursor: loading ? 'not-allowed' : 'pointer', ...S, fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700, opacity: loading ? 0.6 : 1, transition: 'all 0.15s' }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'var(--red-border)'; }}
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}>
             {loading ? 'Logging out…' : 'Log Out of Library'}
           </button>
@@ -721,22 +721,22 @@ export default function LoggerPage() {
 
       {/* Check-in form */}
       {session === null && (
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', marginBottom: '16px' }}>
-          <p style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: '#64748b', textTransform: 'uppercase', marginBottom: '16px' }}>Library Check-In</p>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: '14px', padding: '20px', marginBottom: '16px' }}>
+          <p style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: '16px' }}>Library Check-In</p>
           {error && (
-            <div style={{ marginBottom: '14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '10px 14px' }}>
-              <p style={{ ...S, fontSize: '11px', color: '#f87171' }}>{error}</p>
+            <div style={{ marginBottom: '14px', background: 'var(--red-soft)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '10px 14px' }}>
+              <p style={{ ...S, fontSize: '11px', color: 'var(--red)' }}>{error}</p>
             </div>
           )}
           <div style={{ marginBottom: '14px' }}>
-            <label style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Purpose of Visit</label>
+            <label style={{ ...S, fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-dim)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Purpose of Visit</label>
             <select className="select" value={purpose} onChange={e => { setPurpose(e.target.value); setError(''); }}>
               <option value="">— Select Purpose —</option>
               {PURPOSES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
           <button onClick={handleCheckIn} disabled={loading}
-            style={{ width: '100%', padding: '13px', borderRadius: '10px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.35)', color: '#34d399', cursor: loading ? 'not-allowed' : 'pointer', ...S, fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700, opacity: loading ? 0.6 : 1, transition: 'all 0.15s' }}
+            style={{ width: '100%', padding: '13px', borderRadius: '10px', background: 'var(--green-soft)', border: '1px solid rgba(16,185,129,0.35)', color: 'var(--green)', cursor: loading ? 'not-allowed' : 'pointer', ...S, fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700, opacity: loading ? 0.6 : 1, transition: 'all 0.15s' }}
             onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'rgba(16,185,129,0.25)'; }}
             onMouseLeave={e => e.currentTarget.style.background = 'rgba(16,185,129,0.15)'}>
             {loading ? 'Checking in…' : 'Log In to Library'}
@@ -745,8 +745,8 @@ export default function LoggerPage() {
       )}
 
       {session === undefined && (
-        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '14px', padding: '32px', textAlign: 'center', marginBottom: '16px' }}>
-          <p style={{ ...S, fontSize: '11px', color: '#334155' }}>Loading session…</p>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--divider)', borderRadius: '14px', padding: '32px', textAlign: 'center', marginBottom: '16px' }}>
+          <p style={{ ...S, fontSize: '11px', color: 'var(--text-body)' }}>Loading session…</p>
         </div>
       )}
     </div>
