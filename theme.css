@@ -1,0 +1,105 @@
+/* src/theme.css
+   Global CSS custom properties for dark / light themes.
+   Import once in main.jsx or App.jsx: import './theme.css'
+   All themed components reference these variables — never hardcode colours. */
+
+:root, [data-theme="dark"] {
+  --bg-base:       #060e1e;
+  --bg-mid:        #0a1628;
+  --bg-top:        #0d1e36;
+  --surface:       rgba(255,255,255,0.04);
+  --surface-hover: rgba(255,255,255,0.08);
+  --card:          rgba(10,23,48,0.92);
+  --card-border:   rgba(255,255,255,0.10);
+  --card-border-s: rgba(255,255,255,0.06);
+
+  --text-primary:  #f1f5f9;
+  --text-body:     #cbd5e1;
+  --text-muted:    #94a3b8;
+  --text-dim:      #64748b;
+
+  --gold:          #f59e0b;
+  --gold-soft:     rgba(245,158,11,0.18);
+  --gold-border:   rgba(245,158,11,0.40);
+  --green:         #34d399;
+  --green-soft:    rgba(16,185,129,0.15);
+  --green-border:  rgba(16,185,129,0.40);
+  --blue:          #60a5fa;
+  --blue-soft:     rgba(59,130,246,0.15);
+  --blue-border:   rgba(59,130,246,0.40);
+  --red:           #f87171;
+  --red-soft:      rgba(239,68,68,0.12);
+  --red-border:    rgba(239,68,68,0.35);
+
+  --input-bg:      rgba(255,255,255,0.06);
+  --input-border:  rgba(255,255,255,0.12);
+  --thead-bg:      #060e1e;
+  --row-alt:       rgba(255,255,255,0.02);
+  --row-border:    rgba(255,255,255,0.05);
+  --divider:       rgba(255,255,255,0.08);
+
+  --shadow-card:   0 8px 32px rgba(0,0,0,0.45);
+  --shadow-modal:  0 24px 64px rgba(0,0,0,0.65);
+
+  --toggle-bg:     rgba(255,255,255,0.08);
+  --toggle-icon:   #f59e0b;
+}
+
+[data-theme="light"] {
+  --bg-base:       #f0f4f8;
+  --bg-mid:        #e8eef5;
+  --bg-top:        #dde6f0;
+  --surface:       rgba(255,255,255,0.70);
+  --surface-hover: rgba(255,255,255,0.90);
+  --card:          rgba(255,255,255,0.85);
+  --card-border:   rgba(0,0,0,0.08);
+  --card-border-s: rgba(0,0,0,0.05);
+
+  --text-primary:  #0f172a;
+  --text-body:     #334155;
+  --text-muted:    #64748b;
+  --text-dim:      #94a3b8;
+
+  --gold:          #d97706;
+  --gold-soft:     rgba(217,119,6,0.12);
+  --gold-border:   rgba(217,119,6,0.35);
+  --green:         #059669;
+  --green-soft:    rgba(5,150,105,0.12);
+  --green-border:  rgba(5,150,105,0.35);
+  --blue:          #2563eb;
+  --blue-soft:     rgba(37,99,235,0.10);
+  --blue-border:   rgba(37,99,235,0.35);
+  --red:           #dc2626;
+  --red-soft:      rgba(220,38,38,0.08);
+  --red-border:    rgba(220,38,38,0.30);
+
+  --input-bg:      rgba(255,255,255,0.80);
+  --input-border:  rgba(0,0,0,0.14);
+  --thead-bg:      rgba(0,0,0,0.04);
+  --row-alt:       rgba(0,0,0,0.02);
+  --row-border:    rgba(0,0,0,0.05);
+  --divider:       rgba(0,0,0,0.08);
+
+  --shadow-card:   0 4px 20px rgba(0,0,0,0.10);
+  --shadow-modal:  0 16px 48px rgba(0,0,0,0.20);
+
+  --toggle-bg:     rgba(0,0,0,0.08);
+  --toggle-icon:   #d97706;
+}
+
+/* Global resets */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg-base);
+  color: var(--text-body);
+  transition: background 0.25s, color 0.25s;
+  font-family: 'Inter', 'Poppins', sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 99px; }
+
+/* Select option colours in both themes */
+option { background: var(--bg-mid); color: var(--text-primary); }
