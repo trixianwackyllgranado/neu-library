@@ -149,13 +149,13 @@ export default function AppLayout({ children }) {
         )}
         {!isMobile && (
           <button onClick={() => setCollapsed(c => !c)}
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', fontSize: '12px', flexShrink: 0 }}>
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '7px', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#94a3b8', fontSize: '12px', flexShrink: 0 }}>
             {collapsed ? '›' : '‹'}
           </button>
         )}
         {isMobile && (
           <button onClick={() => setMobileOpen(false)}
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '7px', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#475569', fontSize: '14px' }}>
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '7px', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#94a3b8', fontSize: '14px' }}>
             ✕
           </button>
         )}
@@ -181,18 +181,18 @@ export default function AppLayout({ children }) {
       </nav>
 
       {/* User profile + sign out */}
-      <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         {(!collapsed || isMobile) && (
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', padding: '10px 12px', marginBottom: '8px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '10px 12px', marginBottom: '8px' }}>
             <p style={{ ...S, fontSize: '8px', letterSpacing: '0.14em', color: '#f59e0b', textTransform: 'uppercase', marginBottom: '3px' }}>{role}</p>
-            <p style={{ fontSize: '12px', fontWeight: 600, color: '#e2e8f0', marginBottom: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</p>
-            <p style={{ ...S, fontSize: '9px', color: '#475569' }}>{userProfile?.idNumber || '—'}</p>
+            <p style={{ fontSize: '12px', fontWeight: 600, color: '#f1f5f9', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</p>
+            <p style={{ ...S, fontSize: '10px', color: '#94a3b8' }}>{userProfile?.idNumber || '—'}</p>
           </div>
         )}
         <button onClick={handleLogout} disabled={signingOut}
           style={{
             width: '100%', padding: collapsed && !isMobile ? '10px' : '9px 12px',
-            borderRadius: '10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+            borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
             color: '#f87171', cursor: signingOut ? 'not-allowed' : 'pointer', ...S,
             fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s',
@@ -226,13 +226,16 @@ export default function AppLayout({ children }) {
       {/* Main content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Mobile top bar */}
-        <div className="flex md:hidden" style={{ background: 'var(--navy-800)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '12px 16px', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
+        <div className="flex md:hidden" style={{ background: '#0a1730', borderBottom: '1px solid rgba(255,255,255,0.09)', padding: '12px 16px', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/favicon.svg" alt="NEU" style={{ width: 24, height: 24 }} />
-            <p style={{ ...D, fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>NEU Library</p>
+            <img src="/favicon.svg" alt="NEU" style={{ width: 26, height: 26 }} />
+            <div>
+              <p style={{ ...S, fontSize: '7px', letterSpacing: '0.18em', color: '#f59e0b', textTransform: 'uppercase' }}>New Era University</p>
+              <p style={{ ...D, fontSize: '13px', fontWeight: 700, color: '#f1f5f9' }}>Library System</p>
+            </div>
           </div>
           <button onClick={() => setMobileOpen(true)}
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#94a3b8', fontSize: '18px' }}>
+            style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#cbd5e1', fontSize: '18px' }}>
             ☰
           </button>
         </div>
@@ -243,7 +246,7 @@ export default function AppLayout({ children }) {
         )}
 
         {/* Page content */}
-        <main style={{ flex: 1, padding: '28px 24px', maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
+        <main style={{ flex: 1, padding: 'clamp(16px, 4vw, 28px) clamp(14px, 4vw, 24px)', maxWidth: '1200px', width: '100%', margin: '0 auto' }}>
           {children}
         </main>
       </div>
