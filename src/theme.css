@@ -1,14 +1,11 @@
-/* src/theme.css
-   Global CSS custom properties for dark / light themes.
-   Import once in main.jsx or App.jsx: import './theme.css'
-   All themed components reference these variables — never hardcode colours. */
+/* src/theme.css */
 
 :root, [data-theme="dark"] {
   --bg-base:       #060e1e;
   --bg-mid:        #0a1628;
   --bg-top:        #0d1e36;
   --surface:       rgba(255,255,255,0.04);
-  --surface-hover: rgba(255,255,255,0.08);
+  --surface-hover: rgba(255,255,255,0.09);
   --card:          rgba(10,23,48,0.92);
   --card-border:   rgba(255,255,255,0.10);
   --card-border-s: rgba(255,255,255,0.06);
@@ -33,7 +30,7 @@
 
   --input-bg:      rgba(255,255,255,0.06);
   --input-border:  rgba(255,255,255,0.12);
-  --thead-bg:      #060e1e;
+  --thead-bg:      rgba(6,14,30,0.95);
   --row-alt:       rgba(255,255,255,0.02);
   --row-border:    rgba(255,255,255,0.05);
   --divider:       rgba(255,255,255,0.08);
@@ -41,54 +38,104 @@
   --shadow-card:   0 8px 32px rgba(0,0,0,0.45);
   --shadow-modal:  0 24px 64px rgba(0,0,0,0.65);
 
-  --toggle-bg:     rgba(255,255,255,0.08);
-  --toggle-icon:   #f59e0b;
+  --btn-secondary-bg:         rgba(255,255,255,0.06);
+  --btn-secondary-border:     rgba(255,255,255,0.14);
+  --btn-secondary-text:       #cbd5e1;
+  --btn-secondary-hover-bg:   rgba(255,255,255,0.13);
+  --btn-secondary-hover-text: #f1f5f9;
+  --btn-ghost-text:           #94a3b8;
+  --btn-ghost-hover-bg:       rgba(255,255,255,0.08);
+  --btn-ghost-hover-text:     #e2e8f0;
+
+  --badge-green-bg:     rgba(16,185,129,0.18);
+  --badge-green-border: rgba(16,185,129,0.40);
+  --badge-green-text:   #6ee7b7;
+  --badge-gold-bg:      rgba(245,158,11,0.18);
+  --badge-gold-border:  rgba(245,158,11,0.40);
+  --badge-gold-text:    #fcd34d;
+  --badge-gray-bg:      rgba(148,163,184,0.14);
+  --badge-gray-border:  rgba(148,163,184,0.28);
+  --badge-gray-text:    #94a3b8;
+  --badge-red-bg:       rgba(239,68,68,0.15);
+  --badge-red-border:   rgba(239,68,68,0.38);
+  --badge-red-text:     #fca5a5;
+  --badge-blue-bg:      rgba(59,130,246,0.15);
+  --badge-blue-border:  rgba(59,130,246,0.38);
+  --badge-blue-text:    #93c5fd;
+
+  --row-hover-bg:   rgba(255,255,255,0.055);
+  --row-hover-text: #f1f5f9;
 }
 
 [data-theme="light"] {
   --bg-base:       #f0f4f8;
   --bg-mid:        #e8eef5;
   --bg-top:        #dde6f0;
-  --surface:       rgba(255,255,255,0.70);
-  --surface-hover: rgba(255,255,255,0.90);
-  --card:          rgba(255,255,255,0.85);
-  --card-border:   rgba(0,0,0,0.08);
-  --card-border-s: rgba(0,0,0,0.05);
+  --surface:       #ffffff;
+  --surface-hover: #e8eef5;
+  --card:          #ffffff;
+  --card-border:   rgba(0,0,0,0.10);
+  --card-border-s: rgba(0,0,0,0.06);
 
   --text-primary:  #0f172a;
-  --text-body:     #334155;
-  --text-muted:    #64748b;
+  --text-body:     #1e293b;
+  --text-muted:    #475569;
   --text-dim:      #94a3b8;
 
-  --gold:          #d97706;
-  --gold-soft:     rgba(217,119,6,0.12);
-  --gold-border:   rgba(217,119,6,0.35);
-  --green:         #059669;
-  --green-soft:    rgba(5,150,105,0.12);
-  --green-border:  rgba(5,150,105,0.35);
-  --blue:          #2563eb;
-  --blue-soft:     rgba(37,99,235,0.10);
-  --blue-border:   rgba(37,99,235,0.35);
-  --red:           #dc2626;
-  --red-soft:      rgba(220,38,38,0.08);
-  --red-border:    rgba(220,38,38,0.30);
+  --gold:          #b45309;
+  --gold-soft:     rgba(180,83,9,0.10);
+  --gold-border:   rgba(180,83,9,0.30);
+  --green:         #047857;
+  --green-soft:    rgba(4,120,87,0.10);
+  --green-border:  rgba(4,120,87,0.30);
+  --blue:          #1d4ed8;
+  --blue-soft:     rgba(29,78,216,0.08);
+  --blue-border:   rgba(29,78,216,0.28);
+  --red:           #b91c1c;
+  --red-soft:      rgba(185,28,28,0.08);
+  --red-border:    rgba(185,28,28,0.28);
 
-  --input-bg:      rgba(255,255,255,0.80);
-  --input-border:  rgba(0,0,0,0.14);
-  --thead-bg:      rgba(0,0,0,0.04);
+  --input-bg:      #ffffff;
+  --input-border:  rgba(0,0,0,0.16);
+  --thead-bg:      #f1f5f9;
   --row-alt:       rgba(0,0,0,0.02);
-  --row-border:    rgba(0,0,0,0.05);
-  --divider:       rgba(0,0,0,0.08);
+  --row-border:    rgba(0,0,0,0.06);
+  --divider:       rgba(0,0,0,0.09);
 
-  --shadow-card:   0 4px 20px rgba(0,0,0,0.10);
-  --shadow-modal:  0 16px 48px rgba(0,0,0,0.20);
+  --shadow-card:   0 2px 12px rgba(0,0,0,0.08);
+  --shadow-modal:  0 12px 40px rgba(0,0,0,0.18);
 
-  --toggle-bg:     rgba(0,0,0,0.08);
-  --toggle-icon:   #d97706;
+  --btn-secondary-bg:         #ffffff;
+  --btn-secondary-border:     rgba(0,0,0,0.16);
+  --btn-secondary-text:       #334155;
+  --btn-secondary-hover-bg:   #f1f5f9;
+  --btn-secondary-hover-text: #0f172a;
+  --btn-ghost-text:           #475569;
+  --btn-ghost-hover-bg:       #e2e8f0;
+  --btn-ghost-hover-text:     #0f172a;
+
+  --badge-green-bg:     #d1fae5;
+  --badge-green-border: #6ee7b7;
+  --badge-green-text:   #065f46;
+  --badge-gold-bg:      #fef3c7;
+  --badge-gold-border:  #fcd34d;
+  --badge-gold-text:    #92400e;
+  --badge-gray-bg:      #f1f5f9;
+  --badge-gray-border:  #cbd5e1;
+  --badge-gray-text:    #475569;
+  --badge-red-bg:       #fee2e2;
+  --badge-red-border:   #fca5a5;
+  --badge-red-text:     #991b1b;
+  --badge-blue-bg:      #dbeafe;
+  --badge-blue-border:  #93c5fd;
+  --badge-blue-text:    #1e40af;
+
+  --row-hover-bg:   #f1f5f9;
+  --row-hover-text: #0f172a;
 }
 
-/* Global resets */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
   background: var(--bg-base);
   color: var(--text-body);
@@ -96,10 +143,8 @@ body {
   font-family: 'Inter', 'Poppins', sans-serif;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 99px; }
 
-/* Select option colours in both themes */
 option { background: var(--bg-mid); color: var(--text-primary); }
