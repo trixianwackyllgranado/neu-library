@@ -521,7 +521,7 @@ export default function CatalogPage() {
                 </button>
               )}
               <button
-                className="border border-red-400 text-red-600 hover:bg-red-50 text-[10px] font-mono font-semibold px-3 py-2 transition-colors"
+                className="btn-danger text-[10px]"
                 onClick={() => setConfirmBulk('all')}
                 disabled={bulkDeleting}
               >
@@ -544,7 +544,7 @@ export default function CatalogPage() {
               <span className="font-mono bg-gray-100 px-1">BSIT|BS Midwifery|Juris Doctor</span>
             </p>
           </div>
-          <div className="flex items-start gap-4 p-4 bg-gray-50 border border-gray-200">
+          <div className="flex items-start gap-4 p-4" style={{background:"var(--surface)",border:"1px solid var(--card-border)",borderRadius:8}}>
             <div className="shrink-0 w-7 h-7 rounded-full bg-primary-700 text-white flex items-center justify-center text-xs font-bold font-mono">1</div>
             <div>
               <p className="text-sm font-semibold text-gray-800 mb-1">Download Template</p>
@@ -552,7 +552,7 @@ export default function CatalogPage() {
               <button className="btn-secondary text-xs py-1.5 px-4" onClick={downloadTemplate}>Download CSV Template</button>
             </div>
           </div>
-          <div className="flex items-start gap-4 p-4 bg-gray-50 border border-gray-200">
+          <div className="flex items-start gap-4 p-4" style={{background:"var(--surface)",border:"1px solid var(--card-border)",borderRadius:8}}>
             <div className="shrink-0 w-7 h-7 rounded-full bg-primary-700 text-white flex items-center justify-center text-xs font-bold font-mono">2</div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-gray-800 mb-1">Upload Your CSV</p>
@@ -561,9 +561,9 @@ export default function CatalogPage() {
             </div>
           </div>
           {importErrors.length > 0 && (
-            <div className="border border-red-300 bg-red-50 px-4 py-3">
-              <p className="text-sm font-semibold text-red-800 mb-2">Fix these errors before importing:</p>
-              {importErrors.map((e,i) => <p key={i} className="text-xs font-mono text-red-700">Row {e.row}: {e.errors.join(', ')}</p>)}
+            <div className="px-4 py-3" style={{background:'var(--red-soft)',border:'1px solid var(--red-border)',borderRadius:10}}>
+              <p className="text-sm font-semibold mb-2" style={{color:'var(--red)'}}>Fix these errors before importing:</p>
+              {importErrors.map((e,i) => <p key={i} className="text-xs font-mono" style={{color:'var(--red)'}}>Row {e.row}: {e.errors.join(', ')}</p>)}
             </div>
           )}
           {importRows.length > 0 && importErrors.length === 0 && !importResult && (
@@ -574,7 +574,7 @@ export default function CatalogPage() {
                   <thead><tr>{['#','Title','Authors','ISBN','Category','Shelf','Copies','Courses'].map(h=><th key={h} className="th text-[10px]">{h}</th>)}</tr></thead>
                   <tbody>
                     {importRows.map((r,i) => (
-                      <tr key={i} className="hover:bg-gray-50">
+                      <tr key={i} className="tr-hover">
                         <td className="td font-mono text-gray-400">{i+1}</td>
                         <td className="td font-semibold">{r.title}</td>
                         <td className="td text-gray-600">{r.authors}</td>
@@ -591,9 +591,11 @@ export default function CatalogPage() {
             </div>
           )}
           {importResult && (
-            <div className="mb-4 border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3">
-              <div className="shrink-0 w-5 h-5 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-bold">✓</div>
-              <p className="text-sm text-green-800 font-semibold">
+            <div className="mb-4 px-4 py-3 flex items-center gap-3" style={{background:'var(--green-soft)',border:'1px solid var(--green-border)',borderRadius:10}}>
+              <div className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center" style={{background:'var(--green)',color:'var(--bg-base)'}}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <p className="text-sm font-semibold" style={{color:'var(--green)'}}>
                 Successfully added {importResult.added} new book{importResult.added!==1?'s':''} 
                 {importResult.updated > 0 ? ` and merged stocks for ${importResult.updated} existing book${importResult.updated!==1?'s':''}` : ''} 
                 into the catalog.
@@ -601,7 +603,7 @@ export default function CatalogPage() {
             </div>
           )}
           {importRows.length > 0 && importErrors.length === 0 && !importResult && (
-            <div className="flex items-start gap-4 p-4 bg-gray-50 border border-gray-200">
+            <div className="flex items-start gap-4 p-4" style={{background:"var(--surface)",border:"1px solid var(--card-border)",borderRadius:8}}>
               <div className="shrink-0 w-7 h-7 rounded-full bg-primary-700 text-white flex items-center justify-center text-xs font-bold font-mono">3</div>
               <div>
                 <p className="text-sm font-semibold text-gray-800 mb-2">Confirm &amp; Import</p>
@@ -654,7 +656,7 @@ export default function CatalogPage() {
             </select>
             <label className="flex items-center gap-2 cursor-pointer shrink-0 select-none">
               <div onClick={()=>setAvailableOnly(o=>!o)} className={`w-10 h-5 rounded-full transition-colors relative ${availableOnly?'bg-primary-600':'bg-gray-300'}`}>
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all ${availableOnly?'left-5':'left-0.5'}`} />
+                <div className={`w-4 h-4 rounded-full absolute top-0.5 transition-all ${availableOnly?'left-5':'left-0.5'}`} style={{background:'var(--card)'}} />
               </div>
               <span className="text-xs font-mono text-gray-600">Available only</span>
             </label>
@@ -677,14 +679,14 @@ export default function CatalogPage() {
 
       {/* Filter banner */}
       {(selectedCourse||selectedCategory||availableOnly) && (
-        <div className="mb-4 border border-gold-200 bg-gold-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <p className="text-xs text-gold-800 flex flex-wrap gap-2 items-center">
-            <span>Showing <strong>{filtered.length}</strong> book{filtered.length!==1?'s':''}</span>
+        <div className="mb-4 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3" style={{background:'var(--gold-soft)',border:'1px solid var(--gold-border)',borderRadius:10}}>
+          <p className="text-xs flex flex-wrap gap-2 items-center" style={{color:'var(--text-body)'}}>
+            <span style={{color:'var(--text-muted)'}}>Showing <strong style={{color:'var(--text-primary)'}}>{filtered.length}</strong> book{filtered.length!==1?'s':''}</span>
             {selectedCategory && <span className="badge badge-gold">{selectedCategory}</span>}
             {selectedCourse   && <span className="badge badge-gold">{selectedCourse}</span>}
             {availableOnly    && <span className="badge badge-green">Available Only</span>}
           </p>
-          <button className="text-xs text-gold-700 font-mono hover:underline ml-4 shrink-0"
+          <button className="btn-ghost text-xs shrink-0" style={{color:'var(--gold)'}}
             onClick={()=>{setSelectedCourse('');setSelectedCategory('');setAvailableOnly(false);}}>Show All</button>
         </div>
       )}
@@ -720,7 +722,7 @@ export default function CatalogPage() {
                   </div>
                   <div className="flex flex-wrap gap-1.5 mb-3">
                     {book.category && <span className="badge badge-gray text-[10px]">{book.category}</span>}
-                    {book.isbn && <span className="font-mono text-[10px] text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">{book.isbn}</span>}
+                    {book.isbn && <span className="badge badge-gray font-mono text-[10px]">{book.isbn}</span>}
                   </div>
                   <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mb-3 text-xs">
                     <div className="flex items-center gap-1.5">
@@ -733,7 +735,7 @@ export default function CatalogPage() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-gray-400 font-mono tracking-wider text-[10px]">AVAIL</span>
-                      <span className={`font-mono font-bold ${(book.availableCopies ?? 0) > 0 ? 'text-green-600' : 'text-red-500'}`}>{book.availableCopies ?? 0}</span>
+                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:(book.availableCopies??0)>0?'var(--green)':'var(--red)'}}>{book.availableCopies ?? 0}</span>
                     </div>
                   </div>
                   {isStudent && book.description && (
@@ -802,7 +804,7 @@ export default function CatalogPage() {
                   return (
                     <tr
                       key={book.id}
-                      className={`hover:bg-gray-50 ${selectMode ? 'cursor-pointer' : ''} ${isSelected ? 'bg-red-50' : ''}`}
+                      className={`tr-hover ${selectMode ? 'cursor-pointer' : ''}`} style={{background:isSelected?'var(--red-soft)':'transparent'}}
                       onClick={selectMode ? () => toggleSelect(book.id) : undefined}
                     >
                       {selectMode && (
@@ -849,11 +851,11 @@ export default function CatalogPage() {
                         })()}
                       </td>
                       <td className="td font-mono text-xs">{book.isbn||'—'}</td>
-                      <td className="td">{book.category && <span className="badge-gray badge">{book.category}</span>}</td>
+                      <td className="td">{book.category && <span className="badge badge-gray">{book.category}</span>}</td>
                       <td className="td font-mono text-xs">{book.shelfLocation||'—'}</td>
                       <td className="td text-center font-mono">{book.totalCopies??0}</td>
                       <td className="td text-center">
-                        <span className={`font-mono font-semibold ${(book.availableCopies??0)>0?'text-primary-700':'text-red-600'}`}>{book.availableCopies??0}</span>
+                        <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:600,color:(book.availableCopies??0)>0?'var(--green)':'var(--red)'}}>{book.availableCopies??0}</span>
                       </td>
                       <td className="td">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -883,22 +885,22 @@ export default function CatalogPage() {
       {/* Bulk delete confirmation modal */}
       {confirmBulk && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white w-full max-w-md shadow-2xl">
+          <div className="w-full max-w-md shadow-2xl" style={{background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:16,overflow:'hidden'}}>
             <div className="bg-red-700 text-white px-6 py-4">
               <p className="font-mono text-[10px] tracking-widest uppercase opacity-70 mb-0.5">Irreversible Action</p>
-              <h2 className="font-display text-lg font-bold">Confirm Bulk Delete</h2>
+              <h2 className="font-display text-lg font-bold" style={{color:'var(--red)'}}>Confirm Bulk Delete</h2>
             </div>
             <div className="px-6 py-5">
-              <div className="border border-red-200 bg-red-50 px-4 py-3 mb-4">
-                <p className="text-sm font-semibold text-red-800 mb-1">
+              <div className="px-4 py-3 mb-4" style={{background:'var(--red-soft)',border:'1px solid var(--red-border)',borderRadius:8}}>
+                <p className="text-sm font-semibold mb-1" style={{color:'var(--text-primary)'}}>
                   {confirmBulk === 'all'
                     ? `Delete all ${books.length} books from the catalog?`
                     : `Delete ${selectedIds.size} selected book${selectedIds.size!==1?'s':''}?`}
                 </p>
-                <p className="text-xs text-red-700">This action cannot be undone. All borrow records referencing these books will remain but will show missing book details.</p>
+                <p className="text-xs" style={{color:'var(--red)'}}>This action cannot be undone. All borrow records referencing these books will remain but will show missing book details.</p>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+            <div className="px-6 py-4 flex justify-end gap-3" style={{borderTop:'1px solid var(--divider)',background:'var(--surface)'}}>
               <button className="btn-secondary" onClick={()=>setConfirmBulk(null)} disabled={bulkDeleting}>Cancel</button>
               <button className="btn-danger" onClick={()=>handleBulkDelete(confirmBulk)} disabled={bulkDeleting}>
                 {bulkDeleting ? 'Deleting…' : 'Yes, Delete Permanently'}
@@ -913,18 +915,18 @@ export default function CatalogPage() {
         <>
           <div className="fixed inset-0 bg-black/40 z-40" onClick={()=>!requesting&&setRequestBook(null)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-white w-full max-w-md shadow-2xl">
-              <div className="bg-primary-800 text-white px-6 py-4">
+            <div className="w-full max-w-md shadow-2xl" style={{background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:16,overflow:'hidden'}}>
+              <div className="px-6 py-4" style={{background:'var(--bg-top)',borderBottom:'1px solid var(--divider)'}}>
                 <p className="font-mono text-[10px] tracking-widest uppercase opacity-60 mb-0.5">Borrow Request</p>
-                <h2 className="font-display text-lg font-bold leading-tight">{requestBook.title}</h2>
-                <p className="text-xs text-white/60 mt-0.5">{requestBook.authors}</p>
+                <h2 className="font-display text-lg font-bold leading-tight" style={{color:'var(--text-primary)'}}>{requestBook.title}</h2>
+                <p className="text-xs mt-0.5" style={{color:'var(--text-muted)'}}>{requestBook.authors}</p>
               </div>
               <div className="px-6 py-5">
                 {requestSuccess ? (
                   <div>
-                    <div className="border border-green-200 bg-green-50 px-4 py-3 mb-5">
-                      <p className="text-sm font-semibold text-green-800 mb-1">Request Submitted</p>
-                      <p className="text-sm text-green-700">{requestSuccess}</p>
+                    <div className="px-4 py-3 mb-5" style={{background:'var(--green-soft)',border:'1px solid var(--green-border)',borderRadius:8}}>
+                      <p className="text-sm font-semibold mb-1" style={{color:'var(--green)'}}>Request Submitted</p>
+                      <p className="text-sm" style={{color:'var(--green)'}}>{requestSuccess}</p>
                     </div>
                     <p className="text-xs text-gray-500 mb-5">A staff member will review and approve your request. Once approved, proceed to the library desk to collect your book.</p>
                     <button className="btn-primary w-full" onClick={()=>setRequestBook(null)}>Done</button>
@@ -938,14 +940,14 @@ export default function CatalogPage() {
                       <div><p className="label">Category</p><p className="text-gray-600">{requestBook.category||'—'}</p></div>
                     </div>
                     {requestError && (
-                      <div className="mb-4 border border-red-300 bg-red-50 px-4 py-3 flex gap-3">
-                        <div className="shrink-0 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-xs font-bold">!</div>
-                        <p className="text-sm text-red-700">{requestError}</p>
+                      <div className="mb-4 px-4 py-3 flex gap-3" style={{background:'var(--red-soft)',border:'1px solid var(--red-border)',borderRadius:8}}>
+                        <div className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{background:'var(--red)',color:'var(--bg-base)'}}>!</div>
+                        <p className="text-sm" style={{color:'var(--red)'}}>{requestError}</p>
                       </div>
                     )}
-                    <div className="mb-5 border border-gold-200 bg-gold-50 px-4 py-3">
-                      <p className="text-xs text-gold-800 font-semibold mb-0.5">How it works</p>
-                      <p className="text-xs text-gold-700">Submitting this request notifies library staff. A due date will be assigned upon approval. You'll see the status update in My Borrows.</p>
+                    <div className="mb-5 px-4 py-3" style={{background:'var(--gold-soft)',border:'1px solid var(--gold-border)',borderRadius:8}}>
+                      <p className="text-xs font-semibold mb-0.5" style={{color:'var(--gold)'}}>How it works</p>
+                      <p className="text-xs" style={{color:'var(--text-muted)'}}>Submitting this request notifies library staff. A due date will be assigned upon approval. You'll see the status update in My Borrows.</p>
                     </div>
                     <div className="flex gap-3">
                       <button className="btn-ghost flex-1" onClick={()=>setRequestBook(null)}>Cancel</button>
