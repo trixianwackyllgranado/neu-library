@@ -272,6 +272,7 @@ export default function QRLoggerPage() {
           setLastScan(null);
           setPurposeForId({ idNumber, student });
         }
+        // Reset processing gate here — confirmCheckIn will handle the rest
         processingRef.current = false;
       }
     } catch (err) {
@@ -356,28 +357,46 @@ export default function QRLoggerPage() {
   const confirmCheckIn = async (purpose) => {
     if (!purposeForId) return;
     setConfirmLoad(true);
+
+    // Snapshot these before we clear purposeForId
+    const { idNumber, student } = purposeForId;
+
     try {
       await addDoc(collection(db, 'logger'), {
-        uid:       purposeForId.student.id,
+        uid:       student.id,
         purpose,
         entryTime: serverTimestamp(),
         active:    true,
         scannedBy: userProfile?.uid || null,
       });
+
       if (!unmountedRef.current) {
-        setLastScan({ idNumber: purposeForId.idNumber, student: purposeForId.student, action: 'in', purpose });
-        setScanStatus('success');
+        // Reset processing gate so the next scan isn't blocked
+        processingRef.current = false;
+        // Clear the cooldown for this ID so they can be scanned out immediately
+        delete cooldownRef.current[idNumber];
+
+        // Close modal and show success toast
         setPurposeForId(null);
+        setLastScan({ idNumber, student, action: 'in', purpose });
+        setScanStatus('success');
+        setConfirmLoad(false);
+
+        // Wait for React to flush + DOM to show #qr-staff-reader, then restart
         setTimeout(() => {
           if (!unmountedRef.current) { setScanStatus('idle'); setLastScan(null); }
         }, 2500);
-        // Resume scanner after modal closes
-        startScanner();
+        setTimeout(() => {
+          if (!unmountedRef.current) startScanner();
+        }, 300); // enough time for setPurposeForId(null) → isScanning=false → div visible
       }
-    } catch {
-      if (!unmountedRef.current) setScanStatus('error');
+    } catch (err) {
+      if (!unmountedRef.current) {
+        setScanStatus('error');
+        setConfirmLoad(false);
+        processingRef.current = false;
+      }
     }
-    if (!unmountedRef.current) setConfirmLoad(false);
   };
 
   // ── Manual entry ─────────────────────────────────────────────────────────────
