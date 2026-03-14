@@ -42,9 +42,11 @@ function parseFirebaseError(error) {
 
 export { parseFirebaseError };
 
-// Internal email generated from idNumber (not exposed to user)
+// Internal email generated from idNumber (not exposed to user).
+// We keep the dashes so Auth identifiers are human-readable in the console.
+// e.g. "24-12998-121@neu-lib.internal"
 const idToEmail = (idNumber) => {
-  const clean = idNumber.replace(/-/g, '').replace(/\s/g, '');
+  const clean = idNumber.trim().replace(/\s/g, '');
   return `${clean}@neu-lib.internal`;
 };
 
@@ -59,7 +61,7 @@ export function AuthProvider({ children }) {
    * Creates a Firebase Auth user with a synthetic email derived from idNumber,
    * then writes the Firestore user document.
    */
-  const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, password }) => {
+  const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, role = 'student', password }) => {
     const email = idToEmail(idNumber);
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -71,7 +73,7 @@ export function AuthProvider({ children }) {
         middleInitial: middleInitial ? middleInitial.trim().replace(/\.+$/, '') : '',
         course:        course.trim(),
         college:       college.trim(),
-        role:          'student',
+        role:          role,
         createdAt:     serverTimestamp(),
       });
       return cred;

@@ -16,6 +16,17 @@ const BG = {
 
 const ID_REGEX = /^\d{2}-\d{5}-\d{3}$/;
 
+const INVITE_CODES = {
+  staff: 'NEU-STAFF-2123',
+  admin: 'NEU-ADMIN-2067',
+};
+
+const ROLES = {
+  student: { label: 'Student',       desc: 'Browse books, request borrows, log library visits.' },
+  staff:   { label: 'Library Staff', desc: 'Manage borrowing, view student records, oversee logger.' },
+  admin:   { label: 'Administrator', desc: 'Full system access including user management and reports.' },
+};
+
 function formatId(raw) {
   const digits = raw.replace(/\D/g, '').slice(0, 10);
   if (digits.length <= 2) return digits;
@@ -27,6 +38,8 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const [role,          setRole]          = useState('student');
+  const [inviteCode,    setInviteCode]    = useState('');
   const [idNumber,      setIdNumber]      = useState('');
   const [idFormat,      setIdFormat]      = useState('');
   const [lastName,      setLastName]      = useState('');
@@ -38,6 +51,8 @@ export default function RegisterPage() {
   const [confirm,       setConfirm]       = useState('');
   const [error,         setError]         = useState('');
   const [loading,       setLoading]       = useState(false);
+
+  const needsCode = role === 'staff' || role === 'admin';
 
   // After successful registration
   const [registered, setRegistered] = useState(null); // { idNumber, name }
@@ -72,6 +87,14 @@ export default function RegisterPage() {
     if (courses.length > 0 && !course) {
       setError('Please select a course.'); return;
     }
+    if (needsCode) {
+      if (!inviteCode.trim()) {
+        setError(`An invite code is required to register as ${ROLES[role].label}.`); return;
+      }
+      if (inviteCode.trim() !== INVITE_CODES[role]) {
+        setError(`Invalid invite code for ${ROLES[role].label}.`); return;
+      }
+    }
     if (password.length < 8) {
       setError('Password must be at least 8 characters.'); return;
     }
@@ -88,6 +111,7 @@ export default function RegisterPage() {
         middleInitial: middleInitial.trim().replace(/\.+$/, ''),
         college:       college.trim(),
         course:        course.trim() || college.trim(),
+        role,
         password,
       });
       setRegistered({
@@ -211,6 +235,44 @@ export default function RegisterPage() {
             )}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+              {/* Role selector */}
+              <div>
+                <label style={labelStyle}>Account Type</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+                  {Object.entries(ROLES).map(([key, info]) => (
+                    <button key={key} type="button"
+                      onClick={() => { setRole(key); setInviteCode(''); setError(''); }}
+                      style={{
+                        padding: '10px 6px', borderRadius: '10px', cursor: 'pointer',
+                        background: role === key ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${role === key ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                      }}>
+                      <p style={{ ...S, fontSize: '9px', fontWeight: 600, letterSpacing: '0.08em', color: role === key ? '#f59e0b' : '#64748b', textTransform: 'uppercase' }}>
+                        {info.label}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '8px 12px' }}>
+                  <p style={{ fontSize: '12px', color: '#64748b' }}>{ROLES[role].desc}</p>
+                </div>
+              </div>
+
+              {/* Invite code */}
+              {needsCode && (
+                <div>
+                  <label style={labelStyle}>Invite Code <span style={{ color: '#ef4444' }}>*</span></label>
+                  <input
+                    style={{ ...inputStyle, ...S, letterSpacing: '0.12em' }}
+                    placeholder={`NEU-${role.toUpperCase()}-XXXX`}
+                    value={inviteCode}
+                    onChange={e => { setInviteCode(e.target.value); setError(''); }}
+                    autoComplete="off"
+                  />
+                  <p style={{ ...S, fontSize: '9px', color: '#334155', marginTop: '4px' }}>Ask your library administrator for this code.</p>
+                </div>
+              )}
 
               {/* ID Number */}
               <div>
