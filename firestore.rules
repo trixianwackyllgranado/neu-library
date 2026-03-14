@@ -7,7 +7,13 @@ service cloud.firestore {
     }
 
     function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      // Normal accounts have users/{uid} directly.
+      // QR ghost accounts don't — resolve via qrUsers/{uid}.mainUid.
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
+        : get(/databases/$(database)/documents/users/$(
+            get(/databases/$(database)/documents/qrUsers/$(request.auth.uid)).data.mainUid
+          )).data;
     }
 
     function hasRole(role) {
@@ -24,11 +30,12 @@ service cloud.firestore {
 
     // ── Users ─────────────────────────────────────────────────────────────────
     match /users/{userId} {
-      // Students can only read their own profile.
-      // Staff and admin can read any profile (needed for dashboards, records).
       allow read: if isSignedIn() && (
         request.auth.uid == userId ||
-        isStaffOrAdmin()
+        isStaffOrAdmin() ||
+        // QR ghost account reading the main profile it maps to
+        (exists(/databases/$(database)/documents/qrUsers/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/qrUsers/$(request.auth.uid)).data.mainUid == userId)
       );
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if isSignedIn() && (
@@ -43,6 +50,13 @@ service cloud.firestore {
         )
       );
       allow delete: if false;
+    }
+
+    // ── QR Users (ghost Firebase Auth account → main UID mapping) ─────────────
+    match /qrUsers/{qrUid} {
+      allow read:   if isSignedIn() && request.auth.uid == qrUid;
+      allow create: if isSignedIn() && request.auth.uid == qrUid;
+      allow update, delete: if false;
     }
 
     // ── Role Change Audit Log ─────────────────────────────────────────────────

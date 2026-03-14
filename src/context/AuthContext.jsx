@@ -6,9 +6,11 @@ import {
   signOut,
   onAuthStateChanged,
   updatePassword,
+  getAuth,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
+import { initializeApp, getApps } from 'firebase/app';
 
 const AuthContext = createContext(null);
 
@@ -57,25 +59,55 @@ export function AuthProvider({ children }) {
   const [profileLoading, setProfileLoading] = useState(false);
 
   /**
-   * Register a new student account.
-   * Creates a Firebase Auth user with a synthetic email derived from idNumber,
-   * then writes the Firestore user document.
+   * Register a new account.
+   * 1. Creates main Firebase Auth user (idNumber@neu-lib.internal / userPassword)
+   * 2. Creates a QR ghost Auth user using a secondary app instance so the main
+   *    session is never disrupted: (qr-TOKEN@neu-lib.internal / "QR:TOKEN")
+   * 3. Writes the main Firestore user doc with qrToken field
+   * 4. Writes a minimal qrUsers doc so fetchProfile can resolve ghost → main UID
    */
   const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, role = 'student', password }) => {
-    const email = idToEmail(idNumber);
+    const email   = idToEmail(idNumber);
+    const qrToken = crypto.randomUUID().replace(/-/g, '');
+    const qrEmail = `qr-${qrToken}@neu-lib.internal`;
+    const qrPass  = `QR:${qrToken}`;
+
     try {
+      // 1. Create main account (this signs the user in)
       const cred = await createUserWithEmailAndPassword(auth, email, password);
+
+      // 2. Create ghost QR account using a secondary app — doesn't touch main session
+      const firebaseConfig = auth.app.options;
+      const secondaryAppName = `secondary-${Date.now()}`;
+      const secondaryApp  = initializeApp(firebaseConfig, secondaryAppName);
+      const secondaryAuth = getAuth(secondaryApp);
+      try {
+        const qrCred = await createUserWithEmailAndPassword(secondaryAuth, qrEmail, qrPass);
+        // 3. Write qrUsers mapping doc so fetchProfile can resolve ghost UID → main UID
+        await setDoc(doc(db, 'qrUsers', qrCred.user.uid), {
+          mainUid: cred.user.uid,
+          qrToken,
+        });
+      } catch {
+        // Ghost account creation failed — QR login won't work but manual login still will
+      } finally {
+        await signOut(secondaryAuth).catch(() => {});
+      }
+
+      // 4. Write main user doc
       await setDoc(doc(db, 'users', cred.user.uid), {
         uid:           cred.user.uid,
         idNumber:      idNumber.trim(),
+        qrToken,
         lastName:      lastName.trim(),
         firstName:     firstName.trim(),
         middleInitial: middleInitial ? middleInitial.trim().replace(/\.+$/, '') : '',
         course:        course.trim(),
         college:       college.trim(),
-        role:          role,
+        role,
         createdAt:     serverTimestamp(),
       });
+
       return cred;
     } catch (err) {
       const friendly = new Error(parseFirebaseError(err));
@@ -86,13 +118,33 @@ export function AuthProvider({ children }) {
 
   /**
    * Login by idNumber + password.
-   * Reconstructs the synthetic email and signs in.
    */
   const login = async (idNumber, password) => {
     const email = idToEmail(idNumber);
     try {
       return await signInWithEmailAndPassword(auth, email, password);
     } catch (err) {
+      const friendly = new Error(parseFirebaseError(err));
+      friendly.code = err.code;
+      throw friendly;
+    }
+  };
+
+  /**
+   * Passwordless QR login.
+   * The QR code encodes the 32-char qrToken.
+   * We sign in to the ghost Firebase Auth account (qr-TOKEN@neu-lib.internal / "QR:TOKEN").
+   * fetchProfile then resolves ghost UID → main user doc via the qrUsers collection.
+   */
+  const loginWithQRToken = async (token) => {
+    const qrEmail = `qr-${token}@neu-lib.internal`;
+    const qrPass  = `QR:${token}`;
+    try {
+      return await signInWithEmailAndPassword(auth, qrEmail, qrPass);
+    } catch (err) {
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        throw new Error('QR code not recognised or account was created before QR login was enabled. Please sign in with your ID number and password.');
+      }
       const friendly = new Error(parseFirebaseError(err));
       friendly.code = err.code;
       throw friendly;
@@ -115,7 +167,16 @@ export function AuthProvider({ children }) {
   const fetchProfile = async (uid) => {
     setProfileLoading(true);
     try {
-      const snap = await getDoc(doc(db, 'users', uid));
+      // Try direct users lookup first (normal login path)
+      let snap = await getDoc(doc(db, 'users', uid));
+      if (!snap.exists()) {
+        // Might be a QR ghost account — resolve via qrUsers collection
+        const qrSnap = await getDoc(doc(db, 'qrUsers', uid));
+        if (qrSnap.exists()) {
+          const { mainUid } = qrSnap.data();
+          snap = await getDoc(doc(db, 'users', mainUid));
+        }
+      }
       if (snap.exists()) setUserProfile(snap.data());
     } finally {
       setProfileLoading(false);
@@ -142,7 +203,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       currentUser, userProfile, loadingAuth, profileLoading,
-      register, login, logout, refreshProfile, updateUserPassword,
+      register, login, loginWithQRToken, logout, refreshProfile, updateUserPassword,
       idToEmail,
     }}>
       {children}

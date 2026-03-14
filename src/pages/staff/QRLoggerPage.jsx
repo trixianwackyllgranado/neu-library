@@ -213,27 +213,31 @@ export default function QRLoggerPage() {
   // never changes after mount — fixes the "callback registered but never fires" bug.
   const handleQrScan = useCallback(async (rawText) => {
     if (unmountedRef.current) return;
-    if (processingRef.current) return; // debounce concurrent calls
+    if (processingRef.current) return;
 
-    const idNumber = formatId(rawText.trim());
+    const raw = rawText.trim();
 
-    // Per-ID cooldown: 5 seconds between repeated scans of the same code
+    // Detect token vs legacy ID: token is 32 hex chars with no dashes
+    const isToken      = /^[a-f0-9]{32}$/i.test(raw);
+    const lookupField  = isToken ? 'qrToken'  : 'idNumber';
+    const lookupValue  = isToken ? raw        : formatId(raw);
+
+    // Per-value cooldown: 5 seconds
     const now = Date.now();
-    if (cooldownRef.current[idNumber] && now - cooldownRef.current[idNumber] < 5000) return;
-    cooldownRef.current[idNumber] = now;
+    if (cooldownRef.current[lookupValue] && now - cooldownRef.current[lookupValue] < 5000) return;
+    cooldownRef.current[lookupValue] = now;
 
     processingRef.current = true;
     setScanStatus('processing');
-    setLastScan({ idNumber });
+    setLastScan({ idNumber: lookupValue });
 
     try {
-      // Look up user by ID number
       const userSnap = await getDocs(
-        query(collection(db, 'users'), where('idNumber', '==', idNumber), limit(1))
+        query(collection(db, 'users'), where(lookupField, '==', lookupValue), limit(1))
       );
 
       if (userSnap.empty) {
-        setLastScan({ idNumber });
+        setLastScan({ idNumber: lookupValue });
         setScanStatus('unknown');
         setTimeout(() => {
           if (!unmountedRef.current) { setScanStatus('idle'); setLastScan(null); }
@@ -242,9 +246,9 @@ export default function QRLoggerPage() {
         return;
       }
 
-      const student = { id: userSnap.docs[0].id, ...userSnap.docs[0].data() };
+      const student  = { id: userSnap.docs[0].id, ...userSnap.docs[0].data() };
+      const idNumber = student.idNumber;
 
-      // Check for existing active session
       const sessSnap = await getDocs(
         query(collection(db, 'logger'), where('uid', '==', student.id), where('active', '==', true), limit(1))
       );
@@ -265,19 +269,16 @@ export default function QRLoggerPage() {
         processingRef.current = false;
       } else {
         // ── ASK PURPOSE → CHECK IN ──
-        // Pause scanning while the modal is open — but DON'T destroy the scanner.
-        // We just stop reading frames; the DOM element stays alive.
         if (!unmountedRef.current) {
           setScanStatus('idle');
           setLastScan(null);
           setPurposeForId({ idNumber, student });
         }
-        // Reset processing gate here — confirmCheckIn will handle the rest
         processingRef.current = false;
       }
     } catch (err) {
       if (!unmountedRef.current) {
-        setLastScan({ idNumber, error: err.message });
+        setLastScan({ idNumber: lookupValue, error: err.message });
         setScanStatus('error');
         setTimeout(() => {
           if (!unmountedRef.current) { setScanStatus('idle'); setLastScan(null); }
@@ -285,7 +286,7 @@ export default function QRLoggerPage() {
       }
       processingRef.current = false;
     }
-  }, []); // empty deps — intentional, refs are stable
+  }, []);
 
   // ── Scanner start/stop ───────────────────────────────────────────────────────
   const startScanner = useCallback(async () => {

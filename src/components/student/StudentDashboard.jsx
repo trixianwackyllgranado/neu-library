@@ -78,8 +78,8 @@ export default function StudentDashboard() {
         {/* QR Code card */}
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '20px', display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
           <div style={{ background: '#fff', borderRadius: '10px', padding: '10px', flexShrink: 0, cursor: 'pointer' }} onClick={() => setShowQR(true)}>
-            {userProfile?.idNumber ? (
-              <QRCodeSVG value={userProfile.idNumber} size={80} level="M" includeMargin={false} />
+            {userProfile?.qrToken ? (
+              <QRCodeSVG value={userProfile.qrToken} size={80} level="M" includeMargin={false} />
             ) : (
               <div style={{ width: 80, height: 80, background: '#e2e8f0', borderRadius: '4px' }} />
             )}
@@ -194,10 +194,10 @@ export default function StudentDashboard() {
       </div>
 
       {/* QR code full-screen modal */}
-      {showQR && userProfile?.idNumber && (
+      {showQR && userProfile?.qrToken && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', padding: '16px' }} onClick={() => setShowQR(false)}>
           <div style={{ background: '#fff', borderRadius: '16px', padding: '28px', textAlign: 'center', maxWidth: '320px', width: '100%' }} onClick={e => e.stopPropagation()}>
-            <QRCodeSVG value={userProfile.idNumber} size={240} level="M" includeMargin={false} />
+            <QRCodeSVG value={userProfile.qrToken} size={240} level="M" includeMargin={false} />
             <p style={{ ...D, fontSize: '17px', fontWeight: 700, color: '#0a1730', marginTop: '16px' }}>{userProfile.lastName}, {userProfile.firstName}</p>
             <p style={{ ...S, fontSize: '12px', color: '#475569', marginTop: '4px' }}>{userProfile.idNumber}</p>
             <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>Show this QR code to library staff</p>

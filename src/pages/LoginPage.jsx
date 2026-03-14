@@ -123,7 +123,7 @@ function QRScanner({ onResult, onClose }) {
 }
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginWithQRToken } = useAuth();
   const navigate  = useNavigate();
 
   const [idNumber, setIdNumber] = useState('');
@@ -143,11 +143,30 @@ export default function LoginPage() {
   const onFocus = e => { e.currentTarget.style.borderColor = C.gold;   e.currentTarget.style.background = C.surfaceHov; };
   const onBlur  = e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.surface; };
 
-  const handleScan = (raw) => {
+  const handleScan = async (raw) => {
     setScanning(false);
-    const f = formatId(raw);
-    setIdFormat(f); setIdNumber(f);
-    setScanNote('ID pre-filled from QR code. Enter your password to continue.');
+    setError('');
+    // New QR codes: 32-char hex token (no dashes). Legacy QR: ID number (has dashes).
+    const isToken = /^[a-f0-9]{32}$/i.test(raw.trim());
+    if (isToken) {
+      setLoading(true);
+      setScanNote('QR recognised — signing you in…');
+      try {
+        await loginWithQRToken(raw.trim());
+        navigate('/dashboard', { replace: true });
+      } catch (err) {
+        setError(err.message);
+        setScanNote('');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Legacy / manual fallback — pre-fill ID field, still requires password
+      const f = formatId(raw);
+      setIdFormat(f);
+      setIdNumber(f);
+      setScanNote('ID pre-filled. Enter your password to continue.');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -164,6 +183,17 @@ export default function LoginPage() {
   return (
     <>
       {scanning && <QRScanner onResult={handleScan} onClose={() => setScanning(false)} />}
+
+      {/* QR login in-progress overlay */}
+      {loading && !scanning && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(6,14,30,0.92)' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, border: '3px solid rgba(245,158,11,0.2)', borderTopColor: '#f59e0b', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+            <p style={{ ...MONO, fontSize: '11px', letterSpacing: '0.16em', color: C.gold, textTransform: 'uppercase' }}>Signing In…</p>
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+        </div>
+      )}
 
       <div style={BG}>
         <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', flexShrink: 0 }} />
