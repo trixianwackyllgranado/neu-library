@@ -96,7 +96,7 @@ export default function AuthActionPage() {
               <div>
                 <p style={{ ...S, fontSize: '9px', letterSpacing: '0.22em', color: '#f59e0b', textTransform: 'uppercase', marginBottom: '8px' }}>Password Reset</p>
                 <h1 style={{ ...D, fontSize: '24px', fontWeight: 700, color: '#f1f5f9', marginBottom: '6px' }}>Set New Password</h1>
-                <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px', ...S, fontSize: '11px' }}>{email}</p>
+                <p style={{ ...S, fontSize: '13px', color: '#64748b', marginBottom: '24px' }}>{email}</p>
                 {message && (
                   <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px' }}>
                     <p style={{ ...S, fontSize: '11px', color: '#f87171' }}>{message}</p>

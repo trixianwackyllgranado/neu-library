@@ -1,19 +1,26 @@
-// src/firebase/config.js
-// ⚠️  Replace the values below with your actual Firebase project config.
-import { initializeApp } from 'firebase/app';
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey:            import.meta.env.VITE_FIREBASE_API_KEY            || "YOUR_API_KEY",
-  authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN        || "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID         || "YOUR_PROJECT_ID",
-  storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET     || "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "YOUR_MESSAGING_SENDER_ID",
-  appId:             import.meta.env.VITE_FIREBASE_APP_ID             || "YOUR_APP_ID",
+  apiKey: "AIzaSyA_gpwMPCJOeRqn43myjZdf5eK-QdDqtqE",
+  authDomain: "neu-library-v2.firebaseapp.com",
+  projectId: "neu-library-v2",
+  storageBucket: "neu-library-v2.firebasestorage.app",
+  messagingSenderId: "324265754404",
+  appId: "1:324265754404:web:c1c773f4c62a91abe1fdb1",
+  measurementId: "G-9PS5411BC2"
 };
 
-const app  = initializeApp(firebaseConfig);
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db   = getFirestore(app);
+export const db = getFirestore(app);
+const analytics = getAnalytics(app);
 export default app;
