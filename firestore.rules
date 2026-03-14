@@ -105,7 +105,10 @@ service cloud.firestore {
         resource.data.uid == request.auth.uid ||
         isStaffOrAdmin()
       );
-      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() && (
+        request.resource.data.uid == request.auth.uid ||
+        isStaffOrAdmin()
+      );
       allow update: if isSignedIn() && (
         resource.data.uid == request.auth.uid ||
         isStaffOrAdmin()
