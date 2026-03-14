@@ -269,6 +269,19 @@ export default function QRLoggerPage() {
         processingRef.current = false;
       } else {
         // ── ASK PURPOSE → CHECK IN ──
+        // CRITICAL: stop the scanner NOW before showing the modal.
+        // If the scanner keeps running, it will re-scan the same QR within milliseconds,
+        // find the session we're about to create, and immediately check the student OUT.
+        const sc = scannerRef.current;
+        if (sc) {
+          try {
+            if (sc.isRunning()) await sc.stop().catch(() => {});
+            sc.clear();
+          } catch {}
+          scannerRef.current = null;
+        }
+        if (!unmountedRef.current) setScannerState('idle');
+
         if (!unmountedRef.current) {
           setScanStatus('idle');
           setLastScan(null);
@@ -374,8 +387,8 @@ export default function QRLoggerPage() {
       if (!unmountedRef.current) {
         // Reset processing gate so the next scan isn't blocked
         processingRef.current = false;
-        // Clear the cooldown for this ID so they can be scanned out immediately
-        delete cooldownRef.current[idNumber];
+        // Clear ALL cooldowns so the same QR can be scanned out immediately
+        cooldownRef.current = {};
 
         // Close modal and show success toast
         setPurposeForId(null);
