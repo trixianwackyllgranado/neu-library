@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && getUserData().role == role;
+    }
+
+    function isStaffOrAdmin() {
+      return isSignedIn() && (getUserData().role == 'staff' || getUserData().role == 'admin');
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Students can only read their own profile.
+      // Staff and admin can read any profile (needed for dashboards, records).
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId ||
+        isStaffOrAdmin()
+      );
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (
+        (
+          request.auth.uid == userId &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
+        ) ||
+        (
+          isAdmin() &&
+          request.auth.uid != userId &&
+          resource.data.role != 'admin'
+        )
+      );
+      allow delete: if false;
+    }
+
+    // ── Role Change Audit Log ─────────────────────────────────────────────────
+    match /roleChangeLogs/{logId} {
+      allow read:           if isAdmin();
+      allow create:         if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ── Books ─────────────────────────────────────────────────────────────────
+    match /books/{bookId} {
+      allow read:  if isSignedIn();
+      allow write: if isStaffOrAdmin();
+    }
+
+    // ── Borrows ───────────────────────────────────────────────────────────────
+    match /borrows/{borrowId} {
+      // Students can only read their own borrow records.
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isStaffOrAdmin()
+      );
+      allow create: if isSignedIn() && (
+        isStaffOrAdmin() ||
+        (
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.status == 'pending'
+        )
+      );
+      // Staff/admin can update any borrow.
+      // Students can only cancel their own pending borrows.
+      allow update: if isStaffOrAdmin() || (
+        isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        resource.data.status == 'pending' &&
+        request.resource.data.status == 'cancelled' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // ── Logger ────────────────────────────────────────────────────────────────
+    match /logger/{logId} {
+      // Students can only read their own log entries.
+      allow read: if isSignedIn() && (
+        resource.data.uid == request.auth.uid ||
+        isStaffOrAdmin()
+      );
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.uid == request.auth.uid ||
+        isStaffOrAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // ── Penalties ─────────────────────────────────────────────────────────────
+    match /penalties/{penaltyId} {
+      // Students can only read their own penalties.
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isStaffOrAdmin()
+      );
+      allow write: if isStaffOrAdmin();
+    }
+
+    // ── Email queue ───────────────────────────────────────────────────────────
+    match /emailQueue/{docId} {
+      allow read:           if isStaffOrAdmin();
+      allow create:         if isStaffOrAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    // ── Book Activity Log (catalog adds/edits/deletes) ────────────────────────
+    match /bookLogs/{logId} {
+      allow read:   if isStaffOrAdmin();
+      allow create: if isStaffOrAdmin();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+    match /notifications/{notifId} {
+      // Students can only read their own notifications.
+      allow read: if isSignedIn() && (
+        resource.data.toUid == request.auth.uid ||
+        isStaffOrAdmin()
+      );
+      allow create: if isStaffOrAdmin();
+
+      // Staff/admin can update anything (resolve, follow up).
+      // Students can only acknowledge their own notification.
+      allow update: if isStaffOrAdmin() || (
+        isSignedIn() &&
+        resource.data.toUid == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['acknowledged', 'acknowledgedAt'])
+      );
+
+      allow delete: if isAdmin();
+    }
+  }
+}
