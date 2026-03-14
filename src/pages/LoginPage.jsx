@@ -24,8 +24,8 @@ const BG = {
 };
 
 function formatId(raw) {
-  if (raw.includes('-')) return raw.trim();
-  const d = raw.replace(/\D/g, '').slice(0, 10);
+  // Always strip non-digits first, then cap and reformat — never trust existing dashes
+  const d = raw.replace(/\D/g, '').slice(0, 10); // max 10 digits: 2+5+3
   if (d.length <= 2) return d;
   if (d.length <= 7) return `${d.slice(0,2)}-${d.slice(2)}`;
   return `${d.slice(0,2)}-${d.slice(2,7)}-${d.slice(7)}`;

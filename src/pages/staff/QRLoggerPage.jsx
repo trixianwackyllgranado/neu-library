@@ -43,8 +43,7 @@ function formatDur(entryTs) {
 }
 
 function formatId(raw) {
-  // If already formatted (contains dashes), return as-is
-  if (raw.includes('-')) return raw.trim();
+  // Always strip non-digits first, then cap and reformat
   const d = raw.replace(/\D/g, '').slice(0, 10);
   if (d.length <= 2) return d;
   if (d.length <= 7) return `${d.slice(0,2)}-${d.slice(2)}`;
@@ -60,6 +59,49 @@ function LiveDur({ entryTime }) {
     return () => clearInterval(id);
   }, [entryTime]);
   return <span>{dur}</span>;
+}
+
+// ── Purpose picker modal ──────────────────────────────────────────────────────
+function PurposeModal({ student, idNumber, onConfirm, onCancel, loading }) {
+  const [chosen, setChosen] = useState('');
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)', padding: '16px' }}>
+      <div style={{ width: '100%', maxWidth: '420px', background: '#0a1730', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
+        <div style={{ height: '3px', background: 'linear-gradient(90deg, #f59e0b, #d97706)' }} />
+        <div style={{ padding: '24px' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.2em', color: C.gold, textTransform: 'uppercase', marginBottom: '6px' }}>QR Check-In</p>
+            <p style={{ ...SERIF, fontSize: '20px', fontWeight: 700, color: C.white, marginBottom: '3px' }}>
+              {student.lastName}, {student.firstName}
+            </p>
+            <p style={{ ...MONO, fontSize: '12px', color: C.muted }}>{idNumber}</p>
+          </div>
+          <p style={{ fontSize: '13px', color: C.body, marginBottom: '14px' }}>Select the purpose of this visit:</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '20px' }}>
+            {VISIT_PURPOSES.map(p => {
+              const active = chosen === p;
+              return (
+                <button key={p} type="button" onClick={() => setChosen(p)}
+                  style={{ padding: '12px 10px', borderRadius: '10px', cursor: 'pointer', textAlign: 'left', background: active ? 'rgba(245,158,11,0.15)' : C.surface, border: `1px solid ${active ? 'rgba(245,158,11,0.5)' : C.border}`, transition: 'all 0.15s' }}>
+                  <p style={{ ...MONO, fontSize: '10px', fontWeight: active ? 700 : 500, letterSpacing: '0.08em', color: active ? C.gold : C.body, margin: 0 }}>{p}</p>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={onCancel}
+              style={{ flex: 1, padding: '11px', borderRadius: '10px', background: C.surface, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer', ...MONO, fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              Cancel
+            </button>
+            <button onClick={() => chosen && onConfirm(chosen)} disabled={!chosen || loading}
+              style={{ flex: 2, padding: '11px', borderRadius: '10px', background: chosen ? 'rgba(16,185,129,0.15)' : C.surface, border: `1px solid ${chosen ? 'rgba(16,185,129,0.4)' : C.border}`, color: chosen ? C.green : C.dim, cursor: !chosen ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, ...MONO, fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, transition: 'all 0.15s' }}>
+              {loading ? 'Checking In…' : 'Confirm Check-In'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Scan result toast ─────────────────────────────────────────────────────────
@@ -119,7 +161,7 @@ export default function QRLoggerPage() {
   const [scanError,     setScanError]     = useState('');
   const [lastScan,      setLastScan]      = useState(null);
   const [scanStatus,    setScanStatus]    = useState('idle');
-  const [purposeForId,  setPurposeForId]  = useState(null); // kept for confirmCheckIn compat
+  const [purposeForId,  setPurposeForId]  = useState(null);
   const [confirmLoad,   setConfirmLoad]   = useState(false);
 
   const [manualId,      setManualId]      = useState('');
@@ -127,13 +169,9 @@ export default function QRLoggerPage() {
   const [manualPurpose, setManualPurpose] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
   const [manualMsg,     setManualMsg]     = useState(null);
-  // scannedStudent: set when QR is scanned for check-in, pre-fills the manual form
-  const [scannedStudent, setScannedStudent] = useState(null); // { idNumber, name }
-  const manualPurposeRef = useRef(null); // to focus purpose dropdown after QR scan
 
   const [liveSessions,  setLiveSessions]  = useState([]);
   const [userMap,       setUserMap]       = useState({});
-  const [sessionSearch, setSessionSearch] = useState('');
 
   // Live Firestore listeners
   useEffect(() => {
@@ -229,8 +267,10 @@ export default function QRLoggerPage() {
         }
         processingRef.current = false;
       } else {
-        // ── QR CHECK-IN → pre-fill manual entry, no modal ──
-        // Stop the scanner so it cannot re-scan the same QR and instantly check out.
+        // ── ASK PURPOSE → CHECK IN ──
+        // CRITICAL: stop the scanner NOW before showing the modal.
+        // If the scanner keeps running, it will re-scan the same QR within milliseconds,
+        // find the session we're about to create, and immediately check the student OUT.
         const sc = scannerRef.current;
         if (sc) {
           try {
@@ -244,14 +284,7 @@ export default function QRLoggerPage() {
         if (!unmountedRef.current) {
           setScanStatus('idle');
           setLastScan(null);
-          // Pre-fill the manual entry form with the scanned student
-          const name = `${student.lastName}, ${student.firstName}`;
-          setManualFormat(idNumber);
-          setManualId(idNumber);
-          setScannedStudent({ idNumber, name });
-          setManualPurpose('');
-          // Focus the purpose dropdown so staff just picks and submits
-          setTimeout(() => { manualPurposeRef.current?.focus(); }, 80);
+          setPurposeForId({ idNumber, student });
         }
         processingRef.current = false;
       }
@@ -359,8 +392,6 @@ export default function QRLoggerPage() {
         // still holds the last QR and would immediately re-fire, checking the
         // student back out. Staff presses Start Scanner for the next student.
         setPurposeForId(null);
-        setScannedStudent(null);
-        setManualFormat(''); setManualId(''); setManualPurpose('');
         setLastScan({ idNumber, student, action: 'in', purpose });
         setScanStatus('success');
         setConfirmLoad(false);
@@ -398,7 +429,7 @@ export default function QRLoggerPage() {
         await addDoc(collection(db, 'logger'), { uid: student.id, purpose: manualPurpose, entryTime: serverTimestamp(), active: true, scannedBy: userProfile?.uid || null, manual: true });
         setManualMsg({ ok: true, text: `${student.lastName}, ${student.firstName} checked IN — ${manualPurpose}.` });
       }
-      setManualId(''); setManualFormat(''); setManualPurpose(''); setScannedStudent(null);
+      setManualId(''); setManualFormat(''); setManualPurpose('');
     } catch (err) {
       setManualMsg({ ok: false, text: `Error: ${err.message}` });
     }
@@ -428,6 +459,17 @@ export default function QRLoggerPage() {
         .qr-layout { display: grid; grid-template-columns: minmax(300px, 440px) 1fr; gap: 24px; align-items: start; }
         @media (max-width: 840px) { .qr-layout { grid-template-columns: 1fr !important; } }
       `}</style>
+
+      {/* Purpose modal */}
+      {purposeForId && (
+        <PurposeModal
+          student={purposeForId.student}
+          idNumber={purposeForId.idNumber}
+          onConfirm={confirmCheckIn}
+          onCancel={() => { setPurposeForId(null); startScanner(); }}
+          loading={confirmLoad}
+        />
+      )}
 
       {/* Page header */}
       <div style={{ marginBottom: '28px' }}>
@@ -518,43 +560,26 @@ export default function QRLoggerPage() {
             </div>
           </div>
 
-          {/* Manual / QR pre-fill entry card */}
-          <div style={{ background: C.card, border: `1px solid ${scannedStudent ? 'rgba(245,158,11,0.35)' : 'rgba(255,255,255,0.1)'}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.3)', transition: 'border-color 0.2s' }}>
-            {/* Scanned student banner */}
-            {scannedStudent ? (
-              <div style={{ marginBottom: '14px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                <div>
-                  <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.18em', color: C.gold, textTransform: 'uppercase', marginBottom: '3px' }}>QR Scanned — Select Purpose</p>
-                  <p style={{ ...SERIF, fontSize: '15px', fontWeight: 700, color: C.white }}>{scannedStudent.name}</p>
-                  <p style={{ ...MONO, fontSize: '11px', color: C.muted }}>{scannedStudent.idNumber}</p>
-                </div>
-                <button onClick={() => { setScannedStudent(null); setManualFormat(''); setManualId(''); setManualPurpose(''); }}
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '7px', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted, cursor: 'pointer', fontSize: '13px', flexShrink: 0 }}>
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.2em', color: C.muted, textTransform: 'uppercase', marginBottom: '14px', fontWeight: 600 }}>Manual Entry</p>
-            )}
+          {/* Manual entry card */}
+          <div style={{ background: C.card, border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
+            <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.2em', color: C.muted, textTransform: 'uppercase', marginBottom: '14px', fontWeight: 600 }}>Manual Entry</p>
             <form onSubmit={handleManualSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <input type="text" inputMode="numeric"
                 style={{ ...inputSt, ...MONO, letterSpacing: '0.14em' }}
                 placeholder="22-12345-123"
                 value={manualFormat}
-                onChange={e => { const f = formatId(e.target.value); setManualFormat(f); setManualId(f); if (scannedStudent && f !== scannedStudent.idNumber) setScannedStudent(null); }}
+                onChange={e => { const f = formatId(e.target.value); setManualFormat(f); setManualId(f); }}
                 onFocus={onFoc} onBlur={onBlr}
               />
-              <select
-                ref={manualPurposeRef}
-                style={{ ...inputSt, appearance: 'none', cursor: 'pointer', borderColor: scannedStudent && !manualPurpose ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.12)' }}
+              <select style={{ ...inputSt, appearance: 'none', cursor: 'pointer' }}
                 value={manualPurpose} onChange={e => setManualPurpose(e.target.value)}
                 onFocus={onFoc} onBlur={onBlr}>
                 <option value="">— Purpose of Visit —</option>
                 {VISIT_PURPOSES.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
               <button type="submit" disabled={!manualId || !manualPurpose || manualLoading}
-                style={{ padding: '11px', borderRadius: '9px', background: (!manualId || !manualPurpose) ? C.surface : scannedStudent ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', border: `1px solid ${(!manualId || !manualPurpose) ? C.border : scannedStudent ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)'}`, color: (!manualId || !manualPurpose) ? C.dim : scannedStudent ? C.green : C.gold, cursor: (!manualId || !manualPurpose || manualLoading) ? 'not-allowed' : 'pointer', opacity: manualLoading ? 0.6 : 1, ...MONO, fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, transition: 'all 0.15s' }}>
-                {manualLoading ? 'Processing…' : scannedStudent ? 'Confirm Check-In' : 'Log Entry / Exit'}
+                style={{ padding: '11px', borderRadius: '9px', background: (!manualId || !manualPurpose) ? C.surface : 'rgba(245,158,11,0.15)', border: `1px solid ${(!manualId || !manualPurpose) ? C.border : 'rgba(245,158,11,0.4)'}`, color: (!manualId || !manualPurpose) ? C.dim : C.gold, cursor: (!manualId || !manualPurpose || manualLoading) ? 'not-allowed' : 'pointer', opacity: manualLoading ? 0.6 : 1, ...MONO, fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, transition: 'all 0.15s' }}>
+                {manualLoading ? 'Processing…' : 'Log Entry / Exit'}
               </button>
             </form>
             {manualMsg && (
@@ -567,26 +592,12 @@ export default function QRLoggerPage() {
 
         {/* ── RIGHT: live sessions ── */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', display: 'inline-block', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
             <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.14em', color: C.muted, textTransform: 'uppercase' }}>Currently in Library</p>
             <span style={{ ...MONO, fontSize: '11px', fontWeight: 700, padding: '2px 10px', borderRadius: '20px', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', color: C.green }}>
               {liveSessions.length}
             </span>
-          </div>
-
-          {/* Search bar */}
-          <div style={{ position: 'relative', marginBottom: '12px' }}>
-            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: C.muted, fontSize: '13px', pointerEvents: 'none' }}>⌕</span>
-            <input
-              type="text"
-              placeholder="Search by name or ID…"
-              value={sessionSearch}
-              onChange={e => setSessionSearch(e.target.value)}
-              style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '9px', padding: '9px 12px 9px 32px', fontSize: '13px', color: C.white, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s' }}
-              onFocus={e => e.currentTarget.style.borderColor = C.gold}
-              onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
-            />
           </div>
 
           <div style={{ background: C.card, border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
@@ -607,16 +618,7 @@ export default function QRLoggerPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {liveSessions.filter(s => {
-                      if (!sessionSearch.trim()) return true;
-                      const u = userMap[s.uid];
-                      const q = sessionSearch.toLowerCase();
-                      return (
-                        u?.idNumber?.toLowerCase().includes(q) ||
-                        u?.lastName?.toLowerCase().includes(q) ||
-                        u?.firstName?.toLowerCase().includes(q)
-                      );
-                    }).map((s, i) => {
+                    {liveSessions.map((s, i) => {
                       const u    = userMap[s.uid];
                       const name = u ? `${u.lastName}, ${u.firstName}` : '—';
                       return (
