@@ -224,11 +224,8 @@ export default function StudentRecordsPage() {
             <span className="badge-green badge">Student</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
-            <Info label="Year Level"      value={s.yearLevel} />
             <Info label="Course"          value={s.course} />
             <Info label="College"         value={s.college} />
-            <Info label="Age"             value={s.age} />
-            <Info label="Birthday"        value={s.birthday} />
             <Info label="Account Created" value={fmt(s.createdAt)} />
           </div>
         </div>
@@ -451,7 +448,6 @@ export default function StudentRecordsPage() {
             <option value="name">Sort: Name (A–Z)</option>
             <option value="course">Sort: Course</option>
             <option value="college">Sort: College</option>
-            <option value="year">Sort: Year Level</option>
           </select>
         </div>
 
@@ -465,13 +461,10 @@ export default function StudentRecordsPage() {
             <option value="">— All Colleges —</option>
             {allColleges.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select className="select text-sm w-40 shrink-0" value={filterYear} onChange={e => setFilterYear(e.target.value)}>
-            <option value="">— All Years —</option>
-            {allYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+
           {(search || filterCourse || filterCollege || filterYear) && (
             <button className="btn-ghost text-xs px-3 py-2 shrink-0"
-              onClick={() => { setSearch(''); setFilterCourse(''); setFilterCollege(''); setFilterYear(''); }}>
+              onClick={() => { setSearch(''); setFilterCourse(''); setFilterCollege(''); }}>
               Clear All
             </button>
           )}
@@ -498,7 +491,6 @@ export default function StudentRecordsPage() {
                   <th className="th">Name</th>
                   <th className="th">ID Number</th>
                   <th className="th">College / Course</th>
-                  <th className="th">Year</th>
                   <th className="th">Email</th>
                   <th className="th">Action</th>
                 </tr>
@@ -512,7 +504,6 @@ export default function StudentRecordsPage() {
                       <p className="font-medium">{s.course || '—'}</p>
                       {s.college && <p className="text-gray-400">{s.college}</p>}
                     </td>
-                    <td className="td text-xs">{s.yearLevel || '—'}</td>
                     <td className="td font-mono text-xs text-gray-500">{s.email}</td>
                     <td className="td">
                       <button className="btn-secondary py-1 px-3 text-[10px]"

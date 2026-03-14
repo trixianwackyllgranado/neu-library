@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useLibrarySession } from '../../context/LibrarySessionContext';
+import { useTheme } from '../../context/ThemeContext';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import NotificationBanner from './NotificationBanner';
@@ -25,6 +26,8 @@ const Ico = {
   signout:   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   chLeft:    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>,
   chRight:   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
+  sun:       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  moon:      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
 };
 
 const NAV = {
@@ -81,6 +84,7 @@ function NavItem({ to, label, icon, collapsed, badgeCount, onClick }) {
 export default function AppLayout({ children }) {
   const { userProfile, currentUser, effectiveUid, logout } = useAuth();
   const { session, markWebSignedOut } = useLibrarySession();
+  const { dark, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -162,6 +166,12 @@ export default function AppLayout({ children }) {
             <p style={{...MN,fontSize:11,color:'var(--text-muted)',marginTop:1}}>{userProfile?.idNumber||'—'}</p>
           </div>
         )}
+        {/* Theme toggle */}
+        <button onClick={toggleTheme} title={dark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          style={{width:'100%',padding:collapsed&&!mob?10:'9px 12px',borderRadius:10,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'all 0.15s',marginBottom:6}}>
+          {dark ? Ico.sun : Ico.moon}
+          {(!collapsed||mob) && <span style={{...PP,fontSize:13,fontWeight:500}}>{dark ? 'Light Mode' : 'Dark Mode'}</span>}
+        </button>
         <button onClick={handleLogout} disabled={signingOut}
           style={{width:'100%',padding:collapsed&&!mob?10:'9px 12px',borderRadius:10,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',cursor:signingOut?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'all 0.15s',opacity:signingOut?0.6:1}}>
           {Ico.signout}
@@ -194,9 +204,15 @@ export default function AppLayout({ children }) {
               <p style={{...PP,fontSize:11,color:'var(--text-muted)',lineHeight:1.2}}>Management System</p>
             </div>
           </div>
-          <button onClick={()=>setMobileOpen(true)} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:8,width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text-body)'}}>
-            {Ico.menu}
-          </button>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <button onClick={toggleTheme} title={dark ? 'Light Mode' : 'Dark Mode'}
+              style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:8,width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text-muted)'}}>
+              {dark ? Ico.sun : Ico.moon}
+            </button>
+            <button onClick={()=>setMobileOpen(true)} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:8,width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text-body)'}}>
+              {Ico.menu}
+            </button>
+          </div>
         </div>
 
         {role==='student' && (currentUser?.uid||effectiveUid) && (

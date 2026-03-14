@@ -119,6 +119,7 @@ export default function CatalogPage() {
   const [courseBorrowMap, setCourseBorrowMap] = useState({});
   const [selectedCategory, setSelectedCategory] = useState('');
   const [availableOnly,    setAvailableOnly]    = useState(false);
+  const [showFilters,     setShowFilters]     = useState(false);
 
   // Borrow request modal
   const [requestBook,    setRequestBook]    = useState(null);
@@ -624,9 +625,24 @@ export default function CatalogPage() {
 
       {/* Search + Filter */}
       <div className="mb-3 flex flex-col gap-3">
-        <input className="input w-full" placeholder="Search by title, author, ISBN, category, publisher…" value={search} onChange={e=>setSearch(e.target.value)} />
-        {isStudent && (
-          <div className="flex flex-col sm:flex-row flex-wrap sm:items-center gap-3">
+        {/* Search + filter toggle row */}
+        <div className="flex gap-2">
+          <input className="input flex-1" placeholder="Search by title, author, ISBN, category, publisher…" value={search} onChange={e=>setSearch(e.target.value)} />
+          {(isStudent || canEdit) && (
+            <button
+              className={`shrink-0 btn-secondary text-xs px-3 flex items-center gap-1.5 ${showFilters ? 'bg-primary-50 border-primary-300 text-primary-700' : ''}`}
+              onClick={() => setShowFilters(f => !f)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              <span className="hidden sm:inline">Filters</span>
+              {(selectedCategory||selectedCourse||availableOnly) && <span className="w-2 h-2 rounded-full bg-primary-600 shrink-0" />}
+            </button>
+          )}
+        </div>
+
+        {/* Collapsible filter panel */}
+        {showFilters && isStudent && (
+          <div className="card p-3 flex flex-col sm:flex-row flex-wrap sm:items-center gap-3">
             <select className="select text-sm w-full sm:flex-1 sm:min-w-[200px]" value={selectedCategory} onChange={e=>setSelectedCategory(e.target.value)}>
               <option value="">— All Categories —</option>
               {allCategories.map(c=><option key={c} value={c}>{c}</option>)}
@@ -643,12 +659,12 @@ export default function CatalogPage() {
               <span className="text-xs font-mono text-gray-600">Available only</span>
             </label>
             {(selectedCategory||selectedCourse||availableOnly||search) && (
-              <button className="btn-ghost text-xs px-3 py-2 shrink-0" onClick={()=>{setSelectedCategory('');setSelectedCourse('');setAvailableOnly(false);setSearch('');}}>Clear All</button>
+              <button className="btn-ghost text-xs px-3 py-2 shrink-0" onClick={()=>{setSelectedCategory('');setSelectedCourse('');setAvailableOnly(false);setSearch('');setShowFilters(false);}}>Clear All</button>
             )}
           </div>
         )}
-        {canEdit && (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+        {showFilters && canEdit && (
+          <div className="card p-3 flex flex-col sm:flex-row sm:items-center gap-2">
             <select className="select w-full sm:w-72 text-sm" value={selectedCourse} onChange={e=>setSelectedCourse(e.target.value)}>
               <option value="">— Filter by Subject / Course —</option>
               {courses.length > 0 && <optgroup label="-- From Borrow History --">{courses.map(c=><option key={`borrow-${c}`} value={c}>{c}</option>)}</optgroup>}
@@ -673,14 +689,87 @@ export default function CatalogPage() {
         </div>
       )}
 
-      {/* Table */}
+      {/* ── Mobile card grid (small screens only) ── */}
+      {!loading && filtered.length > 0 && (
+        <div className="block sm:hidden space-y-3 mb-4">
+          {filtered.map(book => {
+            const borrowStatus = myBorrowMap[book.id];
+            const unavailable  = (book.availableCopies ?? 0) <= 0;
+            const isSelected   = selectedIds.has(book.id);
+            return (
+              <div key={book.id}
+                className={`card p-0 overflow-hidden ${selectMode ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-red-400' : ''}`}
+                onClick={selectMode ? () => toggleSelect(book.id) : undefined}
+              >
+                <div style={{ height: 3, background: 'linear-gradient(90deg, #f59e0b, transparent)' }} />
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm leading-snug">{book.title}</p>
+                      {book.authors && <p className="text-xs text-gray-500 mt-0.5">{book.authors}</p>}
+                      {(book.publisher || book.edition) && (
+                        <p className="text-[10px] font-mono text-gray-400 mt-0.5">
+                          {[book.publisher, book.edition ? `${book.edition} Ed.` : ''].filter(Boolean).join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                    {selectMode && (
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(book.id)}
+                        className="mt-1 cursor-pointer shrink-0" onClick={e => e.stopPropagation()} />
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {book.category && <span className="badge badge-gray text-[10px]">{book.category}</span>}
+                    {book.isbn && <span className="font-mono text-[10px] text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">{book.isbn}</span>}
+                  </div>
+                  <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mb-3 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-400 font-mono tracking-wider text-[10px]">SHELF</span>
+                      <span className="font-mono font-semibold">{book.shelfLocation || '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-400 font-mono tracking-wider text-[10px]">COPIES</span>
+                      <span className="font-mono font-semibold">{book.totalCopies ?? 0}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-gray-400 font-mono tracking-wider text-[10px]">AVAIL</span>
+                      <span className={`font-mono font-bold ${(book.availableCopies ?? 0) > 0 ? 'text-green-600' : 'text-red-500'}`}>{book.availableCopies ?? 0}</span>
+                    </div>
+                  </div>
+                  {isStudent && book.description && (
+                    <p className="text-[11px] text-gray-400 leading-snug mb-3 line-clamp-2">{book.description}</p>
+                  )}
+                  {!selectMode && (
+                    <div className="flex gap-2 flex-wrap">
+                      {isStudent && (
+                        borrowStatus === 'active'  ? <span className="badge-green badge">Borrowed</span>
+                        : borrowStatus === 'pending' ? <span className="badge-gold badge">Pending Approval</span>
+                        : unavailable ? <span className="badge-red badge">Unavailable</span>
+                        : <button className="btn-primary py-2 px-4 text-xs w-full" onClick={() => { setRequestBook(book); setRequestError(''); setRequestSuccess(''); }}>Request Borrow</button>
+                      )}
+                      {canEdit && (
+                        <>
+                          <button className="btn-secondary py-1.5 px-3 text-xs flex-1" onClick={e => { e.stopPropagation(); openEdit(book); }}>Edit</button>
+                          <button className="btn-danger py-1.5 px-3 text-xs flex-1" onClick={e => { e.stopPropagation(); handleDelete(book); }}>Delete</button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Desktop table (hidden on mobile) ── */}
       <div className="card p-0 overflow-hidden">
         {loading ? (
           <p className="text-sm text-gray-400 font-mono p-6">Loading catalog…</p>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-gray-400 p-6">{selectedCourse ? `No books found for "${selectedCourse}".` : 'No books found.'}</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full min-w-[700px]">
               <thead>
                 <tr>

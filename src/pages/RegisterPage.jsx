@@ -161,7 +161,7 @@ export default function RegisterPage() {
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
           <div style={{ width: '100%', maxWidth: '420px', textAlign: 'center' }}>
             <Card>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', fontSize: '22px', color: C.green }}>✓</div>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', color: C.green }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
               <Eyebrow>Account Created</Eyebrow>
               <h1 style={{ ...SERIF, fontSize: '26px', fontWeight: 700, color: C.white, marginBottom: '8px' }}>Welcome to NEU Library</h1>
               <p style={{ fontSize: '14px', color: C.body, marginBottom: '28px' }}>

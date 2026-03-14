@@ -120,7 +120,7 @@ export default function AuthActionPage() {
 
             {status === 'success' && (
               <div style={{ textAlign: 'center' }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: '22px', color: '#34d399' }}>✓</div>
+                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#34d399' }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
                 <h1 style={{ ...D, fontSize: '24px', fontWeight: 700, color: '#f1f5f9', marginBottom: '8px' }}>Password Updated</h1>
                 <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px' }}>Sign in with your ID number and new password.</p>
                 <button onClick={() => navigate('/login')} style={{ width: '100%', padding: '13px', borderRadius: '10px', background: 'rgba(245,158,11,0.2)', border: '1px solid rgba(245,158,11,0.4)', color: '#f59e0b', cursor: 'pointer', ...S, fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 700 }}>
