@@ -66,7 +66,7 @@ function PurposeModal({ student, idNumber, onConfirm, onCancel, loading }) {
         <div style={{ padding: '28px' }}>
           {/* Student card */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', borderRadius: '12px', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', marginBottom: '22px' }}>
-            <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>🎓</div>
+            <div style={{ width: 44, height: 44, borderRadius: '12px', background: 'var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3.33 1.67 8.67 1.67 12 0v-5"/></svg></div>
             <div>
               <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '3px' }}>QR Check-In</p>
               <p style={{ ...SERIF, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{student.lastName}, {student.firstName}</p>
@@ -100,7 +100,7 @@ function PurposeModal({ student, idNumber, onConfirm, onCancel, loading }) {
             </button>
             <button onClick={() => chosen && !loading && onConfirm(chosen)} disabled={!chosen || loading}
               style={{ flex: 2, padding: '12px', borderRadius: '10px', transition: 'all 0.15s', background: chosen ? 'var(--green-soft)' : 'var(--surface)', border: `1px solid ${chosen ? 'var(--green-border)' : 'var(--card-border)'}`, color: chosen ? 'var(--green)' : 'var(--text-dim)', cursor: !chosen || loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, ...MONO, fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700 }}>
-              {loading ? '⏳ Checking In…' : '✓ Confirm Check-In'}
+              {loading ? 'Checking In…' : 'Confirm Check-In'}
             </button>
           </div>
         </div>
@@ -120,7 +120,7 @@ function ScanToast({ scan, status }) {
   );
   if (status === 'unknown') return (
     <div style={{ borderRadius: '12px', padding: '14px 18px', background: 'var(--red-soft)', border: '1px solid var(--red-border)', marginBottom: '12px' }}>
-      <p style={{ ...MONO, fontSize: '11px', color: 'var(--red)' }}>⚠ No account found for: {scan.idNumber}</p>
+      <p style={{ ...MONO, fontSize: '11px', color: 'var(--red)' }}>No account found for: {scan.idNumber}</p>
     </div>
   );
   if (status === 'success') {
@@ -132,7 +132,7 @@ function ScanToast({ scan, status }) {
         </div>
         <div>
           <p style={{ ...SERIF, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>{scan.student ? `${scan.student.lastName}, ${scan.student.firstName}` : scan.idNumber}</p>
-          <p style={{ ...MONO, fontSize: '10px', color: isIn ? 'var(--green)' : 'var(--blue)', letterSpacing: '0.08em' }}>{isIn ? `✓ Checked IN — ${scan.purpose}` : '✓ Checked OUT successfully'}</p>
+          <p style={{ ...MONO, fontSize: '10px', color: isIn ? 'var(--green)' : 'var(--blue)', letterSpacing: '0.08em' }}>{isIn ? `Checked IN — ${scan.purpose}` : 'Checked OUT'}</p>
         </div>
       </div>
     );
@@ -213,10 +213,8 @@ export default function QRLoggerPage() {
         if (!unmountedRef.current) { setLastScan({ idNumber, student, action: 'out' }); setScanStatus('success'); setTimeout(() => { if (!unmountedRef.current) { setScanStatus('idle'); setLastScan(null); } }, 3000); }
         processingRef.current = false;
       } else {
-        // Stop scanner FIRST then show modal
-        const sc = scannerRef.current;
-        if (sc) { try { if (sc.isRunning()) await sc.stop().catch(() => {}); sc.clear(); } catch {} scannerRef.current = null; }
-        if (!unmountedRef.current) { setScannerState('idle'); setScanStatus('idle'); setLastScan(null); setPurposeForId({ idNumber, student }); }
+        // Show modal WITHOUT stopping the scanner — camera stays live
+        if (!unmountedRef.current) { setScanStatus('idle'); setLastScan(null); setPurposeForId({ idNumber, student }); }
         processingRef.current = false;
       }
     } catch (err) {
@@ -331,7 +329,7 @@ export default function QRLoggerPage() {
         </div>
         <button onClick={toggleTheme} title={dark ? 'Light Mode' : 'Dark Mode'}
           style={{ width: 40, height: 40, borderRadius: '10px', border: '1px solid var(--card-border)', background: 'var(--surface)', color: 'var(--gold)', cursor: 'pointer', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 }}>
-          {dark ? '☀️' : '🌙'}
+          {dark ? (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>) : (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>)}
         </button>
       </div>
       <div style={{ height: '1px', background: 'linear-gradient(90deg, var(--gold-border), var(--gold-soft), transparent)', marginBottom: '24px' }} />
