@@ -60,7 +60,7 @@ function NavItem({ to, label, icon, collapsed, onClick }) {
 }
 
 export default function AppLayout({ children }) {
-  const { userProfile, currentUser, logout } = useAuth();
+  const { userProfile, currentUser, effectiveUid, logout } = useAuth();
   const { session, markWebSignedOut } = useLibrarySession();
   const navigate = useNavigate();
   const location = useLocation();
@@ -241,8 +241,8 @@ export default function AppLayout({ children }) {
         </div>
 
         {/* Notification banner (students) */}
-        {role === 'student' && currentUser && (
-          <NotificationBanner userId={currentUser.uid} />
+        {role === 'student' && effectiveUid && (
+          <NotificationBanner userId={effectiveUid} />
         )}
 
         {/* Page content */}

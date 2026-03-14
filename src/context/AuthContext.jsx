@@ -54,6 +54,7 @@ const idToEmail = (idNumber) => {
 
 export function AuthProvider({ children }) {
   const [currentUser,    setCurrentUser]    = useState(null);
+  const [effectiveUid,   setEffectiveUid]   = useState(null); // real UID — differs from currentUser.uid for QR ghost accounts
   const [userProfile,    setUserProfile]    = useState(null);
   const [loadingAuth,    setLoadingAuth]    = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -175,7 +176,12 @@ export function AuthProvider({ children }) {
         if (qrSnap.exists()) {
           const { mainUid } = qrSnap.data();
           snap = await getDoc(doc(db, 'users', mainUid));
+          // CRITICAL: store mainUid so all downstream queries use the real UID,
+          // not the ghost UID that currentUser.uid returns after QR login
+          if (snap.exists()) setEffectiveUid(mainUid);
         }
+      } else {
+        setEffectiveUid(uid);
       }
       if (snap.exists()) setUserProfile(snap.data());
     } finally {
@@ -194,6 +200,7 @@ export function AuthProvider({ children }) {
         await fetchProfile(user.uid);
       } else {
         setUserProfile(null);
+        setEffectiveUid(null);
       }
       setLoadingAuth(false);
     });
@@ -202,7 +209,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      currentUser, userProfile, loadingAuth, profileLoading,
+      currentUser, effectiveUid, userProfile, loadingAuth, profileLoading,
       register, login, loginWithQRToken, logout, refreshProfile, updateUserPassword,
       idToEmail,
     }}>

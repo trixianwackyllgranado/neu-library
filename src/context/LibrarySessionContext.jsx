@@ -10,17 +10,20 @@ import { useAuth } from './AuthContext';
 const LibrarySessionContext = createContext(null);
 
 export function LibrarySessionProvider({ children }) {
-  const { currentUser } = useAuth();
+  const { currentUser, effectiveUid } = useAuth();
   const [session, setSession] = useState(undefined); // undefined = loading
   const [elapsed, setElapsed] = useState(0);
 
   // Real-time listener for the current user's active session
   useEffect(() => {
+    // Wait until effectiveUid is resolved — for QR ghost accounts this arrives
+    // slightly after currentUser, so we must gate on effectiveUid not currentUser
     if (!currentUser) { setSession(null); return; }
+    if (!effectiveUid) return; // still resolving ghost → real UID, wait
 
     const q = query(
       collection(db, 'logger'),
-      where('uid',    '==', currentUser.uid),
+      where('uid',    '==', effectiveUid),
       where('active', '==', true),
     );
 
@@ -34,7 +37,7 @@ export function LibrarySessionProvider({ children }) {
     });
 
     return unsub;
-  }, [currentUser]);
+  }, [currentUser, effectiveUid]);
 
   // Tick every second
   useEffect(() => {
@@ -51,9 +54,9 @@ export function LibrarySessionProvider({ children }) {
   }, [session]);
 
   const checkIn = async (purpose) => {
-    if (!currentUser || session) return;
+    if (!effectiveUid || session) return;
     await addDoc(collection(db, 'logger'), {
-      uid:       currentUser.uid,
+      uid:       effectiveUid,
       purpose,
       entryTime: serverTimestamp(),
       active:    true,
