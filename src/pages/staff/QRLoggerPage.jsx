@@ -385,24 +385,21 @@ export default function QRLoggerPage() {
       });
 
       if (!unmountedRef.current) {
-        // Reset processing gate so the next scan isn't blocked
         processingRef.current = false;
-        // Clear ALL cooldowns so the same QR can be scanned out immediately
         cooldownRef.current = {};
 
-        // Close modal and show success toast
+        // Close modal and show success toast.
+        // Do NOT auto-restart the scanner — html5-qrcode's internal frame buffer
+        // still holds the last QR and would immediately re-fire, checking the
+        // student back out. Staff presses Start Scanner for the next student.
         setPurposeForId(null);
         setLastScan({ idNumber, student, action: 'in', purpose });
         setScanStatus('success');
         setConfirmLoad(false);
 
-        // Wait for React to flush + DOM to show #qr-staff-reader, then restart
         setTimeout(() => {
           if (!unmountedRef.current) { setScanStatus('idle'); setLastScan(null); }
-        }, 2500);
-        setTimeout(() => {
-          if (!unmountedRef.current) startScanner();
-        }, 300); // enough time for setPurposeForId(null) → isScanning=false → div visible
+        }, 3000);
       }
     } catch (err) {
       if (!unmountedRef.current) {
