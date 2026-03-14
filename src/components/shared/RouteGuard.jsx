@@ -2,21 +2,18 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-const S = { fontFamily: "'IBM Plex Mono', monospace" };
-
-function Splash({ text = 'Loading…' }) {
+function Splash({ text = 'Loading...' }) {
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(160deg, #060e1e 0%, #0a1628 50%, #0d1e36 100%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-    }}>
-      <p style={{ ...S, fontSize: '12px', color: '#334155', letterSpacing: '0.18em' }}>{text}</p>
+    <div style={{ minHeight:'100vh', background:'var(--bg-base)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ width:40, height:40, border:'3px solid var(--gold-border)', borderTopColor:'var(--gold)', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 16px' }} />
+        <p style={{ fontFamily:"'Poppins',sans-serif", fontSize:13, color:'var(--text-muted)', letterSpacing:'0.04em' }}>{text}</p>
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
 
-/** Redirect to /dashboard if already logged in */
 export function RequireGuest({ children }) {
   const { currentUser, loadingAuth } = useAuth();
   if (loadingAuth) return <Splash />;
@@ -24,7 +21,6 @@ export function RequireGuest({ children }) {
   return children;
 }
 
-/** Redirect to /login if not logged in */
 export function RequireAuth({ children }) {
   const { currentUser, loadingAuth } = useAuth();
   const location = useLocation();
@@ -33,12 +29,9 @@ export function RequireAuth({ children }) {
   return children;
 }
 
-/** Redirect to /dashboard if role not in allowed list */
 export function RequireRole({ roles, children }) {
   const { userProfile, profileLoading } = useAuth();
-  if (profileLoading) return <Splash text="Checking permissions…" />;
-  if (!userProfile || !roles.includes(userProfile.role)) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  if (profileLoading) return <Splash text="Checking permissions..." />;
+  if (!userProfile || !roles.includes(userProfile.role)) return <Navigate to="/dashboard" replace />;
   return children;
 }

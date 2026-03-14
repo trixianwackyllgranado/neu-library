@@ -5,19 +5,31 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 
-const S = { fontFamily: "'IBM Plex Mono', monospace" };
-const D = { fontFamily: "'Playfair Display', serif" };
+const PP = { fontFamily:"'Poppins',sans-serif" };
+const SR = { fontFamily:"'Playfair Display',serif" };
+const MN = { fontFamily:"'IBM Plex Mono',monospace" };
 
-function Stat({ label, value, accent, onClick }) {
-  const c = accent === 'gold' ? '#f59e0b' : accent === 'red' ? '#f87171' : accent === 'green' ? '#34d399' : '#7a9fd8';
+function StatCard({ label, value, color, sub, onClick }) {
+  const borderColor = color === 'gold' ? 'var(--gold)' : color === 'red' ? 'var(--red)' : color === 'green' ? 'var(--green)' : 'var(--blue)';
   return (
-    <button onClick={onClick}
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderLeft: `3px solid ${c}`, borderRadius: '12px', padding: '16px', textAlign: 'left', cursor: 'pointer', width: '100%', transition: 'all 0.15s' }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}>
-      <p style={{ ...S, fontSize: '9px', letterSpacing: '0.14em', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>{label}</p>
-      <p style={{ ...D, fontSize: '28px', fontWeight: 700, color: '#f1f5f9' }}>{value}</p>
-      <p style={{ ...S, fontSize: '8px', color: '#334155', marginTop: '4px' }}>Click to view</p>
+    <button onClick={onClick} style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderLeft:`3px solid ${borderColor}`, borderRadius:12, padding:'18px 20px', textAlign:'left', cursor:'pointer', width:'100%', transition:'all 0.15s', boxShadow:'var(--shadow-card)' }}
+      onMouseEnter={e=>e.currentTarget.style.borderColor=borderColor}
+      onMouseLeave={e=>e.currentTarget.style.borderColor='var(--card-border)'}>
+      <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-muted)',marginBottom:8,textTransform:'uppercase',letterSpacing:'0.04em'}}>{label}</p>
+      <p style={{...SR,fontSize:34,fontWeight:700,color:'var(--text-primary)',lineHeight:1}}>{value}</p>
+      {sub && <p style={{...PP,fontSize:12,color:'var(--text-dim)',marginTop:6}}>{sub}</p>}
+    </button>
+  );
+}
+
+function QuickLink({ label, sub, path, accentColor, navigate }) {
+  return (
+    <button onClick={() => navigate(path)}
+      style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderTop:`3px solid ${accentColor}`, borderRadius:12, padding:'18px 20px', textAlign:'left', cursor:'pointer', transition:'all 0.15s', boxShadow:'var(--shadow-card)' }}
+      onMouseEnter={e=>e.currentTarget.style.background='var(--surface-hover)'}
+      onMouseLeave={e=>e.currentTarget.style.background='var(--card)'}>
+      <p style={{...PP,fontSize:15,fontWeight:600,color:'var(--text-primary)',marginBottom:4}}>{label}</p>
+      <p style={{...PP,fontSize:13,color:'var(--text-muted)'}}>{sub}</p>
     </button>
   );
 }
@@ -25,74 +37,66 @@ function Stat({ label, value, accent, onClick }) {
 export default function AdminDashboard() {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
-
-  const [users,    setUsers]    = useState({ total: 0, students: 0, staff: 0 });
-  const [books,    setBooks]    = useState(0);
-  const [pending,  setPending]  = useState(0);
-  const [overdue,  setOverdue]  = useState(0);
-  const [inLib,    setInLib]    = useState(0);
+  const [users,   setUsers]   = useState({ total:0, students:0, staff:0 });
+  const [books,   setBooks]   = useState(0);
+  const [pending, setPending] = useState(0);
+  const [overdue, setOverdue] = useState(0);
+  const [inLib,   setInLib]   = useState(0);
 
   useEffect(() => {
-    const u1 = onSnapshot(collection(db, 'users'), s => {
-      const docs = s.docs.map(d => d.data());
-      setUsers({ total: docs.length, students: docs.filter(u => u.role === 'student').length, staff: docs.filter(u => u.role === 'staff' || u.role === 'admin').length });
+    const u1 = onSnapshot(collection(db,'users'), s => {
+      const docs = s.docs.map(d=>d.data());
+      setUsers({ total:docs.length, students:docs.filter(u=>u.role==='student').length, staff:docs.filter(u=>u.role==='staff'||u.role==='admin').length });
     });
-    const u2 = onSnapshot(collection(db, 'books'), s => setBooks(s.size));
-    const u3 = onSnapshot(query(collection(db, 'borrows'), where('status', '==', 'pending')), s => setPending(s.size));
-    const u4 = onSnapshot(query(collection(db, 'borrows'), where('status', '==', 'active')), s => {
+    const u2 = onSnapshot(collection(db,'books'), s => setBooks(s.size));
+    const u3 = onSnapshot(query(collection(db,'borrows'),where('status','==','pending')), s => setPending(s.size));
+    const u4 = onSnapshot(query(collection(db,'borrows'),where('status','==','active')), s => {
       const now = new Date(); let od = 0;
-      s.docs.forEach(d => { const due = d.data().dueDate?.toDate?.(); if (due && due < now) od++; });
+      s.docs.forEach(d => { const due = d.data().dueDate?.toDate?.(); if(due && due < now) od++; });
       setOverdue(od);
     });
-    const u5 = onSnapshot(query(collection(db, 'logger'), where('active', '==', true)), s => setInLib(s.size));
+    const u5 = onSnapshot(query(collection(db,'logger'),where('active','==',true)), s => setInLib(s.size));
     return () => { u1(); u2(); u3(); u4(); u5(); };
   }, []);
 
+  const greeting = userProfile ? `Welcome back, ${userProfile.firstName}` : 'System Overview';
+
   return (
-    <div style={{ animation: 'fadeSlideUp 0.35s ease both' }}>
-      <style>{`@keyframes fadeSlideUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }`}</style>
+    <div style={{ animation:'fadeUp 0.3s ease both' }}>
+      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
-      <div style={{ marginBottom: '24px' }}>
-        <p style={{ ...S, fontSize: '9px', letterSpacing: '0.22em', color: '#f59e0b', textTransform: 'uppercase', marginBottom: '6px' }}>Administrator</p>
-        <h1 style={{ ...D, fontSize: 'clamp(22px,4vw,30px)', fontWeight: 700, color: '#f1f5f9' }}>System Overview</h1>
-        <div style={{ marginTop: '14px', height: '1px', background: 'linear-gradient(90deg, #f59e0b22, #f59e0b44, transparent)' }} />
+      <div style={{ marginBottom:32 }}>
+        <p style={{...PP,fontSize:13,fontWeight:600,color:'var(--gold)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Administrator</p>
+        <h1 style={{...SR,fontSize:'clamp(24px,4vw,32px)',fontWeight:700,color:'var(--text-primary)',marginBottom:6}}>{greeting}</h1>
+        <p style={{...PP,fontSize:15,color:'var(--text-muted)'}}>Here is a live overview of the library system.</p>
+        <div style={{marginTop:16,height:1,background:'linear-gradient(90deg,var(--gold-border),transparent)'}} />
       </div>
 
-      <div style={{ marginBottom: '8px' }}>
-        <p style={{ ...S, fontSize: '9px', letterSpacing: '0.16em', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>Users</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '20px' }}>
-          <Stat label="Total Users" value={users.total}    accent="blue"  onClick={() => navigate('/admin/users')} />
-          <Stat label="Students"    value={users.students} accent="blue"  onClick={() => navigate('/staff/students')} />
-          <Stat label="Staff"       value={users.staff}    accent="gold"  onClick={() => navigate('/admin/users')} />
-        </div>
-        <p style={{ ...S, fontSize: '9px', letterSpacing: '0.16em', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>Borrowing</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '20px' }}>
-          <Stat label="Books in Catalog" value={books}   accent="blue"  onClick={() => navigate('/catalog')} />
-          <Stat label="Pending Requests" value={pending} accent="gold"  onClick={() => navigate('/borrows')} />
-          <Stat label="Overdue"          value={overdue} accent="red"   onClick={() => navigate('/borrows')} />
-        </div>
-        <p style={{ ...S, fontSize: '9px', letterSpacing: '0.16em', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>Logger</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '24px' }}>
-          <Stat label="In Library Now" value={inLib} accent="green" onClick={() => navigate('/logger')} />
-        </div>
+      <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Users</p>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:24}}>
+        <StatCard label="Total Users"  value={users.total}    color="blue"  sub="All accounts"        onClick={()=>navigate('/admin/users')} />
+        <StatCard label="Students"     value={users.students} color="blue"  sub="Active learners"     onClick={()=>navigate('/staff/students')} />
+        <StatCard label="Staff & Admin" value={users.staff}   color="gold"  sub="Library personnel"   onClick={()=>navigate('/admin/users')} />
       </div>
 
-      {/* Quick links */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-        {[
-          { label: 'Reports',         path: '/admin/reports',   sub: 'Analytics & exports' },
-          { label: 'User Management', path: '/admin/users',     sub: 'Role assignment' },
-          { label: 'QR Scanner',      path: '/staff/qr-logger', sub: 'Check-in/out station' },
-          { label: 'Book Catalog',    path: '/catalog',         sub: 'Add & manage books' },
-        ].map(({ label, path, sub }) => (
-          <button key={path} onClick={() => navigate(path)}
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '16px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}>
-            <p style={{ ...D, fontSize: '15px', fontWeight: 700, color: '#f1f5f9', marginBottom: '4px' }}>{label}</p>
-            <p style={{ fontSize: '12px', color: '#64748b' }}>{sub}</p>
-          </button>
-        ))}
+      <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Borrowing</p>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:24}}>
+        <StatCard label="Books in Catalog" value={books}   color="blue"  sub="Total entries"      onClick={()=>navigate('/catalog')} />
+        <StatCard label="Pending Requests" value={pending} color="gold"  sub="Awaiting approval"  onClick={()=>navigate('/borrows')} />
+        <StatCard label="Overdue"          value={overdue} color="red"   sub="Past due date"      onClick={()=>navigate('/borrows')} />
+      </div>
+
+      <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Library</p>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:32}}>
+        <StatCard label="In Library Now" value={inLib} color="green" sub="Currently checked in" onClick={()=>navigate('/logger')} />
+      </div>
+
+      <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Quick Access</p>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12}}>
+        <QuickLink label="Reports"         sub="Analytics and data exports"  path="/admin/reports"   accentColor="var(--gold)"  navigate={navigate} />
+        <QuickLink label="User Management" sub="Roles and account control"   path="/admin/users"     accentColor="var(--blue)"  navigate={navigate} />
+        <QuickLink label="QR Scanner"      sub="Student check-in station"    path="/staff/qr-logger" accentColor="var(--green)" navigate={navigate} />
+        <QuickLink label="Book Catalog"    sub="Add and manage books"        path="/catalog"         accentColor="var(--gold)"  navigate={navigate} />
       </div>
     </div>
   );
