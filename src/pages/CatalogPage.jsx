@@ -505,7 +505,7 @@ export default function CatalogPage() {
           {/* Bulk delete toolbar */}
           {selectMode && (
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-xs font-mono text-gray-500">
+              <span className="text-xs font-mono" style={{color:"var(--text-muted)"}}>
                 {selectedIds.size} of {filtered.length} selected
               </span>
               <button className="btn-secondary text-[10px]" onClick={toggleSelectAll}>
@@ -539,7 +539,7 @@ export default function CatalogPage() {
           <div>
             <p className="font-mono text-[10px] tracking-widest uppercase text-gray-400 mb-1">Bulk Import</p>
             <h2 className="section-head">Import Books from CSV</h2>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs mt-1 text-muted">
               The <span className="font-mono">courses</span> column accepts pipe-separated values, e.g.{' '}
               <span className="font-mono bg-gray-100 px-1">BSIT|BS Midwifery|Juris Doctor</span>
             </p>
@@ -547,17 +547,17 @@ export default function CatalogPage() {
           <div className="flex items-start gap-4 p-4" style={{background:"var(--surface)",border:"1px solid var(--card-border)",borderRadius:8}}>
             <div className="shrink-0 w-7 h-7 rounded-full bg-primary-700 text-white flex items-center justify-center text-xs font-bold font-mono">1</div>
             <div>
-              <p className="text-sm font-semibold text-gray-800 mb-1">Download Template</p>
-              <p className="text-xs text-gray-500 mb-2">Use this CSV template to format your book data correctly.</p>
+              <p className="text-sm font-semibold mb-1" style={{color:"var(--text-body)"}}>Download Template</p>
+              <p className="text-xs mb-2 text-muted">Use this CSV template to format your book data correctly.</p>
               <button className="btn-secondary text-xs py-1.5 px-4" onClick={downloadTemplate}>Download CSV Template</button>
             </div>
           </div>
           <div className="flex items-start gap-4 p-4" style={{background:"var(--surface)",border:"1px solid var(--card-border)",borderRadius:8}}>
             <div className="shrink-0 w-7 h-7 rounded-full bg-primary-700 text-white flex items-center justify-center text-xs font-bold font-mono">2</div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-gray-800 mb-1">Upload Your CSV</p>
-              <input type="file" accept=".csv" className="text-sm text-gray-600 file:mr-3 file:btn file:btn-secondary file:text-xs file:py-1" onChange={handleImportFile} />
-              {importFile && <p className="text-xs font-mono text-gray-500 mt-1">{importFile}</p>}
+              <p className="text-sm font-semibold mb-1" style={{color:"var(--text-body)"}}>Upload Your CSV</p>
+              <input type="file" accept=".csv" className="text-sm text-muted file:mr-3 file:btn file:btn-secondary file:text-xs file:py-1" onChange={handleImportFile} />
+              {importFile && <p className="text-xs font-mono mt-1 text-muted">{importFile}</p>}
             </div>
           </div>
           {importErrors.length > 0 && (
@@ -568,21 +568,21 @@ export default function CatalogPage() {
           )}
           {importRows.length > 0 && importErrors.length === 0 && !importResult && (
             <div>
-              <p className="text-sm font-semibold text-gray-700 mb-2">Preview ({importRows.length} rows)</p>
+              <p className="text-sm font-semibold mb-2" style={{color:"var(--text-body)"}}>Preview ({importRows.length} rows)</p>
               <div className="overflow-x-auto border border-gray-200">
                 <table className="w-full text-xs min-w-[600px]">
                   <thead><tr>{['#','Title','Authors','ISBN','Category','Shelf','Copies','Courses'].map(h=><th key={h} className="th text-[10px]">{h}</th>)}</tr></thead>
                   <tbody>
                     {importRows.map((r,i) => (
                       <tr key={i} className="tr-hover">
-                        <td className="td font-mono text-gray-400">{i+1}</td>
+                        <td className="td font-mono text-dim">{i+1}</td>
                         <td className="td font-semibold">{r.title}</td>
-                        <td className="td text-gray-600">{r.authors}</td>
+                        <td className="td text-muted">{r.authors}</td>
                         <td className="td font-mono">{r.isbn}</td>
                         <td className="td">{r.category}</td>
                         <td className="td font-mono">{r.shelfLocation}</td>
                         <td className="td text-center">{r.totalCopies}</td>
-                        <td className="td">{r.courses ? r.courses.split('|').map(c=>c.trim()).filter(Boolean).map(c=><span key={c} className="inline-block text-[9px] font-mono bg-primary-50 text-primary-700 border border-primary-200 px-1 mr-0.5 mb-0.5">{c}</span>) : <span className="text-gray-400">—</span>}</td>
+                        <td className="td">{r.courses ? r.courses.split('|').map(c=>c.trim()).filter(Boolean).map(c=><span key={c} className="inline-block text-[9px] font-mono bg-primary-50 text-primary-700 border border-primary-200 px-1 mr-0.5 mb-0.5">{c}</span>) : <span className="text-dim">—</span>}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -606,11 +606,11 @@ export default function CatalogPage() {
             <div className="flex items-start gap-4 p-4" style={{background:"var(--surface)",border:"1px solid var(--card-border)",borderRadius:8}}>
               <div className="shrink-0 w-7 h-7 rounded-full bg-primary-700 text-white flex items-center justify-center text-xs font-bold font-mono">3</div>
               <div>
-                <p className="text-sm font-semibold text-gray-800 mb-2">Confirm &amp; Import</p>
+                <p className="text-sm font-semibold mb-2" style={{color:"var(--text-body)"}}>Confirm &amp; Import</p>
                 <button className="btn-primary" onClick={handleImportSubmit} disabled={importing}>
                   {importing ? `Importing… (${importRows.length} books)` : `Import ${importRows.length} Book${importRows.length!==1?'s':''} Now`}
                 </button>
-                {importing && <p className="text-xs text-gray-500 mt-2 font-mono">Please wait, writing to database…</p>}
+                {importing && <p className="text-xs mt-2 font-mono text-muted">Please wait, writing to database…</p>}
               </div>
             </div>
           )}
@@ -658,7 +658,7 @@ export default function CatalogPage() {
               <div onClick={()=>setAvailableOnly(o=>!o)} className={`w-10 h-5 rounded-full transition-colors relative ${availableOnly?'bg-primary-600':'bg-gray-300'}`}>
                 <div className={`w-4 h-4 rounded-full absolute top-0.5 transition-all ${availableOnly?'left-5':'left-0.5'}`} style={{background:'var(--card)'}} />
               </div>
-              <span className="text-xs font-mono text-gray-600">Available only</span>
+              <span className="text-xs font-mono" style={{color:"var(--text-muted)"}}>Available only</span>
             </label>
             {(selectedCategory||selectedCourse||availableOnly||search) && (
               <button className="btn-ghost text-xs px-3 py-2 shrink-0" onClick={()=>{setSelectedCategory('');setSelectedCourse('');setAvailableOnly(false);setSearch('');setShowFilters(false);}}>Clear All</button>
@@ -708,7 +708,7 @@ export default function CatalogPage() {
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm leading-snug">{book.title}</p>
-                      {book.authors && <p className="text-xs text-gray-500 mt-0.5">{book.authors}</p>}
+                      {book.authors && <p className="text-xs mt-0.5" style={{color:"var(--text-muted)"}}>{book.authors}</p>}
                       {(book.publisher || book.edition) && (
                         <p className="text-[10px] font-mono text-gray-400 mt-0.5">
                           {[book.publisher, book.edition ? `${book.edition} Ed.` : ''].filter(Boolean).join(' · ')}
@@ -726,15 +726,15 @@ export default function CatalogPage() {
                   </div>
                   <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mb-3 text-xs">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-gray-400 font-mono tracking-wider text-[10px]">SHELF</span>
+                      <span className="text-dim font-mono tracking-wider text-[10px]">SHELF</span>
                       <span className="font-mono font-semibold">{book.shelfLocation || '—'}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-gray-400 font-mono tracking-wider text-[10px]">COPIES</span>
+                      <span className="text-dim font-mono tracking-wider text-[10px]">COPIES</span>
                       <span className="font-mono font-semibold">{book.totalCopies ?? 0}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-gray-400 font-mono tracking-wider text-[10px]">AVAIL</span>
+                      <span className="text-dim font-mono tracking-wider text-[10px]">AVAIL</span>
                       <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:(book.availableCopies??0)>0?'var(--green)':'var(--red)'}}>{book.availableCopies ?? 0}</span>
                     </div>
                   </div>
@@ -767,9 +767,9 @@ export default function CatalogPage() {
       {/* ── Desktop table (hidden on mobile) ── */}
       <div className="card p-0 overflow-hidden">
         {loading ? (
-          <p className="text-sm text-gray-400 font-mono p-6">Loading catalog…</p>
+          <p className="text-sm font-mono p-6 text-muted">Loading catalog…</p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-gray-400 p-6">{selectedCourse ? `No books found for "${selectedCourse}".` : 'No books found.'}</p>
+          <p className="text-sm p-6 text-muted">{selectedCourse ? `No books found for "${selectedCourse}".` : 'No books found.'}</p>
         ) : (
           <div className="hidden sm:block overflow-x-auto">
             <table className="w-full min-w-[700px]">
@@ -813,10 +813,10 @@ export default function CatalogPage() {
                         </td>
                       )}
                       <td className="td">
-                        <p className="font-semibold text-gray-900 text-sm">{book.title}</p>
-                        <p className="text-xs text-gray-500">{book.authors}</p>
+                        <p className="font-semibold text-sm" style={{color:"var(--text-primary)"}}>{book.title}</p>
+                        <p className="text-xs" style={{color:"var(--text-muted)"}}>{book.authors}</p>
                         {(book.edition||book.publisher) && (
-                          <p className="text-[10px] font-mono text-gray-400">
+                          <p className="text-[10px] font-mono text-dim">
                             {[book.publisher, book.edition?`${book.edition} Ed.`:''].filter(Boolean).join(' · ')}
                           </p>
                         )}
@@ -928,16 +928,16 @@ export default function CatalogPage() {
                       <p className="text-sm font-semibold mb-1" style={{color:'var(--green)'}}>Request Submitted</p>
                       <p className="text-sm" style={{color:'var(--green)'}}>{requestSuccess}</p>
                     </div>
-                    <p className="text-xs text-gray-500 mb-5">A staff member will review and approve your request. Once approved, proceed to the library desk to collect your book.</p>
+                    <p className="text-xs mb-5 text-muted">A staff member will review and approve your request. Once approved, proceed to the library desk to collect your book.</p>
                     <button className="btn-primary w-full" onClick={()=>setRequestBook(null)}>Done</button>
                   </div>
                 ) : (
                   <div>
                     <div className="mb-5 grid grid-cols-2 gap-3 text-sm">
                       <div><p className="label">Available Copies</p><p className="font-semibold text-primary-700">{requestBook.availableCopies}</p></div>
-                      <div><p className="label">Shelf Location</p><p className="text-gray-600">{requestBook.shelfLocation||'—'}</p></div>
-                      <div><p className="label">ISBN</p><p className="font-mono text-xs text-gray-600">{requestBook.isbn||'—'}</p></div>
-                      <div><p className="label">Category</p><p className="text-gray-600">{requestBook.category||'—'}</p></div>
+                      <div><p className="label">Shelf Location</p><p className="text-muted">{requestBook.shelfLocation||'—'}</p></div>
+                      <div><p className="label">ISBN</p><p className="font-mono text-xs text-muted">{requestBook.isbn||'—'}</p></div>
+                      <div><p className="label">Category</p><p className="text-muted">{requestBook.category||'—'}</p></div>
                     </div>
                     {requestError && (
                       <div className="mb-4 px-4 py-3 flex gap-3" style={{background:'var(--red-soft)',border:'1px solid var(--red-border)',borderRadius:8}}>

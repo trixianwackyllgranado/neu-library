@@ -122,7 +122,7 @@ export default function AppLayout({ children }) {
         {(!collapsed||mob) && (
           <div style={{display:'flex',alignItems:'center',gap:10,minWidth:0}}>
             <div style={{width:32,height:32,borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-              <img src="/neu-logo.png" alt="NEU" style={{width:20,height:20,objectFit:'contain'}} onError={e=>{e.currentTarget.style.display='none';}} />
+              <img src="/liblogo.png" alt="NEU" style={{width:20,height:20,objectFit:'contain'}} onError={e=>{e.currentTarget.style.display='none';}} />
             </div>
             <div style={{minWidth:0}}>
               <p style={{...PP,fontSize:11,fontWeight:700,color:'var(--gold)',whiteSpace:'nowrap',lineHeight:1.2}}>NEU Library</p>
@@ -132,7 +132,7 @@ export default function AppLayout({ children }) {
         )}
         {collapsed&&!mob && (
           <div style={{width:32,height:32,borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <img src="/neu-logo.png" alt="NEU" style={{width:20,height:20,objectFit:'contain'}} onError={e=>{e.currentTarget.style.display='none';}} />
+            <img src="/liblogo.png" alt="NEU" style={{width:20,height:20,objectFit:'contain'}} onError={e=>{e.currentTarget.style.display='none';}} />
           </div>
         )}
         {!mob && (
@@ -196,7 +196,7 @@ export default function AppLayout({ children }) {
         <div className="flex md:hidden" style={{background:'var(--card)',borderBottom:'1px solid var(--divider)',padding:'12px 16px',alignItems:'center',justifyContent:'space-between',position:'sticky',top:0,zIndex:30}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <div style={{width:30,height:30,borderRadius:7,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              <img src="/neu-logo.png" alt="NEU" style={{width:18,height:18,objectFit:'contain'}} onError={e=>{e.currentTarget.style.display='none';}} />
+              <img src="/liblogo.png" alt="NEU" style={{width:18,height:18,objectFit:'contain'}} onError={e=>{e.currentTarget.style.display='none';}} />
             </div>
             <div>
               <p style={{...PP,fontSize:13,fontWeight:700,color:'var(--text-primary)',lineHeight:1.2}}>NEU Library</p>

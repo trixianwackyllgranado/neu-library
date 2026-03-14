@@ -63,7 +63,7 @@ export default function LoginPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           {/* Logo — place neu-logo.png in /public/ folder */}
           <img
-            src="/neu-logo.png"
+            src="/liblogo.png"
             alt="NEU"
             style={{ width: 38, height: 38, objectFit: 'contain' }}
             onError={e => { e.currentTarget.style.display = 'none'; }}
