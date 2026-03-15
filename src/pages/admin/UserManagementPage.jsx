@@ -119,7 +119,10 @@ export default function UserManagementPage() {
   const [confirmWord, setConfirmWord] = useState('');
 
   // Audit modal
-  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditOpen,  setAuditOpen]  = useState(false);
+
+  // Password reset
+  const [resetPwId,  setResetPwId]  = useState(null);
 
   // Live users
   useEffect(() => {
