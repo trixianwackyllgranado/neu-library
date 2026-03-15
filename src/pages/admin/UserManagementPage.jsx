@@ -326,13 +326,14 @@ export default function UserManagementPage() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-
-      {/* Header */}
-      <div className="pb-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <style>{`
+        tr.log-row:hover td { background: var(--row-hover-bg) !important; color: var(--row-hover-text) !important; }
+      `}</style>
+      <div className="pb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4" style={{borderBottom:"1px solid var(--divider)",paddingBottom:24}}>
         <div>
-          <p className="font-mono text-[10px] tracking-widest uppercase text-gray-400 mb-1">Administration</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{color:"var(--text-muted)"}}>Administration</p>
           <h1 className="page-title">User Management</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm mt-1" style={{color:"var(--text-muted)"}}> 
             Manage roles for registered users. Admin accounts are fully protected.
           </p>
         </div>
@@ -366,14 +367,17 @@ export default function UserManagementPage() {
         </div>
 
         {/* Role filter tabs */}
-        <div className="flex border-b border-gray-200">
+        <div className="flex" style={{borderBottom:"1px solid var(--divider)"}}> 
           {ROLE_TABS.map(t => (
             <button key={t.key} onClick={() => setRoleFilter(t.key)}
-              className={`px-5 py-2.5 text-xs font-mono font-semibold tracking-widest uppercase flex items-center gap-2 transition-colors ${
-                roleFilter === t.key
-                  ? 'border-b-2 border-primary-600 text-primary-700'
-                  : 'text-gray-400 hover:text-gray-600'
-              }`}>
+              className="px-5 py-2.5 text-xs font-mono font-semibold tracking-widest uppercase flex items-center gap-2 transition-colors"
+              style={{
+                borderBottom: roleFilter === t.key ? '2px solid var(--gold)' : '2px solid transparent',
+                color: roleFilter === t.key ? 'var(--gold)' : 'var(--text-muted)',
+                background: 'transparent', border: 'none',
+                borderBottom: roleFilter === t.key ? '2px solid var(--gold)' : '2px solid transparent',
+                cursor: 'pointer',
+              }}>
               {t.label}
               <span className="text-[10px] px-1.5 py-0.5 font-bold rounded" style={{
                 background: t.key === 'admin' ? 'var(--badge-red-bg)' : t.key === 'staff' ? 'var(--badge-gold-bg)' : t.key === 'student' ? 'var(--badge-green-bg)' : 'var(--badge-gray-bg)',
@@ -389,10 +393,10 @@ export default function UserManagementPage() {
       {/* Result summary */}
       {(search || roleFilter !== 'all') && (
         <div className="flex items-center justify-between">
-          <p className="text-xs text-gray-400 font-mono">
-            Showing <strong className="text-gray-700">{filtered.length}</strong> of {users.length} users
+          <p className="text-xs font-mono" style={{color:"var(--text-muted)"}}> 
+            Showing <strong style={{color:"var(--text-primary)"}}>{filtered.length}</strong> of {users.length} users
           </p>
-          <button className="text-xs text-primary-600 hover:underline font-mono"
+          <button className="text-xs font-mono" style={{color:"var(--gold)",background:"none",border:"none",cursor:"pointer"}}
             onClick={() => { setSearch(''); setRoleFilter('all'); }}>
             Clear filters
           </button>
@@ -402,9 +406,9 @@ export default function UserManagementPage() {
       {/* Table */}
       <div className="card p-0 overflow-hidden">
         {loading ? (
-          <p className="text-sm text-gray-400 font-mono p-6">Loading users…</p>
+          <p className="text-sm font-mono p-6" style={{color:"var(--text-muted)"}}>Loading users…</p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-gray-400 p-8 text-center">No users match your filters.</p>
+          <p className="text-sm p-8 text-center" style={{color:"var(--text-muted)"}}>No users match your filters.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
@@ -420,7 +424,7 @@ export default function UserManagementPage() {
               </thead>
               <tbody>
                 {filtered.map(u => (
-                  <tr key={u.id} className="hover:bg-gray-50">
+                  <tr key={u.id} className="log-row">
                     <td className="td">
                       <p className="font-semibold text-sm">
                         {u.lastName
@@ -428,15 +432,15 @@ export default function UserManagementPage() {
                           : u.email}
                       </p>
                       {u.id === myProfile?.uid && (
-                        <span className="text-[10px] font-mono text-primary-500">(you)</span>
+                        <span className="text-[10px] font-mono" style={{color:"var(--gold)"}}>(you)</span>
                       )}
                     </td>
                     <td className="td font-mono text-xs">{u.idNumber || '—'}</td>
-                    <td className="td text-xs font-mono text-gray-500">{u.email}</td>
+                    <td className="td text-xs font-mono" style={{color:"var(--text-muted)"}}>{u.email}</td>
                     <td className="td text-xs">
                       <p className="font-medium">{u.college || u.department || '—'}</p>
-                      {u.course    && <p className="text-gray-400">{u.course}</p>}
-                      {u.yearLevel && <p className="text-gray-400">{u.yearLevel}</p>}
+                      {u.course    && <p style={{color:"var(--text-muted)"}}> {u.course}</p>}
+                      {u.yearLevel && <p style={{color:"var(--text-muted)"}}> {u.yearLevel}</p>}
                     </td>
                     <td className="td">
                       <span className={`badge ${BADGE[u.role] || 'badge-gray'}`}>
@@ -445,9 +449,9 @@ export default function UserManagementPage() {
                     </td>
                     <td className="td">
                       {u.role === 'admin' ? (
-                        <span className="text-xs text-gray-400 font-mono italic">Protected — Admin</span>
+                        <span className="text-xs font-mono italic" style={{color:"var(--text-muted)"}}>Protected — Admin</span>
                       ) : u.id === myProfile?.uid ? (
-                        <span className="text-xs text-gray-400 font-mono italic">Your account</span>
+                        <span className="text-xs font-mono italic" style={{color:"var(--text-muted)"}}>Your account</span>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
                           {canPromoteToStaff(u) && (
@@ -491,7 +495,7 @@ export default function UserManagementPage() {
                             title="Edit student name"
                           >Edit Name</button>
                           {saving === u.id && (
-                            <span className="text-[10px] font-mono text-gray-400 animate-pulse">Saving…</span>
+                            <span className="text-[10px] font-mono animate-pulse" style={{color:"var(--text-muted)"}}>Saving…</span>
                           )}
                         </div>
                       )}
@@ -604,7 +608,8 @@ export default function UserManagementPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 shadow-lg text-white text-sm font-mono tracking-wide ${toast.ok ? 'bg-primary-700' : 'bg-red-700'}`}>
+        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 shadow-lg text-sm font-mono tracking-wide"
+          style={{color:'var(--text-primary)', background: toast.ok ? 'var(--green-soft)' : 'var(--red-soft)', border: `1px solid ${toast.ok ? 'var(--green-border)' : 'var(--red-border)'}`, borderRadius:10, color: toast.ok ? 'var(--green)' : 'var(--red)'}}>
           {toast.msg}
         </div>
       )}
