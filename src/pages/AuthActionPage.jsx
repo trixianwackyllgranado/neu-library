@@ -10,7 +10,7 @@ const D = { fontFamily: "'Playfair Display', serif" };
 
 const BG = {
   minHeight: '100vh',
-  background: 'linear-gradient(160deg, #060e1e 0%, #0a1628 50%, #0d1e36 100%)',
+  background: 'linear-gradient(160deg, var(--bg-base) 0%, var(--bg-mid) 50%, var(--bg-top) 100%)',
   display: 'flex', flexDirection: 'column',
 };
 
@@ -62,9 +62,8 @@ export default function AuthActionPage() {
 
   return (
     <div style={BG}>
-      <div style={{ height: '3px', background: 'linear-gradient(90deg, #c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)' }} />
-      <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <img src="/favicon.svg" alt="NEU" style={{ width: 36, height: 36 }} />
+      <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '12px', borderBottom: '1px solid var(--divider)' }}>
+        <img src="/liblogo.png" alt="NEU" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 4 }} onError={e=>{e.currentTarget.style.display='none'}} />
         <div>
           <p style={{ ...S, fontSize: '8px', letterSpacing: '0.22em', color: '#f59e0b', textTransform: 'uppercase' }}>New Era University</p>
           <p style={{ ...D, fontSize: '14px', fontWeight: 700, color: '#f1f5f9', lineHeight: 1.2 }}>Library Management System</p>

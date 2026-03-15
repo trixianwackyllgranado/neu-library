@@ -140,6 +140,105 @@ function ScanToast({ scan, status }) {
   return null;
 }
 
+
+const TEMPLATES = [
+  { id: 'inquiry', label: 'General Inquiry',      text: 'You have an inquiry at the library counter. Please proceed when available.' },
+  { id: 'lost',    label: 'Lost Item Found',       text: 'A lost item may belong to you. Please come to the counter to claim it.' },
+  { id: 'overdue', label: 'Overdue Book Reminder', text: 'You have an overdue book. Please return it at the counter as soon as possible.' },
+  { id: 'borrow',  label: 'Borrow Ready',          text: 'Your book borrow request has been processed. Please come to the counter to collect it.' },
+  { id: 'penalty', label: 'Penalty Notice',        text: 'There is a pending penalty on your account. Please settle it at the counter.' },
+  { id: 'custom',  label: 'Custom Message',        text: '' },
+];
+
+function CallModal({ student, sentByName, sentByUid, onClose }) {
+  const [templateId, setTemplateId] = useState('');
+  const [customMsg,  setCustomMsg]  = useState('');
+  const [sending,    setSending]    = useState(false);
+  const [sent,       setSent]       = useState(false);
+
+  const selectedTemplate = TEMPLATES.find(t => t.id === templateId);
+  const finalMessage = templateId === 'custom' ? customMsg : (selectedTemplate?.text ?? '');
+
+  const handleSend = async () => {
+    if (!finalMessage.trim()) return;
+    setSending(true);
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        toUid: student.uid, toName: student.displayName,
+        message: finalMessage.trim(), templateId,
+        templateLabel: selectedTemplate?.label ?? 'Custom',
+        sentBy: sentByUid, sentByName, sentAt: serverTimestamp(),
+        resolved: false, acknowledged: false, followUp: false,
+      });
+      setSent(true);
+      setTimeout(onClose, 1200);
+    } catch (e) { console.error(e); }
+    setSending(false);
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', padding: '16px', animation: 'fadeIn 0.18s ease both' }}>
+      <div style={{ width: '100%', maxWidth: '440px', background: 'var(--card)', border: '1px solid var(--gold-border)', borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-modal)', animation: 'slideUp 0.22s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+        <div style={{ height: 3, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--divider)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '4px' }}>Call to Counter</p>
+            <h2 style={{ ...SERIF, fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)' }}>{student.displayName}</h2>
+            {student.idNumber && <p style={{ ...MONO, fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{student.idNumber}</p>}
+          </div>
+          <button onClick={onClose} style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '8px', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '14px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {sent ? (
+            <p style={{ ...MONO, fontSize: '12px', color: 'var(--green)', textAlign: 'center', padding: '16px 0' }}>Notification sent.</p>
+          ) : (
+            <>
+              <div>
+                <label style={{ ...MONO, fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Message Template</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  {TEMPLATES.map(t => (
+                    <button key={t.id} type="button" onClick={() => { setTemplateId(t.id); setCustomMsg(''); }}
+                      style={{ padding: '9px 10px', borderRadius: '8px', textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s', background: templateId === t.id ? 'var(--gold-soft)' : 'var(--surface)', border: `1px solid ${templateId === t.id ? 'var(--gold-border)' : 'var(--card-border)'}` }}>
+                      <p style={{ ...MONO, fontSize: '10px', fontWeight: 600, color: templateId === t.id ? 'var(--gold)' : 'var(--text-muted)', margin: 0 }}>{t.label}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {templateId && (
+                <div>
+                  <label style={{ ...MONO, fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                    {templateId === 'custom' ? 'Your Message' : 'Preview'}
+                  </label>
+                  {templateId === 'custom' ? (
+                    <textarea style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', resize: 'none', height: '80px' }}
+                      placeholder="Type your message…" value={customMsg} onChange={e => setCustomMsg(e.target.value)} maxLength={300} />
+                  ) : (
+                    <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '12px 14px' }}>
+                      <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>{finalMessage}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button onClick={onClose} disabled={sending}
+                  style={{ ...MONO, fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '9px 16px', borderRadius: '8px', background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button onClick={handleSend} disabled={sending || !templateId || (templateId === 'custom' && !customMsg.trim())}
+                  style={{ ...MONO, fontSize: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '9px 18px', borderRadius: '8px', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: 'pointer', opacity: (sending || !templateId || (templateId === 'custom' && !customMsg.trim())) ? 0.4 : 1 }}>
+                  {sending ? 'Sending…' : 'Send'}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function QRLoggerPage() {
   const { userProfile } = useAuth();
@@ -164,14 +263,19 @@ export default function QRLoggerPage() {
   const [manualLoading, setManualLoading] = useState(false);
   const [manualMsg,     setManualMsg]     = useState(null);
 
-  const [liveSessions, setLiveSessions] = useState([]);
-  const [userMap,      setUserMap]      = useState({});
-  const [search,       setSearch]       = useState('');
+  const [liveSessions,   setLiveSessions]   = useState([]);
+  const [userMap,        setUserMap]        = useState({});
+  const [search,         setSearch]         = useState('');
+  const [callTarget,     setCallTarget]     = useState(null);
+  const [activeNotifMap, setActiveNotifMap] = useState({});
 
   useEffect(() => {
     const u1 = onSnapshot(query(collection(db, 'logger'), where('active', '==', true)), snap => setLiveSessions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const u2 = onSnapshot(collection(db, 'users'), snap => { const m = {}; snap.forEach(d => { m[d.id] = d.data(); }); setUserMap(m); });
-    return () => { u1(); u2(); };
+    const u3 = onSnapshot(query(collection(db, 'notifications'), where('resolved', '==', false)), snap => {
+      const m = {}; snap.docs.forEach(d => { m[d.data().toUid] = { id: d.id, ...d.data() }; }); setActiveNotifMap(m);
+    });
+    return () => { u1(); u2(); u3(); };
   }, []);
 
   useEffect(() => {
@@ -263,6 +367,16 @@ export default function QRLoggerPage() {
     } catch { if (!unmountedRef.current) { setConfirmLoad(false); processingRef.current = false; } }
   };
 
+  const handleFollowUp = async (notifId) => {
+    try { await updateDoc(doc(db, 'notifications', notifId), { acknowledged: false, followUp: true }); }
+    catch (e) { console.error(e); }
+  };
+
+  const handleResolve = async (notifId) => {
+    try { await updateDoc(doc(db, 'notifications', notifId), { resolved: true }); }
+    catch (e) { console.error(e); }
+  };
+
   const handleManualSubmit = async (e) => {
     e.preventDefault();
     if (!manualId || !manualPurpose) return;
@@ -317,6 +431,16 @@ export default function QRLoggerPage() {
           onConfirm={confirmCheckIn}
           onCancel={() => { setPurposeForId(null); processingRef.current = false; cooldownRef.current = {}; }}
           loading={confirmLoad}
+        />
+      )}
+
+      {/* Notification CallModal */}
+      {callTarget && (
+        <CallModal
+          student={callTarget}
+          sentByName={userProfile ? `${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}`.trim() : ''}
+          sentByUid={userProfile?.uid}
+          onClose={() => setCallTarget(null)}
         />
       )}
 
@@ -424,7 +548,7 @@ export default function QRLoggerPage() {
                 <table style={{ width: '100%', minWidth: '500px', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'var(--thead-bg)' }}>
-                      {['Student', 'ID', 'Purpose', 'Since', 'Duration'].map(h => (
+                      {['Student', 'ID', 'Purpose', 'Since', 'Duration', 'Notify'].map(h => (
                         <th key={h} style={{ ...MONO, fontSize: '9px', letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', padding: '11px 14px', textAlign: 'left', borderBottom: '1px solid var(--divider)', fontWeight: 600 }}>{h}</th>
                       ))}
                     </tr>
@@ -441,6 +565,37 @@ export default function QRLoggerPage() {
                           </td>
                           <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--row-border)', ...MONO, fontSize: '11px', color: 'var(--text-muted)' }}>{fmtTime(s.entryTime)}</td>
                           <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--row-border)', ...MONO, fontSize: '11px', color: 'var(--text-body)' }}><LiveDur entryTime={s.entryTime} /></td>
+                          <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--row-border)' }}>
+                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                              {(() => {
+                                const notif = activeNotifMap[s.uid];
+                                const nm = u ? `${u.lastName}, ${u.firstName}` : '—';
+                                if (!notif) return (
+                                  <button onClick={() => setCallTarget({ uid: s.uid, displayName: nm, idNumber: u?.idNumber ?? '' })}
+                                    style={{ ...MONO, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 10px', borderRadius: '7px', background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', color: 'var(--blue)', cursor: 'pointer' }}>
+                                    Call
+                                  </button>
+                                );
+                                if (!notif.acknowledged) return (
+                                  <span style={{ ...MONO, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: '7px', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)' }}>
+                                    Pending
+                                  </span>
+                                );
+                                return (
+                                  <>
+                                    <button onClick={() => handleFollowUp(notif.id)}
+                                      style={{ ...MONO, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 10px', borderRadius: '7px', background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', color: 'var(--blue)', cursor: 'pointer' }}>
+                                      Follow Up
+                                    </button>
+                                    <button onClick={() => handleResolve(notif.id)}
+                                      style={{ ...MONO, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 10px', borderRadius: '7px', background: 'var(--green-soft)', border: '1px solid var(--green-border)', color: 'var(--green)', cursor: 'pointer' }}>
+                                      Resolve
+                                    </button>
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}

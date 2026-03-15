@@ -46,7 +46,7 @@ function formatId(raw) {
 function Header() {
   return (
     <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '13px', flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-      <img src="/favicon.svg" alt="NEU" style={{ width: 34, height: 34 }} />
+      <img src="/liblogo.png" alt="NEU" style={{ width: 34, height: 34 }} />
       <div>
         <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.24em', color: C.gold, textTransform: 'uppercase', marginBottom: '2px' }}>New Era University</p>
         <p style={{ ...SERIF, fontSize: '14px', fontWeight: 700, color: C.white, lineHeight: 1.2 }}>Library Management System</p>
@@ -194,7 +194,6 @@ export default function RegisterPage() {
   // ── Registration form ─────────────────────────────────────────────────────
   return (
     <div style={BG}>
-      <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', flexShrink: 0 }} />
       <Header />
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>

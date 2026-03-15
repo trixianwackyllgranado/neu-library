@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   collection, query, where, onSnapshot, getDocs, limit,
-  addDoc, serverTimestamp
+  addDoc, updateDoc, doc, serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
@@ -253,7 +253,7 @@ export default function LoggerPage() {
     if (!isStaff) return;
     return onSnapshot(query(collection(db, 'notifications'), where('resolved', '==', false)), snap => {
       const map = {};
-      snap.docs.forEach(d => { map[d.data().toUid] = true; });
+      snap.docs.forEach(d => { map[d.data().toUid] = { id: d.id, ...d.data() }; });
       setActiveNotifMap(map);
     });
   }, [isStaff]);
@@ -301,6 +301,21 @@ export default function LoggerPage() {
       title: 'Force Log Out', message: `Log out ${name || 'this student'} from the library?`,
       confirmLabel: 'Log Out', confirmStyle: 'danger',
       onConfirm: async () => { setConfirm(null); await forceCheckOut(sessionId); },
+      onCancel: () => setConfirm(null),
+    });
+  };
+
+  const handleFollowUp = async (notifId) => {
+    try {
+      await updateDoc(doc(db, 'notifications', notifId), { acknowledged: false, followUp: true });
+    } catch (e) { console.error(e); }
+  };
+
+  const handleResolve = (notifId, name) => {
+    setConfirm({
+      title: 'Resolve Case', message: `Mark the notification for ${name} as resolved? This closes the case and allows a new one to be created.`,
+      confirmLabel: 'Resolve', confirmStyle: 'primary',
+      onConfirm: async () => { setConfirm(null); try { await updateDoc(doc(db, 'notifications', notifId), { resolved: true }); } catch(e){console.error(e);} },
       onCancel: () => setConfirm(null),
     });
   };
@@ -488,19 +503,42 @@ export default function LoggerPage() {
                             </td>
                             <td style={tdSt}><LiveDuration entryTime={s.entryTime} /></td>
                             <td style={tdSt}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {activeNotifMap[s.uid] ? (
-                                  <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: '8px', background: 'var(--gold-soft)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--gold)' }}>
-                                    Notified
-                                  </span>
-                                ) : (
-                                  <button onClick={() => setCallTarget({ uid: s.uid, displayName: name, idNumber: user?.idNumber ?? '' })}
-                                    style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 12px', borderRadius: '8px', background: 'var(--blue-soft)', border: '1px solid rgba(59,130,246,0.3)', color: 'var(--blue)', cursor: 'pointer' }}>
-                                    Call
-                                  </button>
-                                )}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                {(() => {
+                                  const notif = activeNotifMap[s.uid];
+                                  if (!notif) {
+                                    // No active case — show Call button
+                                    return (
+                                      <button onClick={() => setCallTarget({ uid: s.uid, displayName: name, idNumber: user?.idNumber ?? '' })}
+                                        style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 12px', borderRadius: '8px', background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', color: 'var(--blue)', cursor: 'pointer' }}>
+                                        Call
+                                      </button>
+                                    );
+                                  }
+                                  if (!notif.acknowledged) {
+                                    // Sent but student hasn't acknowledged yet
+                                    return (
+                                      <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: '8px', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)' }}>
+                                        Pending
+                                      </span>
+                                    );
+                                  }
+                                  // Student acknowledged — show Follow Up + Resolve
+                                  return (
+                                    <>
+                                      <button onClick={() => handleFollowUp(notif.id)}
+                                        style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 10px', borderRadius: '8px', background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', color: 'var(--blue)', cursor: 'pointer' }}>
+                                        Follow Up
+                                      </button>
+                                      <button onClick={() => handleResolve(notif.id, name)}
+                                        style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 10px', borderRadius: '8px', background: 'var(--green-soft)', border: '1px solid var(--green-border)', color: 'var(--green)', cursor: 'pointer' }}>
+                                        Resolve
+                                      </button>
+                                    </>
+                                  );
+                                })()}
                                 <button onClick={() => handleForceOut(s.id, name)}
-                                  style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 12px', borderRadius: '8px', background: 'var(--red-soft)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--red)', cursor: 'pointer' }}>
+                                  style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 12px', borderRadius: '8px', background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: 'pointer' }}>
                                   Log Out
                                 </button>
                               </div>

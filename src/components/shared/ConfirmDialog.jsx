@@ -9,7 +9,7 @@ export default function ConfirmDialog({ title, message, confirmLabel = 'Confirm'
   return (
     <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.65)',backdropFilter:'blur(4px)',padding:16}}>
       <div style={{width:'100%',maxWidth:420,background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:16,overflow:'hidden',boxShadow:'var(--shadow-modal)'}}>
-        <div style={{height:3,background:'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#f39c12 25%,#f39c12 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)'}} />
+        <div style={{height:3,background:'linear-gradient(90deg,var(--gold),transparent)'}} />
         <div style={{padding:28}}>
           <p style={{...SR,fontSize:20,fontWeight:700,color:'var(--text-primary)',marginBottom:10}}>{title}</p>
           <p style={{...PP,fontSize:14,color:'var(--text-muted)',marginBottom:28,lineHeight:1.65}}>{message}</p>
@@ -27,7 +27,7 @@ export function AlertDialog({ title, message, onClose }) {
   return (
     <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.65)',backdropFilter:'blur(4px)',padding:16}}>
       <div style={{width:'100%',maxWidth:420,background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:16,overflow:'hidden',boxShadow:'var(--shadow-modal)'}}>
-        <div style={{height:3,background:'linear-gradient(90deg,#c0392b,#f39c12 50%,#2980b9)'}} />
+        <div style={{height:3,background:'linear-gradient(90deg,var(--gold),transparent)'}} />
         <div style={{padding:28}}>
           <p style={{fontFamily:"'Playfair Display',serif",fontSize:20,fontWeight:700,color:'var(--text-primary)',marginBottom:10}}>{title}</p>
           <p style={{fontFamily:"'Poppins',sans-serif",fontSize:14,color:'var(--text-muted)',marginBottom:28,lineHeight:1.65}}>{message}</p>

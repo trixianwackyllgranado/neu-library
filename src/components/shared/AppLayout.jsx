@@ -225,7 +225,7 @@ export default function AppLayout({ children }) {
       {showSignOut && (
         <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.65)',backdropFilter:'blur(4px)',padding:16}}>
           <div style={{width:'100%',maxWidth:420,background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:18,overflow:'hidden',boxShadow:'var(--shadow-modal)'}}>
-            <div style={{height:3,background:'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#f39c12 25%,#f39c12 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)'}} />
+            <div style={{height:3,background:'linear-gradient(90deg,var(--gold),transparent)'}} />
             <div style={{padding:28}}>
               <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--gold)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>Active Library Session</p>
               <p style={{...SR,fontSize:20,fontWeight:700,color:'var(--text-primary)',marginBottom:10}}>You are still checked in</p>
