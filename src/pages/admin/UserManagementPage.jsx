@@ -270,7 +270,25 @@ function AuditModal({ logs, onClose }) {
                             {l.oldProgram || '—'} → {l.newProgram || '—'}
                           </span>
                         )}
+                        {l.activityType === 'user_deletion' && (
+                          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--badge-red-text)' }}>
+                            Hard deleted · {l.borrowsSnapshotted ?? 0} borrows, {l.logsSnapshotted ?? 0} visits snapshotted
+                          </span>
+                        )}
                       </td>
+                      <td className="td" style={{ fontSize:12, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{l.changedByName || l.approvedByName || '—'}</td>
+                      <td className="td" style={{ fontSize:12, color:'var(--text-body)', maxWidth:180 }}>{l.reason || '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 export default function UserManagementPage() {
