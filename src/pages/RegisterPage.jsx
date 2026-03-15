@@ -266,14 +266,14 @@ export default function RegisterPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <FieldLabel required>Last Name</FieldLabel>
-                  <input style={inputBase()} placeholder="Santos" value={lastName}
-                    onChange={e => { setLastName(e.target.value); setError(''); }}
+                  <input style={{ ...inputBase(), textTransform: 'uppercase' }} placeholder="SANTOS" value={lastName}
+                    onChange={e => { setLastName(e.target.value.toUpperCase()); setError(''); }}
                     onFocus={onFocus} onBlur={onBlur} required />
                 </div>
                 <div>
                   <FieldLabel required>First Name</FieldLabel>
-                  <input style={inputBase()} placeholder="Juan" value={firstName}
-                    onChange={e => { setFirstName(e.target.value); setError(''); }}
+                  <input style={{ ...inputBase(), textTransform: 'uppercase' }} placeholder="JUAN" value={firstName}
+                    onChange={e => { setFirstName(e.target.value.toUpperCase()); setError(''); }}
                     onFocus={onFocus} onBlur={onBlur} required />
                 </div>
               </div>
@@ -283,7 +283,7 @@ export default function RegisterPage() {
                 <FieldLabel>Middle Initial</FieldLabel>
                 <input style={{ ...inputBase(), width: '72px', textTransform: 'uppercase', textAlign: 'center' }}
                   placeholder="D" maxLength={2} value={middleInitial}
-                  onChange={e => setMiddleInitial(e.target.value.replace(/[^a-zA-Z]/g, ''))}
+                  onChange={e => setMiddleInitial(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
                   onFocus={onFocus} onBlur={onBlur} />
               </div>
 
