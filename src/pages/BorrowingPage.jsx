@@ -26,11 +26,11 @@ function ApproveModal({ borrow, onConfirm, onCancel, saving }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-      <div className="bg-white w-full max-w-md shadow-2xl">
-        <div className="bg-primary-800 text-white px-6 py-4">
-          <p className="font-mono text-[10px] tracking-widest uppercase opacity-60 mb-0.5">Approve Request</p>
-          <h2 className="font-display text-lg font-bold leading-tight">{borrow.bookTitle}</h2>
-          <p className="text-xs text-white/60 mt-0.5">Requested by: {borrow._studentName || '—'}</p>
+      <div style={{background:"var(--card)",border:"1px solid var(--card-border)",borderRadius:12,width:"100%",maxWidth:"28rem",boxShadow:"var(--shadow-modal)"}}>
+        <div style={{background:"var(--thead-bg)",borderBottom:"1px solid var(--divider)",padding:"16px 24px"}}>
+          <p className="font-mono text-[10px] tracking-widest uppercase mb-0.5" style={{color:"var(--text-muted)"}}>Approve Request</p>
+          <h2 className="font-display text-lg font-bold leading-tight" style={{color:"var(--text-primary)"}}>{borrow.bookTitle}</h2>
+          <p className="text-xs mt-0.5" style={{color:"var(--text-muted)"}}>Requested by: {borrow._studentName || '—'}</p>
         </div>
         <div className="px-6 py-5 space-y-4">
           <div>
@@ -39,11 +39,11 @@ function ApproveModal({ borrow, onConfirm, onCancel, saving }) {
               min={new Date().toISOString().split('T')[0]}
               onChange={e => setDueDate(e.target.value)} />
           </div>
-          <div className="border border-gold-200 bg-gold-50 px-4 py-3">
-            <p className="text-xs text-gold-800">Approving will mark this borrow as <strong>Active</strong> and decrement available copies.</p>
+          <div style={{background:"var(--gold-soft)",border:"1px solid var(--gold-border)",borderRadius:8,padding:"12px 16px"}}>
+            <p style={{fontSize:12,color:"var(--gold)"}}>Approving will mark this borrow as <strong>Active</strong> and decrement available copies.</p>
           </div>
         </div>
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+        <div style={{padding:"16px 24px",borderTop:"1px solid var(--divider)",background:"var(--surface)",display:"flex",justifyContent:"flex-end",gap:12}}>
           <button className="btn-ghost" onClick={onCancel} disabled={saving}>Cancel</button>
           <button className="btn-primary" disabled={!dueDate || saving} onClick={() => onConfirm(dueDate)}>
             {saving ? 'Approving…' : 'Approve & Set Due Date'}
@@ -334,7 +334,7 @@ export default function BorrowingPage() {
   if (loadingAuth || !role) {
     return (
       <div className="flex items-center justify-center py-32">
-        <p className="text-sm text-gray-400 font-mono">Loading records…</p>
+        <p className="text-sm font-mono" style={{color:"var(--text-muted)"}}>Loading records…</p>
       </div>
     );
   }
@@ -355,11 +355,12 @@ export default function BorrowingPage() {
 
   return (
     <div className="space-y-6">
+      <style>{`tr.log-row:hover td { background: var(--row-hover-bg) !important; color: var(--row-hover-text) !important; }`}</style>
 
       {/* Header */}
-      <div className="pb-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="pb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4" style={{borderBottom:"1px solid var(--divider)"}}>
         <div>
-          <p className="font-mono text-[10px] tracking-widest uppercase text-gray-400 mb-1">Circulation</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{color:"var(--text-muted)"}}>Circulation</p>
           <h1 className="page-title">{isStudent ? 'My Borrows' : 'Borrowing Records'}</h1>
           {isStudent && (
             <p className="text-sm text-gray-500 mt-1">
@@ -369,7 +370,7 @@ export default function BorrowingPage() {
           {/* Live indicator */}
           <div className="flex items-center gap-1.5 mt-2">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Live</span>
+            <span className="text-[10px] font-mono uppercase tracking-widest" style={{color:"var(--text-muted)"}}>Live</span>
           </div>
         </div>
         {canManage && (
@@ -391,13 +392,13 @@ export default function BorrowingPage() {
                 value={newBorrow.studentSearch}
                 onChange={e => { setNewBorrow(p => ({ ...p, studentSearch: e.target.value, selectedUserId: '' })); searchStudents(e.target.value); }} />
               {studentResults.length > 0 && (
-                <div className="border border-gray-200 bg-white shadow-sm mt-1">
+                <div style={{border:"1px solid var(--card-border)",background:"var(--card)",borderRadius:8,boxShadow:"var(--shadow-card)",marginTop:4}}>
                   {studentResults.map(u => (
                     <button key={u.id} type="button"
-                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                      className="w-full text-left text-sm" style={{padding:"10px 16px",borderBottom:"1px solid var(--row-border)",background:"transparent",color:"var(--text-body)",cursor:"pointer"}}
                       onClick={() => { setNewBorrow(p => ({ ...p, studentSearch: `${u.lastName}, ${u.firstName} (${u.idNumber})`, selectedUserId: u.id })); setStudentResults([]); }}>
                       <span className="font-semibold">{u.lastName}, {u.firstName}</span>
-                      <span className="ml-2 font-mono text-xs text-gray-400">{u.idNumber}</span>
+                      <span className="ml-2 font-mono text-xs" style={{color:"var(--text-muted)"}}>{u.idNumber}</span>
                     </button>
                   ))}
                 </div>
@@ -410,13 +411,13 @@ export default function BorrowingPage() {
                 value={newBorrow.bookSearch}
                 onChange={e => { setNewBorrow(p => ({ ...p, bookSearch: e.target.value, selectedBookId: '', selectedBookTitle: '' })); searchBooks(e.target.value); }} />
               {bookResults.length > 0 && (
-                <div className="border border-gray-200 bg-white shadow-sm mt-1">
+                <div style={{border:"1px solid var(--card-border)",background:"var(--card)",borderRadius:8,boxShadow:"var(--shadow-card)",marginTop:4}}>
                   {bookResults.map(b => (
                     <button key={b.id} type="button"
-                      className="w-full text-left px-4 py-2.5 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                      className="w-full text-left" style={{padding:"10px 16px",borderBottom:"1px solid var(--row-border)",background:"transparent",color:"var(--text-body)",cursor:"pointer",fontSize:13}}
                       onClick={() => { setNewBorrow(p => ({ ...p, bookSearch: b.title, selectedBookId: b.id, selectedBookTitle: b.title })); setBookResults([]); }}>
                       <p className="text-sm font-semibold">{b.title}</p>
-                      <p className="text-xs text-gray-400">{b.authors} — {b.availableCopies ?? 0} copies available</p>
+                      <p className="text-xs" style={{color:"var(--text-muted)"}}>{b.authors} — {b.availableCopies ?? 0} copies available</p>
                     </button>
                   ))}
                 </div>
@@ -438,19 +439,23 @@ export default function BorrowingPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex overflow-x-auto whitespace-nowrap border-b border-gray-200">
+      <div className="flex overflow-x-auto whitespace-nowrap" style={{borderBottom:"1px solid var(--divider)"}}>
         {TABS.map(t => (
           <button key={t.key} onClick={() => handleTabChange(t.key)}
-            className={`px-5 py-3 text-xs font-mono font-semibold tracking-widest uppercase transition-colors flex items-center gap-2 ${
-              tab === t.key ? 'border-b-2 border-primary-600 text-primary-700' : 'text-gray-400 hover:text-gray-600'
-            }`}>
+            className="px-5 py-3 text-xs font-mono font-semibold tracking-widest uppercase transition-colors flex items-center gap-2"
+            style={{
+              borderBottom: tab === t.key ? '2px solid var(--gold)' : '2px solid transparent',
+              color: tab === t.key ? 'var(--gold)' : 'var(--text-muted)',
+              background: 'transparent',
+            }}>
             {t.label}
             {t.count > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                t.key === 'pending' ? 'bg-gold-100 text-gold-700' :
-                t.key === 'overdue' ? 'bg-red-100 text-red-700' :
-                'bg-gray-100 text-gray-600'
-              }`}>{t.count}</span>
+              <span style={{
+                fontSize:10, padding:'1px 6px', borderRadius:10, fontWeight:700,
+                background: t.key === 'overdue' ? 'var(--badge-red-bg)' : t.key === 'pending' ? 'var(--badge-gold-bg)' : 'var(--badge-gray-bg)',
+                color:      t.key === 'overdue' ? 'var(--badge-red-text)' : t.key === 'pending' ? 'var(--badge-gold-text)' : 'var(--badge-gray-text)',
+                border:     `1px solid ${t.key === 'overdue' ? 'var(--badge-red-border)' : t.key === 'pending' ? 'var(--badge-gold-border)' : 'var(--badge-gray-border)'}`,
+              }}>{t.count}</span>
             )}
           </button>
         ))}
@@ -458,7 +463,7 @@ export default function BorrowingPage() {
 
       {/* Filter bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="text-xs text-gray-400 font-mono">
+        <p className="text-xs font-mono" style={{color:"var(--text-muted)"}}> 
           {filtered.length} record{filtered.length !== 1 ? 's' : ''}
           {(filterBook || filterStudent || filterDate) && ' (filtered)'}
         </p>
@@ -470,7 +475,8 @@ export default function BorrowingPage() {
             </button>
           )}
           <button
-            className={`btn-ghost text-xs px-3 py-1.5 border ${showFilters ? 'border-primary-400 text-primary-700 bg-primary-50' : 'border-gray-200'}`}
+            className="btn-ghost text-xs px-3 py-1.5"
+            style={{ border: `1px solid ${showFilters ? 'var(--gold-border)' : 'var(--card-border)'}`, color: showFilters ? 'var(--gold)' : 'var(--text-muted)' }}
             onClick={() => setShowFilters(s => !s)}>
             {showFilters ? '▲ Hide Filters' : '▼ Filter Columns'}
           </button>
@@ -502,10 +508,10 @@ export default function BorrowingPage() {
       {/* Table */}
       <div className="card p-0 overflow-hidden">
         {loading || tab === null ? (
-          <p className="text-sm text-gray-400 font-mono p-6">Loading records…</p>
+          <p className="text-sm font-mono p-6" style={{color:"var(--text-muted)"}}>Loading records…</p>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm" style={{color:"var(--text-muted)"}}>
               {tab === 'pending' && isStudent ? 'No pending requests. Browse the Book Catalog to request a book.'
                 : tab === 'pending' && canManage ? 'No pending requests to review.'
                 : `No ${tab} records.`}
@@ -529,7 +535,7 @@ export default function BorrowingPage() {
                 {filtered.map(b => {
                   const over = isOverdue(b);
                   return (
-                    <tr key={b.id} className="hover:bg-gray-50">
+                    <tr key={b.id} className="log-row">
                       <td className="td">
                         <p className="font-semibold text-sm">{b.bookTitle}</p>
                         {b.walkUp && <span className="badge badge-blue text-[9px] mt-0.5">Walk-Up</span>}
@@ -537,7 +543,7 @@ export default function BorrowingPage() {
                       {canManage && (
                         <td className="td">
                           <p className="text-sm font-medium">{b._studentName || '—'}</p>
-                          <p className="font-mono text-xs text-gray-400">{b._studentId}</p>
+                          <p className="font-mono text-xs" style={{color:"var(--text-muted)"}}>{b._studentId}</p>
                         </td>
                       )}
                       <td className="td font-mono text-xs">{fmt(b.borrowDate)}</td>
@@ -545,7 +551,7 @@ export default function BorrowingPage() {
                         <td className={`td font-mono text-xs ${over ? 'text-red-700 font-bold' : ''}`}>{fmt(b.dueDate)}</td>
                       )}
                       {tab === 'returned' && (
-                        <td className="td font-mono text-xs text-gray-400">{fmt(b.returnDate)}</td>
+                        <td className="td font-mono text-xs" style={{color:"var(--text-muted)"}}>{fmt(b.returnDate)}</td>
                       )}
                       <td className="td">
                         {b.status === 'returned' && <span className="badge badge-gray">Returned</span>}
@@ -574,7 +580,7 @@ export default function BorrowingPage() {
                           )}
                           {isStudent && b.status === 'pending' && (
                             <button
-                              className="btn-ghost py-1 px-3 text-[10px] text-red-500 border border-red-200 hover:bg-red-50"
+                              className="btn-ghost py-1 px-3 text-[10px]" style={{color:"var(--red)",borderColor:"var(--red-border)"}}
                               onClick={() => handleCancelRequest(b)}>
                               Cancel
                             </button>

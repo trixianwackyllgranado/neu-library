@@ -1,5 +1,5 @@
 // src/pages/RegisterPage.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
@@ -132,6 +132,24 @@ export default function RegisterPage() {
   const [loading,       setLoading]       = useState(false);
   const [registered,    setRegistered]    = useState(null);
 
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+  useEffect(() => {
+    const handler = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile && (role === 'staff' || role === 'admin')) {
+        handleRoleChange('student');
+      }
+    };
+    window.addEventListener('resize', handler);
+    // Also enforce on mount
+    if (window.innerWidth < 768 && (role === 'staff' || role === 'admin')) {
+      handleRoleChange('student');
+    }
+    return () => window.removeEventListener('resize', handler);
+  }, [role]);
+
   const needsCode = role === 'staff' || role === 'admin';
   const isStaffOrAdmin = needsCode;
   const selectedCollege = COLLEGES.find(c => c.name === college);
@@ -251,11 +269,12 @@ export default function RegisterPage() {
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
-              {/* Account type */}
               <div>
                 <FieldLabel>Account Type</FieldLabel>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                  {Object.entries(ROLES).map(([key, info]) => {
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                  {Object.entries(ROLES)
+                    .filter(([key]) => !isMobile || key === 'student')
+                    .map(([key, info]) => {
                     const active = role === key;
                     return (
                       <button key={key} type="button"
@@ -272,6 +291,14 @@ export default function RegisterPage() {
                     );
                   })}
                 </div>
+                {isMobile && (
+                  <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '10px 13px', marginBottom: '10px', display: 'flex', alignItems: 'flex-start', gap: '9px' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <p style={{ fontSize: '12px', color: C.muted, margin: 0, lineHeight: 1.5 }}>
+                      Staff and Administrator registration is only available on desktop. Please use a computer to register a staff or admin account.
+                    </p>
+                  </div>
+                )}
                 <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '10px 13px' }}>
                   <p style={{ fontSize: '13px', color: C.body, margin: 0 }}>{ROLES[role].desc}</p>
                 </div>
