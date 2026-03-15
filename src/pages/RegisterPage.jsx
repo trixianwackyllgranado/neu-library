@@ -190,10 +190,6 @@ export default function RegisterPage() {
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
-      setRegistered({ idNumber: idNumber.trim(), name: `${lastName.trim()}, ${firstName.trim()}` });
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
-  };
 
   // ── Success / QR screen ───────────────────────────────────────────────────
   if (registered) {
