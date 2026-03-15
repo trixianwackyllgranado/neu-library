@@ -3,28 +3,29 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { COLLEGES } from '../data/colleges';
 
 const MONO  = { fontFamily: "'IBM Plex Mono', monospace" };
 const SERIF = { fontFamily: "'Playfair Display', serif" };
 
 const C = {
-  gold:      '#f59e0b',
-  white:     '#f1f5f9',
-  body:      '#cbd5e1',
-  muted:     '#94a3b8',
-  border:    'rgba(255,255,255,0.12)',
-  surface:   'rgba(255,255,255,0.05)',
-  surfaceHov:'rgba(255,255,255,0.08)',
-  red:       '#f87171',
-  green:     '#34d399',
+  gold:       'var(--gold)',
+  white:      'var(--text-primary)',
+  body:       'var(--text-body)',
+  muted:      'var(--text-muted)',
+  border:     'var(--input-border)',
+  surface:    'var(--input-bg)',
+  surfaceHov: 'var(--surface-hover)',
+  red:        'var(--red)',
+  green:      'var(--green)',
 };
 
-const BG = {
+const getBG = () => ({
   minHeight: '100vh',
-  background: 'linear-gradient(160deg, #060e1e 0%, #0a1628 50%, #0d1e36 100%)',
-  display: 'flex', flexDirection: 'column',
-};
+  background: 'linear-gradient(160deg, var(--bg-base) 0%, var(--bg-mid) 50%, var(--bg-top) 100%)',
+  display: 'flex', flexDirection: 'column', transition: 'background 0.25s',
+});
 
 const ID_REGEX = /^\d{2}-\d{5}-\d{3}$/;
 
@@ -43,21 +44,30 @@ function formatId(raw) {
   return `${d.slice(0,2)}-${d.slice(2,7)}-${d.slice(7)}`;
 }
 
-function Header() {
+function Header({ dark, toggle }) {
   return (
-    <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '13px', flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-      <img src="/liblogo.png" alt="NEU" style={{ width: 34, height: 34 }} />
-      <div>
-        <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.24em', color: C.gold, textTransform: 'uppercase', marginBottom: '2px' }}>New Era University</p>
-        <p style={{ ...SERIF, fontSize: '14px', fontWeight: 700, color: C.white, lineHeight: 1.2 }}>Library Management System</p>
+    <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '13px', flexShrink: 0, borderBottom: '1px solid var(--divider)', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '13px' }}>
+        <img src="/liblogo.png" alt="NEU" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+        <div>
+          <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.24em', color: C.gold, textTransform: 'uppercase', marginBottom: '2px' }}>New Era University</p>
+          <p style={{ ...SERIF, fontSize: '14px', fontWeight: 700, color: C.white, lineHeight: 1.2 }}>Library Management System</p>
+        </div>
       </div>
+      <button onClick={toggle} title={dark ? 'Light Mode' : 'Dark Mode'}
+        style={{ width: 36, height: 36, borderRadius: '8px', border: '1px solid var(--card-border)', background: 'var(--surface)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 }}>
+        {dark
+          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        }
+      </button>
     </div>
   );
 }
 
 function Footer() {
   return (
-    <footer style={{ textAlign: 'center', padding: '16px', ...MONO, fontSize: '9px', letterSpacing: '0.18em', color: '#2d4a7a', textTransform: 'uppercase' }}>
+    <footer style={{ textAlign: 'center', padding: '16px', ...MONO, fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
       New Era University — Library Management System
     </footer>
   );
@@ -65,7 +75,7 @@ function Footer() {
 
 function Card({ children }) {
   return (
-    <div style={{ background: 'rgba(15,34,68,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '18px', padding: '36px 32px', boxShadow: '0 24px 64px rgba(0,0,0,0.5)' }}>
+    <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: '18px', padding: '36px 32px', boxShadow: 'var(--shadow-modal)' }}>
       {children}
     </div>
   );
@@ -102,6 +112,7 @@ function primaryBtn(loading = false) {
 export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const { dark, toggle } = useTheme();
 
   const [role,          setRole]          = useState('student');
   const [inviteCode,    setInviteCode]    = useState('');
@@ -155,9 +166,8 @@ export default function RegisterPage() {
   // ── Success / QR screen ───────────────────────────────────────────────────
   if (registered) {
     return (
-      <div style={BG}>
-        <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)' }} />
-        <Header />
+      <div style={getBG()}>
+        <Header dark={dark} toggle={toggle} />
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
           <div style={{ width: '100%', maxWidth: '420px', textAlign: 'center' }}>
             <Card>
@@ -174,7 +184,7 @@ export default function RegisterPage() {
               <p style={{ fontSize: '13px', color: C.body, marginBottom: '22px', lineHeight: 1.7 }}>
                 Screenshot or save this QR code. Show it to library staff to check in and out instantly.
               </p>
-              <div style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', textAlign: 'left' }}>
+              <div style={{ background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', textAlign: 'left' }}>
                 <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.14em', color: C.gold, textTransform: 'uppercase', marginBottom: '8px' }}>How to use</p>
                 <ul style={{ fontSize: '13px', color: C.body, paddingLeft: '18px', lineHeight: 1.9, margin: 0 }}>
                   <li>Show this QR code to the staff scanner when entering</li>
@@ -193,8 +203,8 @@ export default function RegisterPage() {
 
   // ── Registration form ─────────────────────────────────────────────────────
   return (
-    <div style={BG}>
-      <Header />
+    <div style={getBG()}>
+      <Header dark={dark} toggle={toggle} />
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
         <div style={{ width: '100%', maxWidth: '460px' }}>
@@ -206,7 +216,7 @@ export default function RegisterPage() {
             </div>
 
             {error && (
-              <div style={{ marginBottom: '20px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: '10px', padding: '12px 16px' }}>
+              <div style={{ marginBottom: '20px', background: 'var(--red-soft)', border: '1px solid var(--red-border)', borderRadius: '10px', padding: '12px 16px' }}>
                 <p style={{ ...MONO, fontSize: '12px', color: C.red }}>{error}</p>
               </div>
             )}
@@ -234,7 +244,7 @@ export default function RegisterPage() {
                     );
                   })}
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: '8px', padding: '10px 13px' }}>
+                <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '10px 13px' }}>
                   <p style={{ fontSize: '13px', color: C.body, margin: 0 }}>{ROLES[role].desc}</p>
                 </div>
               </div>
@@ -332,7 +342,7 @@ export default function RegisterPage() {
               </button>
             </form>
 
-            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
+            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--divider)', textAlign: 'center' }}>
               <p style={{ fontSize: '14px', color: C.body }}>
                 Already have an account?{' '}
                 <Link to="/login" style={{ color: C.gold, fontWeight: 600, textDecoration: 'none', ...MONO, fontSize: '13px' }}>Sign In</Link>
