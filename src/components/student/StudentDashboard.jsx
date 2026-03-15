@@ -214,14 +214,38 @@ export default function StudentDashboard() {
       {showQR && userProfile?.qrToken && (
         <div style={{position:'fixed',inset:0,zIndex:60,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.85)',padding:16}} onClick={()=>setShowQR(false)}>
           <div style={{background:'#fff',borderRadius:18,padding:28,textAlign:'center',maxWidth:320,width:'100%'}} onClick={e=>e.stopPropagation()}>
-            <QRCodeSVG value={userProfile.qrToken} size={240} level="M" includeMargin={false} />
+            <QRCodeSVG id="student-qr-canvas" value={userProfile.qrToken} size={240} level="M" includeMargin={false} />
             <p style={{...SR,fontSize:18,fontWeight:700,color:'#0a1730',marginTop:16}}>{userProfile.lastName}, {userProfile.firstName}</p>
             <p style={{...MN,fontSize:13,color:'#475569',marginTop:4}}>{userProfile.idNumber}</p>
             <p style={{fontFamily:"'Poppins',sans-serif",fontSize:12,color:'#94a3b8',marginTop:6}}>Show this QR code to library staff</p>
-            <button onClick={()=>setShowQR(false)}
-              style={{marginTop:18,fontFamily:"'Poppins',sans-serif",fontSize:13,fontWeight:600,padding:'9px 22px',borderRadius:9,background:'#1a3a6b',border:'none',color:'#f1f5f9',cursor:'pointer'}}>
-              Close
-            </button>
+            <div style={{display:'flex',gap:8,justifyContent:'center',marginTop:18,flexWrap:'wrap'}}>
+              <button onClick={() => {
+                const svg = document.getElementById('student-qr-canvas');
+                if (!svg) return;
+                const serialized = new XMLSerializer().serializeToString(svg);
+                const canvas = document.createElement('canvas');
+                canvas.width = 300; canvas.height = 300;
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                  ctx.fillStyle = '#ffffff';
+                  ctx.fillRect(0,0,300,300);
+                  ctx.drawImage(img,0,0,300,300);
+                  const a = document.createElement('a');
+                  a.download = `QR-${userProfile.idNumber}.png`;
+                  a.href = canvas.toDataURL('image/png');
+                  a.click();
+                };
+                img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(serialized)));
+              }}
+                style={{fontFamily:"'Poppins',sans-serif",fontSize:13,fontWeight:600,padding:'9px 22px',borderRadius:9,background:'rgba(245,158,11,0.15)',border:'1px solid rgba(245,158,11,0.4)',color:'#b7952a',cursor:'pointer'}}>
+                Save as Image
+              </button>
+              <button onClick={()=>setShowQR(false)}
+                style={{fontFamily:"'Poppins',sans-serif",fontSize:13,fontWeight:600,padding:'9px 22px',borderRadius:9,background:'#1a3a6b',border:'none',color:'#f1f5f9',cursor:'pointer'}}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

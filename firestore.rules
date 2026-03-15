@@ -46,12 +46,11 @@ service cloud.firestore {
           isAdmin() &&
           request.auth.uid != userId &&
           resource.data.role != 'admin' &&
-          // Admins can only promote to 'staff' or demote to 'student' — NEVER to 'admin'
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
            request.resource.data.role in ['staff', 'student'])
         )
       );
-      allow delete: if false;
+      allow delete: if isAdmin();
     }
 
     // ── QR Users (ghost Firebase Auth account → main UID mapping) ─────────────
@@ -73,6 +72,20 @@ service cloud.firestore {
       allow read:           if isAdmin();
       allow create:         if isAdmin();
       allow update, delete: if false;
+    }
+
+    // ── Delete Requests (staff submits, admin approves) ───────────────────────
+    match /deleteRequests/{reqId} {
+      // Staff and admin can create requests
+      allow create: if isStaffOrAdmin();
+      // Admin can read all requests; staff can read requests they submitted
+      allow read: if isAdmin() || (
+        isStaffOrAdmin() &&
+        resource.data.requestedBy == request.auth.uid
+      );
+      // Only admin can update (approve/reject)
+      allow update: if isAdmin();
+      allow delete: if false;
     }
 
     // ── Books ─────────────────────────────────────────────────────────────────

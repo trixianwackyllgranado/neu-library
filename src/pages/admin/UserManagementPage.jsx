@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import {
   collection, updateDoc, addDoc, doc, onSnapshot,
-  serverTimestamp,
+  serverTimestamp, deleteDoc, writeBatch, getDocs, query, where,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
@@ -49,6 +49,7 @@ const ACTIVITY_TABS = [
   { key: 'password_reset', label: 'Password Resets'},
   { key: 'name_change',    label: 'Name Changes'   },
   { key: 'program_change', label: 'Program Changes'},
+  { key: 'user_deletion',  label: 'Deletions'      },
 ];
 
 const ACTIVITY_BADGE = {
@@ -56,17 +57,142 @@ const ACTIVITY_BADGE = {
   password_reset: { bg: 'var(--badge-blue-bg)',  border: 'var(--badge-blue-border)',  color: 'var(--badge-blue-text)',  label: 'Password' },
   name_change:    { bg: 'var(--badge-gold-bg)',  border: 'var(--badge-gold-border)',  color: 'var(--badge-gold-text)',  label: 'Name'     },
   program_change: { bg: 'var(--badge-green-bg)', border: 'var(--badge-green-border)', color: 'var(--badge-green-text)', label: 'Program'  },
+  user_deletion:  { bg: 'var(--badge-red-bg)',   border: 'var(--badge-red-border)',   color: 'var(--badge-red-text)',   label: 'Deleted'  },
 };
 
 function AuditModal({ logs, onClose }) {
   const [actFilter, setActFilter] = useState('all');
+  const [search, setSearch] = useState('');
   const fmt = (ts) => {
     if (!ts) return '—';
     const d = ts.toDate ? ts.toDate() : new Date(ts);
     return d.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
   };
 
-  const filtered = actFilter === 'all' ? logs : logs.filter(l => l.activityType === actFilter);
+  const filtered = logs
+    .filter(l => actFilter === 'all' || l.activityType === actFilter)
+    .filter(l => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        (l.targetName || '').toLowerCase().includes(q) ||
+        (l.targetId   || '').toLowerCase().includes(q) ||
+        (l.changedByName || '').toLowerCase().includes(q) ||
+        (l.reason     || '').toLowerCase().includes(q) ||
+        (l.oldName    || '').toLowerCase().includes(q) ||
+        (l.newName    || '').toLowerCase().includes(q) ||
+        (l.deletedIdNumber || '').toLowerCase().includes(q)
+      );
+    });
+
+  return (
+    <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.6)', padding:16 }}>
+      <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:16, width:'100%', maxWidth:820, maxHeight:'88vh', display:'flex', flexDirection:'column', boxShadow:'var(--shadow-modal)', overflow:'hidden' }}>
+        {/* Header */}
+        <div style={{ background:'var(--thead-bg)', borderBottom:'1px solid var(--divider)', padding:'16px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+          <div>
+            <p style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:9, letterSpacing:'0.2em', color:'var(--text-muted)', textTransform:'uppercase', marginBottom:4 }}>Immutable Log</p>
+            <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:'var(--text-primary)' }}>Admin Audit Log</h2>
+          </div>
+          <button onClick={onClose} style={{ background:'var(--surface)', border:'1px solid var(--card-border)', borderRadius:8, width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-muted)', cursor:'pointer' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        {/* Search bar */}
+        <div style={{ padding:'12px 24px', borderBottom:'1px solid var(--divider)', flexShrink:0, background:'var(--card)' }}>
+          <input
+            style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:8, padding:'9px 14px', fontSize:13, color:'var(--text-primary)', fontFamily:'inherit', outline:'none', boxSizing:'border-box' }}
+            placeholder="Search by name, ID, reason, or changed by…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Activity type filter tabs */}
+        <div style={{ display:'flex', borderBottom:'1px solid var(--divider)', flexShrink:0, overflowX:'auto', background:'var(--card)' }}>
+          {ACTIVITY_TABS.map(t => (
+            <button key={t.key} onClick={() => setActFilter(t.key)}
+              style={{ padding:'10px 18px', fontFamily:"'IBM Plex Mono',monospace", fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', cursor:'pointer', background:'transparent', border:'none', borderBottom: actFilter === t.key ? '2px solid var(--gold)' : '2px solid transparent', color: actFilter === t.key ? 'var(--gold)' : 'var(--text-muted)', whiteSpace:'nowrap', transition:'all 0.15s' }}>
+              {t.label}
+              <span style={{ marginLeft:6, fontSize:9, padding:'1px 6px', borderRadius:10, background: actFilter === t.key ? 'var(--gold-soft)' : 'var(--surface)', color: actFilter === t.key ? 'var(--gold)' : 'var(--text-dim)', border:`1px solid ${actFilter === t.key ? 'var(--gold-border)' : 'var(--card-border)'}` }}>
+                {t.key === 'all' ? logs.length : logs.filter(l => l.activityType === t.key).length}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Table */}
+        <div style={{ overflowY:'auto', flex:1 }}>
+          {filtered.length === 0 ? (
+            <p style={{ padding:24, textAlign:'center', fontFamily:"'Poppins',sans-serif", fontSize:13, color:'var(--text-muted)' }}>No records found.</p>
+          ) : (
+            <table style={{ width:'100%', minWidth:600, borderCollapse:'collapse' }}>
+              <thead style={{ position:'sticky', top:0 }}>
+                <tr>
+                  <th className="th">Date</th>
+                  <th className="th">Type</th>
+                  <th className="th">Target User</th>
+                  <th className="th">Detail</th>
+                  <th className="th">Changed By</th>
+                  <th className="th">Note / Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(l => {
+                  const ab = ACTIVITY_BADGE[l.activityType] || ACTIVITY_BADGE.role_change;
+                  return (
+                    <tr key={l.id} style={{ borderBottom:'1px solid var(--row-border)' }}
+                      onMouseEnter={e => e.currentTarget.style.background='var(--row-hover-bg)'}
+                      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                      <td className="td" style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{fmt(l.timestamp)}</td>
+                      <td className="td">
+                        <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:9, fontWeight:700, padding:'2px 8px', borderRadius:20, background:ab.bg, border:`1px solid ${ab.border}`, color:ab.color, textTransform:'uppercase', letterSpacing:'0.08em', whiteSpace:'nowrap' }}>{ab.label}</span>
+                      </td>
+                      <td className="td" style={{ fontWeight:600, fontSize:13, color:'var(--text-primary)', whiteSpace:'nowrap' }}>
+                        {l.targetName || '—'}
+                        {l.deletedIdNumber && <p style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:10, color:'var(--text-muted)', marginTop:2 }}>{l.deletedIdNumber}</p>}
+                      </td>
+                      <td className="td" style={{ fontSize:12, color:'var(--text-body)', maxWidth:200 }}>
+                        {l.activityType === 'role_change' && (
+                          <span style={{ display:'flex', alignItems:'center', gap:4 }}>
+                            <span className={`badge ${BADGE[l.fromRole] || 'badge-gray'}`}>{l.fromRole}</span>
+                            <span style={{ color:'var(--text-dim)' }}>→</span>
+                            <span className={`badge ${BADGE[l.toRole] || 'badge-gray'}`}>{l.toRole}</span>
+                          </span>
+                        )}
+                        {l.activityType === 'password_reset' && (
+                          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-muted)' }}>Reset flag set</span>
+                        )}
+                        {l.activityType === 'name_change' && (
+                          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-body)' }}>
+                            {l.oldName || '—'} → {l.newName || '—'}
+                          </span>
+                        )}
+                        {l.activityType === 'program_change' && (
+                          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-body)' }}>
+                            {l.oldProgram || '—'} → {l.newProgram || '—'}
+                          </span>
+                        )}
+                        {l.activityType === 'user_deletion' && (
+                          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--badge-red-text)' }}>
+                            Hard deleted · {l.borrowsSnapshotted ?? 0} borrows, {l.logsSnapshotted ?? 0} visits snapshotted
+                          </span>
+                        )}
+                      </td>
+                      <td className="td" style={{ fontSize:12, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{l.changedByName || l.approvedByName || '—'}</td>
+                      <td className="td" style={{ fontSize:12, color:'var(--text-body)', maxWidth:180 }}>{l.reason || '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.6)', padding:16 }}>
@@ -145,19 +271,6 @@ function AuditModal({ logs, onClose }) {
                           </span>
                         )}
                       </td>
-                      <td className="td" style={{ fontSize:12, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{l.changedByName || '—'}</td>
-                      <td className="td" style={{ fontSize:12, color:'var(--text-body)', maxWidth:160 }}>{l.reason || '—'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 export default function UserManagementPage() {
@@ -192,6 +305,16 @@ export default function UserManagementPage() {
   // Edit name (admin only)
   const [editNameTarget, setEditNameTarget] = useState(null);
 
+  // Delete request state
+  const [deleteTarget,       setDeleteTarget]       = useState(null); // user to request deletion of
+  const [deleteReason,       setDeleteReason]       = useState('');
+  const [deleteSaving,       setDeleteSaving]       = useState(false);
+  const [deleteRequests,     setDeleteRequests]     = useState([]);
+  const [showDeleteRequests, setShowDeleteRequests] = useState(false);
+
+  // Deleted user modal (clicked row with no existing profile)
+  const [deletedUserModal, setDeletedUserModal] = useState(false);
+
   // Live users
   useEffect(() => {
     setLoading(true);
@@ -210,6 +333,16 @@ export default function UserManagementPage() {
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       docs.sort((a, b) => (b.timestamp?.toMillis?.() ?? 0) - (a.timestamp?.toMillis?.() ?? 0));
       setAuditLogs(docs);
+    }, () => {});
+    return unsub;
+  }, []);
+
+  // Live delete requests
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'deleteRequests'), snap => {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      docs.sort((a, b) => (b.requestedAt?.toMillis?.() ?? 0) - (a.requestedAt?.toMillis?.() ?? 0));
+      setDeleteRequests(docs);
     }, () => {});
     return unsub;
   }, []);
@@ -305,6 +438,107 @@ export default function UserManagementPage() {
     setPending(null);
   };
 
+  // ── Delete request (staff submits) ───────────────────────────────────────
+  const handleRequestDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteReason.trim().length < 10) { showToast('Reason must be at least 10 characters.', false); return; }
+    setDeleteSaving(true);
+    try {
+      await addDoc(collection(db, 'deleteRequests'), {
+        targetId:      deleteTarget.id,
+        targetName:    `${deleteTarget.lastName}, ${deleteTarget.firstName}`,
+        targetIdNumber: deleteTarget.idNumber || '',
+        targetRole:    deleteTarget.role || 'student',
+        reason:        deleteReason.trim(),
+        requestedBy:   myProfile?.uid,
+        requestedByName: `${myProfile?.lastName}, ${myProfile?.firstName}`,
+        requestedAt:   serverTimestamp(),
+        status:        'pending',
+      });
+      showToast(`Deletion request submitted for ${deleteTarget.firstName}. Awaiting admin approval.`, true);
+      setDeleteTarget(null);
+      setDeleteReason('');
+    } catch (e) {
+      showToast('Failed to submit request: ' + e.message, false);
+    }
+    setDeleteSaving(false);
+  };
+
+  // ── Admin approves delete (hard delete + snapshot) ────────────────────────
+  const handleApproveDelete = async (req) => {
+    if (!window.confirm(`Permanently delete user "${req.targetName}"? This cannot be undone. Their borrow and logger records will be snapshotted first.`)) return;
+    try {
+      const batch = writeBatch(db);
+
+      // 1. Snapshot borrows — write studentName + studentId into each doc
+      const borrowsSnap = await getDocs(query(collection(db, 'borrows'), where('userId', '==', req.targetId)));
+      borrowsSnap.forEach(d => {
+        batch.update(doc(db, 'borrows', d.id), {
+          studentName:      req.targetName,
+          studentId:        req.targetIdNumber,
+          userDeleted:      true,
+        });
+      });
+
+      // 2. Snapshot logger entries
+      const loggerSnap = await getDocs(query(collection(db, 'logger'), where('uid', '==', req.targetId)));
+      loggerSnap.forEach(d => {
+        batch.update(doc(db, 'logger', d.id), {
+          studentName:  req.targetName,
+          studentId:    req.targetIdNumber,
+          userDeleted:  true,
+        });
+      });
+
+      // 3. Hard delete the user doc
+      batch.delete(doc(db, 'users', req.targetId));
+
+      // 4. Mark deleteRequest as approved
+      batch.update(doc(db, 'deleteRequests', req.id), {
+        status:       'approved',
+        approvedBy:   myProfile?.uid,
+        approvedByName: `${myProfile?.lastName}, ${myProfile?.firstName}`,
+        approvedAt:   serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      // 5. Write audit log
+      await addDoc(collection(db, 'adminAuditLogs'), {
+        activityType:       'user_deletion',
+        targetId:           req.targetId,
+        targetName:         req.targetName,
+        deletedIdNumber:    req.targetIdNumber,
+        reason:             req.reason,
+        requestedBy:        req.requestedBy,
+        requestedByName:    req.requestedByName,
+        approvedBy:         myProfile?.uid,
+        approvedByName:     `${myProfile?.lastName}, ${myProfile?.firstName}`,
+        borrowsSnapshotted: borrowsSnap.size,
+        logsSnapshotted:    loggerSnap.size,
+        timestamp:          serverTimestamp(),
+      });
+
+      showToast(`${req.targetName} permanently deleted. ${borrowsSnap.size} borrow(s) and ${loggerSnap.size} log(s) snapshotted.`, true);
+    } catch (e) {
+      showToast('Delete failed: ' + e.message, false);
+    }
+  };
+
+  // ── Admin rejects delete request ──────────────────────────────────────────
+  const handleRejectDelete = async (req) => {
+    try {
+      await updateDoc(doc(db, 'deleteRequests', req.id), {
+        status:       'rejected',
+        rejectedBy:   myProfile?.uid,
+        rejectedAt:   serverTimestamp(),
+      });
+      showToast(`Deletion request for ${req.targetName} rejected.`, true);
+    } catch (e) {
+      showToast('Failed to reject: ' + e.message, false);
+    }
+  };
+
   const showToast = (msg, ok) => {
     setToast({ msg, ok });
     setTimeout(() => setToast(null), 4500);
@@ -340,6 +574,13 @@ export default function UserManagementPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap shrink-0">
+          {myProfile?.role === 'admin' && deleteRequests.filter(r => r.status === 'pending').length > 0 && (
+            <button className="btn-secondary text-xs py-2 px-4"
+              style={{ borderColor:'var(--red-border)', color:'var(--red)' }}
+              onClick={() => setShowDeleteRequests(true)}>
+              ⚠ Delete Requests ({deleteRequests.filter(r => r.status === 'pending').length})
+            </button>
+          )}
           <button
             className="btn-secondary text-xs py-2 px-4"
             onClick={() => exportUsersCSV(filtered)}
@@ -489,6 +730,12 @@ export default function UserManagementPage() {
                             onClick={() => setEditNameTarget({ uid: u.id, profile: u })}
                             title="Edit student name"
                           >Edit Name</button>
+                          <button
+                            className="border text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors"
+                            style={{borderColor:'var(--red-border)',color:'var(--red)',background:'transparent'}}
+                            onClick={() => { setDeleteTarget(u); setDeleteReason(''); }}
+                            title="Request user deletion"
+                          >Delete</button>
                           {saving === u.id && (
                             <span className="text-[10px] font-mono animate-pulse" style={{color:"var(--text-muted)"}}>Saving…</span>
                           )}
@@ -586,10 +833,123 @@ export default function UserManagementPage() {
         />
       )}
 
+      {/* Delete Request Modal (staff submits / admin too) */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div style={{background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:12,width:'100%',maxWidth:480,boxShadow:'var(--shadow-modal)'}}>
+            <div style={{background:'var(--thead-bg)',borderBottom:'1px solid var(--divider)',padding:'16px 24px'}}>
+              <p className="font-mono text-[10px] tracking-widest uppercase mb-0.5" style={{color:'var(--red)'}}>⚠ Delete User</p>
+              <h2 className="font-display text-lg font-bold" style={{color:'var(--text-primary)'}}>
+                {deleteTarget.lastName}, {deleteTarget.firstName}
+              </h2>
+              <p className="text-xs font-mono mt-1" style={{color:'var(--text-muted)'}}>{deleteTarget.idNumber}</p>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div style={{background:'var(--red-soft)',border:'1px solid var(--red-border)',borderRadius:8,padding:'12px 16px'}}>
+                <p style={{fontSize:12,color:'var(--red)',lineHeight:1.6}}>
+                  {myProfile?.role === 'admin'
+                    ? 'As admin, your deletion request will be queued for review. A hard delete will permanently remove this user and snapshot their records.'
+                    : 'This will submit a deletion request to an Admin for approval. The user will not be deleted until an Admin approves the request.'}
+                </p>
+              </div>
+              <div>
+                <label className="label">Reason for deletion <span style={{color:'var(--red)'}}>*</span></label>
+                <textarea
+                  className="input resize-none h-20 text-sm"
+                  placeholder="e.g. Unenrolled, graduated, duplicate account… (min 10 chars)"
+                  value={deleteReason}
+                  onChange={e => setDeleteReason(e.target.value)}
+                  autoFocus
+                />
+                <p className="text-[10px] font-mono mt-1" style={{color:'var(--text-dim)'}}>{deleteReason.trim().length} / 10 characters minimum</p>
+              </div>
+            </div>
+            <div style={{padding:'16px 24px',borderTop:'1px solid var(--divider)',background:'var(--surface)',display:'flex',justifyContent:'flex-end',gap:12}}>
+              <button className="btn-secondary" onClick={() => setDeleteTarget(null)} disabled={deleteSaving}>Cancel</button>
+              <button
+                disabled={deleteReason.trim().length < 10 || deleteSaving}
+                onClick={handleRequestDelete}
+                style={{padding:'9px 20px',borderRadius:8,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',fontFamily:"'IBM Plex Mono',monospace",fontSize:11,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',cursor:deleteReason.trim().length < 10 || deleteSaving ? 'not-allowed' : 'pointer',opacity:deleteReason.trim().length < 10 || deleteSaving ? 0.5 : 1}}>
+                {deleteSaving ? 'Submitting…' : 'Submit Delete Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Requests Review Panel (admin only) */}
+      {showDeleteRequests && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div style={{background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:16,width:'100%',maxWidth:700,maxHeight:'80vh',display:'flex',flexDirection:'column',boxShadow:'var(--shadow-modal)',overflow:'hidden'}}>
+            <div style={{background:'var(--thead-bg)',borderBottom:'1px solid var(--divider)',padding:'16px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+              <div>
+                <p style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:9,letterSpacing:'0.2em',color:'var(--red)',textTransform:'uppercase',marginBottom:4}}>Admin Review</p>
+                <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:'var(--text-primary)'}}>Deletion Requests</h2>
+              </div>
+              <button onClick={() => setShowDeleteRequests(false)} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:8,width:32,height:32,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-muted)',cursor:'pointer'}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div style={{overflowY:'auto',flex:1}}>
+              {deleteRequests.length === 0 ? (
+                <p style={{padding:24,textAlign:'center',fontFamily:"'Poppins',sans-serif",fontSize:13,color:'var(--text-muted)'}}>No deletion requests.</p>
+              ) : (
+                <table style={{width:'100%',minWidth:560,borderCollapse:'collapse'}}>
+                  <thead style={{position:'sticky',top:0}}>
+                    <tr>
+                      <th className="th">User</th>
+                      <th className="th">Reason</th>
+                      <th className="th">Requested By</th>
+                      <th className="th">Status</th>
+                      <th className="th">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deleteRequests.map(req => (
+                      <tr key={req.id} style={{borderBottom:'1px solid var(--row-border)'}}
+                        onMouseEnter={e => e.currentTarget.style.background='var(--row-hover-bg)'}
+                        onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                        <td className="td">
+                          <p style={{fontWeight:600,fontSize:13,color:'var(--text-primary)'}}>{req.targetName}</p>
+                          <p style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:10,color:'var(--text-muted)'}}>{req.targetIdNumber}</p>
+                        </td>
+                        <td className="td" style={{fontSize:12,color:'var(--text-body)',maxWidth:180}}>{req.reason}</td>
+                        <td className="td" style={{fontSize:12,color:'var(--text-muted)'}}>{req.requestedByName || '—'}</td>
+                        <td className="td">
+                          {req.status === 'pending'  && <span className="badge badge-gold">Pending</span>}
+                          {req.status === 'approved' && <span className="badge badge-red">Deleted</span>}
+                          {req.status === 'rejected' && <span className="badge badge-gray">Rejected</span>}
+                        </td>
+                        <td className="td">
+                          {req.status === 'pending' && (
+                            <div style={{display:'flex',gap:6}}>
+                              <button
+                                style={{padding:'4px 10px',borderRadius:6,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',fontFamily:"'IBM Plex Mono',monospace",fontSize:9,fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}
+                                onClick={() => handleApproveDelete(req)}>
+                                Approve
+                              </button>
+                              <button
+                                style={{padding:'4px 10px',borderRadius:6,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',fontFamily:"'IBM Plex Mono',monospace",fontSize:9,fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}
+                                onClick={() => handleRejectDelete(req)}>
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 px-5 py-3 shadow-lg text-sm font-mono tracking-wide"
-          style={{color:'var(--text-primary)', background: toast.ok ? 'var(--green-soft)' : 'var(--red-soft)', border: `1px solid ${toast.ok ? 'var(--green-border)' : 'var(--red-border)'}`, borderRadius:10, color: toast.ok ? 'var(--green)' : 'var(--red)'}}>
+          style={{background: toast.ok ? 'var(--green-soft)' : 'var(--red-soft)', border: `1px solid ${toast.ok ? 'var(--green-border)' : 'var(--red-border)'}`, borderRadius:10, color: toast.ok ? 'var(--green)' : 'var(--red)'}}>
           {toast.msg}
         </div>
       )}

@@ -189,6 +189,22 @@ export default function ReportsPage() {
     .filter(u => u.role === 'student')
     .sort((a,b) => (a.lastName||'').localeCompare(b.lastName||''));
 
+  // User activity search combo-box state
+  const [userSearch,       setUserSearch]       = useState('');
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  const selectedUserObj = studentUsers.find(u => u.id === activityUser);
+
+  const filteredUserOptions = studentUsers.filter(u => {
+    if (!userSearch.trim()) return true;
+    const q = userSearch.toLowerCase();
+    return (
+      `${u.lastName} ${u.firstName}`.toLowerCase().includes(q) ||
+      (u.idNumber || '').replace(/-/g, '').includes(q.replace(/-/g, '')) ||
+      (u.course || '').toLowerCase().includes(q)
+    );
+  });
+
   const selectedUserBorrows  = activityUser ? borrows.filter(b => b.userId === activityUser)  : [];
   const selectedUserSessions = activityUser ? sessions.filter(s => s.uid === activityUser) : [];
 
@@ -596,15 +612,56 @@ export default function ReportsPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <select className="select flex-1 text-sm" value={activityUser}
-              onChange={e => setActivityUser(e.target.value)}>
-              <option value="">— Select a Student —</option>
-              {studentUsers.map(u => (
-                <option key={u.id} value={u.id}>
-                  {u.lastName}, {u.firstName} — {u.idNumber || 'No ID'} ({u.course || 'No course'})
-                </option>
-              ))}
-            </select>
+            {/* Searchable combo-box */}
+            <div style={{ position:'relative', flex:1 }}>
+              <div
+                style={{ display:'flex', alignItems:'center', background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:8, padding:'0 12px', cursor:'text', minHeight:40 }}
+                onClick={() => { setUserDropdownOpen(true); }}>
+                {selectedUserObj && !userDropdownOpen ? (
+                  <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <span style={{ fontSize:13, color:'var(--text-primary)', fontFamily:"'Poppins',sans-serif" }}>
+                      {selectedUserObj.lastName}, {selectedUserObj.firstName}
+                      <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-muted)', marginLeft:8 }}>{selectedUserObj.idNumber}</span>
+                    </span>
+                    <button onClick={e => { e.stopPropagation(); setActivityUser(''); setUserSearch(''); setUserDropdownOpen(false); }}
+                      style={{ background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', fontSize:16, lineHeight:1, padding:'0 2px' }}>×</button>
+                  </div>
+                ) : (
+                  <input
+                    autoFocus={userDropdownOpen}
+                    style={{ flex:1, background:'transparent', border:'none', outline:'none', fontSize:13, color:'var(--text-primary)', padding:'9px 0', fontFamily:"'Poppins',sans-serif" }}
+                    placeholder="Search by name, ID number, or course…"
+                    value={userSearch}
+                    onChange={e => { setUserSearch(e.target.value); setUserDropdownOpen(true); }}
+                    onFocus={() => setUserDropdownOpen(true)}
+                  />
+                )}
+              </div>
+              {userDropdownOpen && (
+                <>
+                  <div style={{ position:'fixed', inset:0, zIndex:10 }} onClick={() => setUserDropdownOpen(false)} />
+                  <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:20, background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:8, boxShadow:'var(--shadow-modal)', maxHeight:240, overflowY:'auto' }}>
+                    {filteredUserOptions.length === 0 ? (
+                      <p style={{ padding:'12px 16px', fontSize:13, color:'var(--text-muted)', fontFamily:"'Poppins',sans-serif" }}>No students match "{userSearch}"</p>
+                    ) : (
+                      filteredUserOptions.map(u => (
+                        <button key={u.id} type="button"
+                          style={{ width:'100%', textAlign:'left', padding:'10px 16px', borderBottom:'1px solid var(--row-border)', background: activityUser === u.id ? 'var(--gold-soft)' : 'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}
+                          onMouseEnter={e => { if (activityUser !== u.id) e.currentTarget.style.background='var(--row-hover-bg)'; }}
+                          onMouseLeave={e => { if (activityUser !== u.id) e.currentTarget.style.background='transparent'; }}
+                          onClick={() => { setActivityUser(u.id); setUserSearch(''); setUserDropdownOpen(false); }}>
+                          <span>
+                            <span style={{ fontWeight:600, fontSize:13, color:'var(--text-primary)', fontFamily:"'Poppins',sans-serif" }}>{u.lastName}, {u.firstName}</span>
+                            {u.course && <span style={{ fontSize:11, color:'var(--text-muted)', marginLeft:8 }}>{u.course}</span>}
+                          </span>
+                          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--gold)', whiteSpace:'nowrap' }}>{u.idNumber}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
             <div className="flex border border-gray-200 shrink-0">
               <button onClick={() => setActivityType('borrows')}
                 className={`px-5 py-2 text-[10px] font-mono font-semibold uppercase tracking-widest transition-colors ${

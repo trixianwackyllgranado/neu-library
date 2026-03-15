@@ -6,7 +6,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 
 const fmt = (ts) => {
@@ -58,10 +58,14 @@ function ApproveModal({ borrow, onConfirm, onCancel, saving }) {
 export default function BorrowingPage() {
   const { userProfile, currentUser, loadingAuth } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const role      = userProfile?.role;
   const canManage = role === 'admin' || role === 'staff';
   const isStudent = role === 'student';
+
+  // Deleted user modal
+  const [deletedUserModal, setDeletedUserModal] = useState(false);
 
   // ── Tab ───────────────────────────────────────────────────────────────────
   const [tab, setTab] = useState(null);
@@ -528,22 +532,37 @@ export default function BorrowingPage() {
                   {tab !== 'pending' && <th className="th">Due Date</th>}
                   {tab === 'returned' && <th className="th">Returned</th>}
                   <th className="th">Status</th>
-                  <th className="th">Actions</th>
+                  {tab !== 'returned' && <th className="th">Actions</th>}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(b => {
                   const over = isOverdue(b);
+                  const handleRowClick = () => {
+                    if (!canManage) return;
+                    if (b.userDeleted) { setDeletedUserModal(true); return; }
+                    if (b.userId && userMap[b.userId]) {
+                      navigate('/staff/students', { state: { openUserId: b.userId } });
+                    } else if (b.userDeleted) {
+                      setDeletedUserModal(true);
+                    }
+                  };
                   return (
-                    <tr key={b.id} className="log-row">
+                    <tr key={b.id} className="log-row"
+                      onClick={handleRowClick}
+                      style={{ cursor: canManage ? 'pointer' : 'default' }}>
                       <td className="td">
                         <p className="font-semibold text-sm">{b.bookTitle}</p>
                         {b.walkUp && <span className="badge badge-blue text-[9px] mt-0.5">Walk-Up</span>}
                       </td>
                       {canManage && (
                         <td className="td">
-                          <p className="text-sm font-medium">{b._studentName || '—'}</p>
-                          <p className="font-mono text-xs" style={{color:"var(--text-muted)"}}>{b._studentId}</p>
+                          <p className="text-sm font-medium">
+                            {b.userDeleted
+                              ? <span style={{color:'var(--text-muted)',fontStyle:'italic'}}>{b.studentName || b._studentName || '—'} <span className="badge badge-red text-[9px] ml-1">Deleted</span></span>
+                              : (b._studentName || '—')}
+                          </p>
+                          <p className="font-mono text-xs" style={{color:"var(--text-muted)"}}>{b.studentId || b._studentId}</p>
                         </td>
                       )}
                       <td className="td font-mono text-xs">{fmt(b.borrowDate)}</td>
@@ -560,7 +579,8 @@ export default function BorrowingPage() {
                         {b.status === 'active' && !over && <span className="badge badge-green">Active</span>}
                         {b.status === 'active' && over  && <span className="badge badge-red">Overdue</span>}
                       </td>
-                      <td className="td">
+                      {tab !== 'returned' && (
+                      <td className="td" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-2 flex-wrap">
                           {canManage && b.status === 'pending' && (
                             <>
@@ -587,6 +607,7 @@ export default function BorrowingPage() {
                           )}
                         </div>
                       </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -596,10 +617,35 @@ export default function BorrowingPage() {
         )}
       </div>
 
+      {/* Deleted User Modal */}
+      {deletedUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={() => setDeletedUserModal(false)}>
+          <div style={{background:'var(--card)',border:'1px solid var(--red-border)',borderRadius:12,width:'100%',maxWidth:400,padding:'28px 28px',boxShadow:'var(--shadow-modal)',textAlign:'center'}}
+            onClick={e => e.stopPropagation()}>
+            <div style={{width:48,height:48,borderRadius:'50%',background:'var(--red-soft)',border:'1px solid var(--red-border)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',color:'var(--red)'}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <p style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:9,letterSpacing:'0.2em',color:'var(--red)',textTransform:'uppercase',marginBottom:8}}>User Deleted</p>
+            <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:18,fontWeight:700,color:'var(--text-primary)',marginBottom:12}}>Account No Longer Exists</h2>
+            <p style={{fontSize:13,color:'var(--text-body)',lineHeight:1.7,marginBottom:20}}>
+              The student associated with this record has been permanently deleted. Their name and ID have been preserved in this record for historical accuracy.
+            </p>
+            <p style={{fontSize:12,color:'var(--text-muted)',marginBottom:20}}>
+              Check the <strong style={{color:'var(--gold)'}}>Audit Log</strong> in User Management for the deletion reason and who approved it.
+            </p>
+            <button onClick={() => setDeletedUserModal(false)}
+              style={{padding:'9px 24px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-primary)',fontFamily:"'IBM Plex Mono',monospace",fontSize:11,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.1em'}}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 shadow-lg text-white text-sm font-mono tracking-wide flex items-center gap-3 ${toast.ok ? 'bg-primary-700' : 'bg-red-700'}`}>
-          <span>{toast.ok ? '✓' : '✕'}</span>
+        <div className="fixed bottom-6 right-6 z-50 px-5 py-3 shadow-lg text-sm font-mono tracking-wide"
+          style={{color: toast.ok ? 'var(--green)' : 'var(--red)', background: toast.ok ? 'var(--green-soft)' : 'var(--red-soft)', border:`1px solid ${toast.ok ? 'var(--green-border)' : 'var(--red-border)'}`, borderRadius:10}}>
           {toast.msg}
         </div>
       )}
