@@ -1,6 +1,6 @@
 // src/pages/admin/ReportsPage.jsx
-import { useEffect, useState } from 'react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { useEffect, useState, useCallback } from 'react';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -43,9 +43,11 @@ function downloadCSV(filename, headers, rows) {
 export default function ReportsPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
-  const [loading,   setLoading]   = useState(true);
+  const [loading,     setLoading]     = useState(true);
+  const [lastFetched, setLastFetched] = useState(null);
+  const [refreshing,  setRefreshing]  = useState(false);
 
-  // Raw data — updated by onSnapshot
+  // Raw data — fetched on demand, NOT live listeners (saves Firestore quota)
   const [users,    setUsers]    = useState([]);
   const [books,    setBooks]    = useState([]);
   const [borrows,  setBorrows]  = useState([]);
@@ -60,36 +62,34 @@ export default function ReportsPage() {
   const [activityUser, setActivityUser] = useState('');
   const [activityType, setActivityType] = useState('borrows');
 
-  // ── Real-time listeners ───────────────────────────────────────────────────
-  useEffect(() => {
-    let ready = 0;
-    const check = () => { ready++; if (ready >= 5) setLoading(false); };
+  // ── One-time fetch (replaces 5 onSnapshot listeners) ─────────────────────
+  const fetchAll = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    try {
+      const [usersSnap, booksSnap, borrowsSnap, sessionsSnap, bookLogsSnap] = await Promise.allSettled([
+        getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'books')),
+        getDocs(query(collection(db, 'borrows'),  orderBy('borrowDate', 'desc'))),
+        getDocs(query(collection(db, 'logger'),   orderBy('entryTime',  'desc'))),
+        getDocs(query(collection(db, 'bookLogs'), orderBy('timestamp',  'desc'))),
+      ]);
 
-    const unsubs = [
-      onSnapshot(collection(db, 'users'), snap => {
-        setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        check();
-      }),
-      onSnapshot(collection(db, 'books'), snap => {
-        setBooks(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        check();
-      }),
-      onSnapshot(
-        query(collection(db, 'borrows'), orderBy('borrowDate', 'desc')),
-        snap => { setBorrows(snap.docs.map(d => ({ id: d.id, ...d.data() }))); check(); }
-      ),
-      onSnapshot(
-        query(collection(db, 'logger'), orderBy('entryTime', 'desc')),
-        snap => { setSessions(snap.docs.map(d => ({ id: d.id, ...d.data() }))); check(); }
-      ),
-      onSnapshot(
-        query(collection(db, 'bookLogs'), orderBy('timestamp', 'desc')),
-        snap => { setBookLogs(snap.docs.map(d => ({ id: d.id, ...d.data() }))); check(); },
-        () => { setBookLogs([]); check(); } // bookLogs collection may not exist yet
-      ),
-    ];
-    return () => unsubs.forEach(u => u());
+      if (usersSnap.status    === 'fulfilled') setUsers(usersSnap.value.docs.map(d => ({ id: d.id, ...d.data() })));
+      if (booksSnap.status    === 'fulfilled') setBooks(booksSnap.value.docs.map(d => ({ id: d.id, ...d.data() })));
+      if (borrowsSnap.status  === 'fulfilled') setBorrows(borrowsSnap.value.docs.map(d => ({ id: d.id, ...d.data() })));
+      if (sessionsSnap.status === 'fulfilled') setSessions(sessionsSnap.value.docs.map(d => ({ id: d.id, ...d.data() })));
+      if (bookLogsSnap.status === 'fulfilled') setBookLogs(bookLogsSnap.value.docs.map(d => ({ id: d.id, ...d.data() })));
+      else setBookLogs([]);
+
+      setLastFetched(new Date());
+    } catch (e) {
+      console.error('Reports fetch error:', e);
+    }
+    setLoading(false);
+    setRefreshing(false);
   }, []);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   // ── Derived stats (recomputed on every data change) ───────────────────────
   const now     = new Date();
@@ -188,22 +188,6 @@ export default function ReportsPage() {
   const studentUsers = users
     .filter(u => u.role === 'student')
     .sort((a,b) => (a.lastName||'').localeCompare(b.lastName||''));
-
-  // User activity search combo-box state
-  const [userSearch,       setUserSearch]       = useState('');
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-
-  const selectedUserObj = studentUsers.find(u => u.id === activityUser);
-
-  const filteredUserOptions = studentUsers.filter(u => {
-    if (!userSearch.trim()) return true;
-    const q = userSearch.toLowerCase();
-    return (
-      `${u.lastName} ${u.firstName}`.toLowerCase().includes(q) ||
-      (u.idNumber || '').replace(/-/g, '').includes(q.replace(/-/g, '')) ||
-      (u.course || '').toLowerCase().includes(q)
-    );
-  });
 
   const selectedUserBorrows  = activityUser ? borrows.filter(b => b.userId === activityUser)  : [];
   const selectedUserSessions = activityUser ? sessions.filter(s => s.uid === activityUser) : [];
@@ -323,12 +307,29 @@ export default function ReportsPage() {
         <div>
           <p className="font-mono text-[10px] tracking-widest uppercase text-gray-400 mb-1">Administration</p>
           <h1 className="page-title">System Reports</h1>
-          <div className="flex items-center gap-1.5 mt-2">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">Live</span>
+          <div className="flex items-center gap-3 mt-2 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500" />
+              <span className="text-[10px] font-mono text-gray-400 uppercase tracking-widest">
+                {lastFetched
+                  ? `Last fetched ${lastFetched.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}`
+                  : 'Loading…'}
+              </span>
+            </div>
           </div>
         </div>
+        <button
+          onClick={() => fetchAll(true)}
+          disabled={refreshing}
+          style={{ display:'flex', alignItems:'center', gap:8, padding:'9px 18px', borderRadius:9, background:'var(--gold-soft)', border:'1px solid var(--gold-border)', color:'var(--gold)', fontFamily:"'IBM Plex Mono',monospace", fontSize:11, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', cursor: refreshing ? 'not-allowed' : 'pointer', opacity: refreshing ? 0.6 : 1, flexShrink:0 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }}>
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          {refreshing ? 'Refreshing…' : 'Refresh Data'}
+        </button>
       </div>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
       {/* Tab bar */}
       <div className="flex border-b border-gray-200">
@@ -612,56 +613,15 @@ export default function ReportsPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Searchable combo-box */}
-            <div style={{ position:'relative', flex:1 }}>
-              <div
-                style={{ display:'flex', alignItems:'center', background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:8, padding:'0 12px', cursor:'text', minHeight:40 }}
-                onClick={() => { setUserDropdownOpen(true); }}>
-                {selectedUserObj && !userDropdownOpen ? (
-                  <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <span style={{ fontSize:13, color:'var(--text-primary)', fontFamily:"'Poppins',sans-serif" }}>
-                      {selectedUserObj.lastName}, {selectedUserObj.firstName}
-                      <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-muted)', marginLeft:8 }}>{selectedUserObj.idNumber}</span>
-                    </span>
-                    <button onClick={e => { e.stopPropagation(); setActivityUser(''); setUserSearch(''); setUserDropdownOpen(false); }}
-                      style={{ background:'none', border:'none', color:'var(--text-muted)', cursor:'pointer', fontSize:16, lineHeight:1, padding:'0 2px' }}>×</button>
-                  </div>
-                ) : (
-                  <input
-                    autoFocus={userDropdownOpen}
-                    style={{ flex:1, background:'transparent', border:'none', outline:'none', fontSize:13, color:'var(--text-primary)', padding:'9px 0', fontFamily:"'Poppins',sans-serif" }}
-                    placeholder="Search by name, ID number, or course…"
-                    value={userSearch}
-                    onChange={e => { setUserSearch(e.target.value); setUserDropdownOpen(true); }}
-                    onFocus={() => setUserDropdownOpen(true)}
-                  />
-                )}
-              </div>
-              {userDropdownOpen && (
-                <>
-                  <div style={{ position:'fixed', inset:0, zIndex:10 }} onClick={() => setUserDropdownOpen(false)} />
-                  <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:20, background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:8, boxShadow:'var(--shadow-modal)', maxHeight:240, overflowY:'auto' }}>
-                    {filteredUserOptions.length === 0 ? (
-                      <p style={{ padding:'12px 16px', fontSize:13, color:'var(--text-muted)', fontFamily:"'Poppins',sans-serif" }}>No students match "{userSearch}"</p>
-                    ) : (
-                      filteredUserOptions.map(u => (
-                        <button key={u.id} type="button"
-                          style={{ width:'100%', textAlign:'left', padding:'10px 16px', borderBottom:'1px solid var(--row-border)', background: activityUser === u.id ? 'var(--gold-soft)' : 'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}
-                          onMouseEnter={e => { if (activityUser !== u.id) e.currentTarget.style.background='var(--row-hover-bg)'; }}
-                          onMouseLeave={e => { if (activityUser !== u.id) e.currentTarget.style.background='transparent'; }}
-                          onClick={() => { setActivityUser(u.id); setUserSearch(''); setUserDropdownOpen(false); }}>
-                          <span>
-                            <span style={{ fontWeight:600, fontSize:13, color:'var(--text-primary)', fontFamily:"'Poppins',sans-serif" }}>{u.lastName}, {u.firstName}</span>
-                            {u.course && <span style={{ fontSize:11, color:'var(--text-muted)', marginLeft:8 }}>{u.course}</span>}
-                          </span>
-                          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--gold)', whiteSpace:'nowrap' }}>{u.idNumber}</span>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+            <select className="select flex-1 text-sm" value={activityUser}
+              onChange={e => setActivityUser(e.target.value)}>
+              <option value="">— Select a Student —</option>
+              {studentUsers.map(u => (
+                <option key={u.id} value={u.id}>
+                  {u.lastName}, {u.firstName} — {u.idNumber || 'No ID'} ({u.course || 'No course'})
+                </option>
+              ))}
+            </select>
             <div className="flex border border-gray-200 shrink-0">
               <button onClick={() => setActivityType('borrows')}
                 className={`px-5 py-2 text-[10px] font-mono font-semibold uppercase tracking-widest transition-colors ${
