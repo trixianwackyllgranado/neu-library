@@ -149,8 +149,8 @@ export default function LoginPage() {
                   ...MONO, fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700,
                   transition: 'all 0.15s',
                 }}
-                onMouseEnter={e => { if (!loading) e.currentTarget.style.filter = 'brightness(1.2)'; }}
-                onMouseLeave={e => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.85'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = loading ? '0.65' : '1'; }}
               >
                 {loading ? 'Signing In…' : 'Sign In'}
               </button>

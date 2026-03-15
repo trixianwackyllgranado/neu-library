@@ -375,12 +375,10 @@ export default function UserManagementPage() {
                   : 'text-gray-400 hover:text-gray-600'
               }`}>
               {t.label}
-              <span className={`text-[10px] px-1.5 py-0.5 font-bold rounded ${
-                t.key === 'admin'   ? 'bg-red-100 text-red-700'     :
-                t.key === 'staff'   ? 'bg-amber-100 text-amber-700' :
-                t.key === 'student' ? 'bg-green-100 text-green-700' :
-                'bg-gray-100 text-gray-600'
-              }`}>
+              <span className="text-[10px] px-1.5 py-0.5 font-bold rounded" style={{
+                background: t.key === 'admin' ? 'var(--badge-red-bg)' : t.key === 'staff' ? 'var(--badge-gold-bg)' : t.key === 'student' ? 'var(--badge-green-bg)' : 'var(--badge-gray-bg)',
+                color: t.key === 'admin' ? 'var(--badge-red-text)' : t.key === 'staff' ? 'var(--badge-gold-text)' : t.key === 'student' ? 'var(--badge-green-text)' : 'var(--badge-gray-text)',
+              }}>
                 {counts[t.key]}
               </span>
             </button>
@@ -454,21 +452,21 @@ export default function UserManagementPage() {
                         <div className="flex flex-wrap gap-1.5">
                           {canPromoteToStaff(u) && (
                             <button
-                              className="border border-amber-300 text-amber-700 hover:bg-amber-50 text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors"
+                              className="text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors" style={{border:"1px solid var(--badge-gold-border)",color:"var(--badge-gold-text)",background:"transparent",borderRadius:4,cursor:"pointer"}}
                               onClick={() => initChange(u, 'staff')}
                               disabled={saving === u.id}
                             >↑ Staff</button>
                           )}
                           {canPromoteToAdmin(u) && (
                             <button
-                              className="border border-red-300 text-red-600 hover:bg-red-50 text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors"
+                              className="text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors" style={{border:"1px solid var(--badge-red-border)",color:"var(--badge-red-text)",background:"transparent",borderRadius:4,cursor:"pointer"}}
                               onClick={() => initChange(u, 'admin')}
                               disabled={saving === u.id}
                             >↑ Admin</button>
                           )}
                           {canDemoteToStudent(u) && (
                             <button
-                              className="border border-gray-300 text-gray-500 hover:bg-gray-50 text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors"
+                              className="text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors" style={{border:"1px solid var(--card-border)",color:"var(--text-muted)",background:"transparent",borderRadius:4,cursor:"pointer"}}
                               onClick={() => initChange(u, 'student')}
                               disabled={saving === u.id}
                             >↓ Student</button>
@@ -509,26 +507,24 @@ export default function UserManagementPage() {
       {/* Role change modal */}
       {pending && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white w-full max-w-md shadow-2xl">
-            <div className="bg-primary-800 text-white px-6 py-4">
-              <p className="font-mono text-[10px] tracking-widest uppercase opacity-60 mb-0.5">Role Change</p>
-              <h2 className="font-display text-lg font-bold leading-tight">
+          <div className="modal-role-change" style={{background:"var(--card)",border:"1px solid var(--card-border)",borderRadius:12,width:"100%",maxWidth:480,boxShadow:"var(--shadow-modal)"}}>
+            <div className="modal-role-header" style={{background:"var(--thead-bg)",borderBottom:"1px solid var(--divider)",padding:"16px 24px"}}>
+              <p className="font-mono text-[10px] tracking-widest uppercase mb-0.5" style={{color:"var(--text-muted)"}}>Role Change</p>
+              <h2 className="font-display text-lg font-bold leading-tight" style={{color:"var(--text-primary)"}}>
                 {pending.user.lastName}, {pending.user.firstName}
               </h2>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className={`badge ${BADGE[pending.user.role]}`}>{pending.user.role}</span>
-                <span className="text-white/50 text-xs">→</span>
+                <span style={{color:"var(--text-muted)",fontSize:12}}>→</span>
                 <span className={`badge ${BADGE[pending.toRole]}`}>{pending.toRole}</span>
               </div>
             </div>
-            <div className="px-6 py-5 space-y-4">
-              <div className={`border px-4 py-3 text-xs ${
-                pending.toRole === 'admin'
-                  ? 'border-red-200 bg-red-50 text-red-800'
-                  : pending.toRole === 'staff'
-                  ? 'border-amber-200 bg-amber-50 text-amber-800'
-                  : 'border-gray-200 bg-gray-50 text-gray-700'
-              }`}>
+            <div className="px-6 py-5 space-y-4" style={{background:'var(--card)'}}>
+              <div className="px-4 py-3 text-xs rounded-lg" style={{
+                background: pending.toRole === 'admin' ? 'var(--red-soft)' : pending.toRole === 'staff' ? 'var(--gold-soft)' : 'var(--surface)',
+                border: `1px solid ${pending.toRole === 'admin' ? 'var(--red-border)' : pending.toRole === 'staff' ? 'var(--gold-border)' : 'var(--card-border)'}`,
+                color: pending.toRole === 'admin' ? 'var(--red)' : pending.toRole === 'staff' ? 'var(--gold)' : 'var(--text-muted)',
+              }}>
                 {pending.toRole === 'admin'
                   ? 'Important: Admin accounts are fully protected after promotion. This cannot be reversed by any admin.'
                   : pending.toRole === 'staff'
@@ -537,7 +533,7 @@ export default function UserManagementPage() {
               </div>
               <div>
                 <label className="label">
-                  Reason for change <span className="text-red-500">*</span>
+                  Reason for change <span style={{color:'var(--red)'}}>*</span>
                 </label>
                 <textarea
                   className="input resize-none h-20 text-sm"
@@ -546,14 +542,14 @@ export default function UserManagementPage() {
                   onChange={e => setReason(e.target.value)}
                   autoFocus
                 />
-                <p className="text-[10px] font-mono text-gray-400 mt-1">
+                <p className="text-[10px] font-mono mt-1" style={{color:"var(--text-dim)"}}>
                   {reason.trim().length} / 10 characters minimum
                 </p>
               </div>
               {pending.toRole === 'admin' && (
                 <div>
                   <label className="label">
-                    Type <span className="font-mono font-bold text-red-600">CONFIRM</span> to proceed
+                    Type <span className="font-mono font-bold" style={{color:"var(--red)"}}>CONFIRM</span> to proceed
                   </label>
                   <input
                     className="input font-mono tracking-widest"
@@ -565,7 +561,7 @@ export default function UserManagementPage() {
                 </div>
               )}
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+            <div className="modal-role-footer flex justify-end gap-3" style={{padding:"16px 24px",borderTop:"1px solid var(--divider)",background:"var(--surface)"}}>
               <button className="btn-secondary" onClick={() => setPending(null)} disabled={!!saving}>
                 Cancel
               </button>

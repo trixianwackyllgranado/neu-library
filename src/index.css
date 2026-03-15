@@ -419,3 +419,35 @@ select option {
   padding: 6px 10px !important;
 }
 #html5qr-code-full-region img { display: none !important; }
+
+/* ── Dark mode: ensure all textareas and inputs use theme variables ── */
+[data-theme="dark"] textarea,
+[data-theme="dark"] input[type="text"],
+[data-theme="dark"] input[type="password"],
+[data-theme="dark"] input[type="email"],
+[data-theme="dark"] input[type="number"],
+[data-theme="dark"] select {
+  background-color: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--input-border) !important;
+}
+
+/* ── Kill brightness filter hovers everywhere — they cause white shine in dark mode ── */
+[data-theme="dark"] button:hover,
+[data-theme="dark"] a:hover {
+  filter: none !important;
+}
+
+/* ── UserManagement role-change modal — fix hardcoded light classes ── */
+[data-theme="dark"] .modal-role-change {
+  background: var(--card) !important;
+  border: 1px solid var(--card-border) !important;
+}
+[data-theme="dark"] .modal-role-header {
+  background: var(--thead-bg) !important;
+  border-bottom: 1px solid var(--divider) !important;
+}
+[data-theme="dark"] .modal-role-footer {
+  background: var(--surface) !important;
+  border-top: 1px solid var(--divider) !important;
+}
