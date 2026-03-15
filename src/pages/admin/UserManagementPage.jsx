@@ -168,6 +168,23 @@ export default function UserManagementPage() {
   const canPromoteToAdmin  = (u) => u.role === 'staff'   && u.id !== myProfile?.uid;
   const canDemoteToStudent = (u) => u.role === 'staff'   && u.id !== myProfile?.uid;
 
+  // Admin resets a user's password to their ID number via Firestore flag
+  // (requires user to log out/in — a Cloud Function would be needed for server-side reset)
+  const handleResetPassword = async (user) => {
+    if (!window.confirm(`Reset ${user.firstName}'s password to their ID number (${user.idNumber})? They will need to sign out and back in with their ID number as the password.`)) return;
+    setResetPwId(user.id);
+    try {
+      await updateDoc(doc(db, 'users', user.id), {
+        adminPasswordReset: true,
+        adminPasswordResetAt: serverTimestamp(),
+        adminPasswordResetBy: myProfile?.uid || null,
+      });
+      showToast(`Password reset flag set for ${user.firstName}. They will be prompted to change their password on next login.`, true);
+    } catch (err) {
+      showToast('Failed to set reset flag: ' + err.message, false);
+    } finally { setResetPwId(null); }
+  };
+
   const initChange = (user, toRole) => {
     setPending({ user, toRole });
     setReason('');
@@ -374,6 +391,13 @@ export default function UserManagementPage() {
                               disabled={saving === u.id}
                             >↓ Student</button>
                           )}
+                          <button
+                            className="border text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors"
+                            style={{borderColor:'var(--blue-border)',color:'var(--blue)',background:'transparent'}}
+                            onClick={() => handleResetPassword(u)}
+                            disabled={resetPwId === u.id}
+                            title="Set flag to reset password to ID number on next login"
+                          >{resetPwId === u.id ? 'Resetting…' : 'Reset PW'}</button>
                           {saving === u.id && (
                             <span className="text-[10px] font-mono text-gray-400 animate-pulse">Saving…</span>
                           )}

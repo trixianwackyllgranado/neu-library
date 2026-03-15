@@ -6,8 +6,10 @@ import {
   signOut,
   onAuthStateChanged,
   updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
 const AuthContext = createContext(null);
@@ -45,6 +47,7 @@ export function AuthProvider({ children }) {
   const [userProfile,    setUserProfile]    = useState(null);
   const [loadingAuth,    setLoadingAuth]    = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
 
   const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, role = 'student', password }) => {
     const email   = idToEmail(idNumber);
@@ -99,10 +102,27 @@ export function AuthProvider({ children }) {
     setProfileLoading(true);
     try {
       const snap = await getDoc(doc(db, 'users', uid));
-      if (snap.exists()) setUserProfile(snap.data());
+      if (snap.exists()) {
+        const data = snap.data();
+        setUserProfile(data);
+        // Check if admin has flagged a password reset
+        if (data.adminPasswordReset) setNeedsPasswordReset(true);
+      }
     } finally {
       setProfileLoading(false);
     }
+  };
+
+  // Clear the admin reset flag after user has changed their password
+  const clearPasswordResetFlag = async () => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        adminPasswordReset: false,
+        adminPasswordResetAt: null,
+      });
+      setNeedsPasswordReset(false);
+    } catch (_) {}
   };
 
   const refreshProfile = () => { if (currentUser) return fetchProfile(currentUser.uid); };
@@ -120,6 +140,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       currentUser, userProfile, loadingAuth, profileLoading,
+      needsPasswordReset, clearPasswordResetFlag,
       register, login, logout, refreshProfile, updateUserPassword, idToEmail,
     }}>
       {children}

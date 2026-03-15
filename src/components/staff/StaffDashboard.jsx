@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
+import ChangePasswordModal from '../shared/ChangePasswordModal';
 
 const PP = { fontFamily:"'Poppins',sans-serif" };
 const SR = { fontFamily:"'Playfair Display',serif" };
@@ -25,6 +26,7 @@ function StatCard({ label, value, color, sub, onClick }) {
 export default function StaffDashboard() {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
+  const [showChangePw, setShowChangePw] = useState(false);
   const [pending, setPending] = useState(0);
   const [active,  setActive]  = useState(0);
   const [overdue, setOverdue] = useState(0);
@@ -56,6 +58,11 @@ export default function StaffDashboard() {
         <h1 style={{...SR,fontSize:'clamp(24px,4vw,32px)',fontWeight:700,color:'var(--text-primary)',marginBottom:6}}>{greeting}</h1>
         <p style={{...PP,fontSize:15,color:'var(--text-muted)'}}>Library operations at a glance.</p>
         <div style={{marginTop:16,height:1,background:'linear-gradient(90deg,var(--gold-border),transparent)'}} />
+        <button onClick={() => setShowChangePw(true)}
+          style={{...PP,marginTop:12,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',transition:'all 0.15s',display:'inline-flex',alignItems:'center',gap:6}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Change Password
+        </button>
       </div>
 
       <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Live Stats</p>
@@ -100,6 +107,7 @@ export default function StaffDashboard() {
           </div>
         </div>
       )}
+      {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
     </div>
   );
 }

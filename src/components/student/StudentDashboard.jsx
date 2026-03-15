@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
+import ChangePasswordModal from '../shared/ChangePasswordModal';
 import { useLibrarySession } from '../../context/LibrarySessionContext';
 
 const PP = { fontFamily:"'Poppins',sans-serif" };
@@ -30,13 +31,19 @@ function StatusBadge({ status, isOverdue }) {
 }
 
 export default function StudentDashboard() {
-  const { userProfile, currentUser } = useAuth();
+  const { userProfile, currentUser, needsPasswordReset, clearPasswordResetFlag } = useAuth();
   const { session, elapsed } = useLibrarySession();
   const navigate = useNavigate();
+  const [showChangePw, setShowChangePw] = useState(false);
 
   const [borrows, setBorrows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showQR,  setShowQR]  = useState(false);
+
+  // Auto-open password change if admin has reset the flag
+  useEffect(() => {
+    if (needsPasswordReset) setShowChangePw(true);
+  }, [needsPasswordReset]);
 
   useEffect(() => {
     if (!currentUser?.uid) return;
@@ -106,10 +113,16 @@ export default function StudentDashboard() {
             <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-muted)',marginBottom:4}}>Your Library QR Code</p>
             <p style={{...SR,fontSize:18,fontWeight:700,color:'var(--text-primary)',marginBottom:4}}>{userProfile?.idNumber||'—'}</p>
             <p style={{...PP,fontSize:13,color:'var(--text-muted)',marginBottom:12}}>Show this to library staff to check in or out.</p>
-            <button onClick={() => setShowQR(true)}
-              style={{...PP,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',cursor:'pointer',transition:'all 0.15s'}}>
-              View Full Size
-            </button>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+              <button onClick={() => setShowQR(true)}
+                style={{...PP,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',cursor:'pointer',transition:'all 0.15s'}}>
+                View Full Size
+              </button>
+              <button onClick={() => setShowChangePw(true)}
+                style={{...PP,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',transition:'all 0.15s'}}>
+                Change Password
+              </button>
+            </div>
           </div>
         </div>
 
@@ -187,6 +200,8 @@ export default function StudentDashboard() {
           </div>
         )}
       </div>
+
+      {showChangePw && <ChangePasswordModal onClose={() => { setShowChangePw(false); if (needsPasswordReset) clearPasswordResetFlag(); }} adminReset={needsPasswordReset} />}
 
       {/* QR Modal */}
       {showQR && userProfile?.qrToken && (
