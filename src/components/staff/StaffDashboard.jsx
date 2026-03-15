@@ -5,6 +5,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import ChangePasswordModal from '../shared/ChangePasswordModal';
+import EditProfileModal from '../shared/EditProfileModal';
 
 const PP = { fontFamily:"'Poppins',sans-serif" };
 const SR = { fontFamily:"'Playfair Display',serif" };
@@ -26,7 +27,8 @@ function StatCard({ label, value, color, sub, onClick }) {
 export default function StaffDashboard() {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
-  const [showChangePw, setShowChangePw] = useState(false);
+  const [showChangePw,    setShowChangePw]    = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
   const [pending, setPending] = useState(0);
   const [active,  setActive]  = useState(0);
   const [overdue, setOverdue] = useState(0);
@@ -62,6 +64,11 @@ export default function StaffDashboard() {
           style={{...PP,marginTop:12,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',transition:'all 0.15s',display:'inline-flex',alignItems:'center',gap:6}}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           Change Password
+        </button>
+        <button onClick={() => setShowEditProfile(true)}
+          style={{...PP,marginTop:12,marginLeft:8,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',transition:'all 0.15s',display:'inline-flex',alignItems:'center',gap:6}}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Edit College/Course
         </button>
       </div>
 
@@ -108,6 +115,7 @@ export default function StaffDashboard() {
         </div>
       )}
       {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
+      {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} />}
     </div>
   );
 }

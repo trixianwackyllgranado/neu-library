@@ -6,6 +6,7 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import ChangePasswordModal from '../shared/ChangePasswordModal';
+import EditProfileModal from '../shared/EditProfileModal';
 import { useLibrarySession } from '../../context/LibrarySessionContext';
 
 const PP = { fontFamily:"'Poppins',sans-serif" };
@@ -34,7 +35,8 @@ export default function StudentDashboard() {
   const { userProfile, currentUser, needsPasswordReset, clearPasswordResetFlag } = useAuth();
   const { session, elapsed } = useLibrarySession();
   const navigate = useNavigate();
-  const [showChangePw, setShowChangePw] = useState(false);
+  const [showChangePw,    setShowChangePw]    = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   const [borrows, setBorrows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -122,6 +124,10 @@ export default function StudentDashboard() {
                 style={{...PP,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',transition:'all 0.15s'}}>
                 Change Password
               </button>
+              <button onClick={() => setShowEditProfile(true)}
+                style={{...PP,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',transition:'all 0.15s'}}>
+                Edit College/Course
+              </button>
             </div>
           </div>
         </div>
@@ -202,6 +208,7 @@ export default function StudentDashboard() {
       </div>
 
       {showChangePw && <ChangePasswordModal onClose={() => { setShowChangePw(false); if (needsPasswordReset) clearPasswordResetFlag(); }} adminReset={needsPasswordReset} />}
+      {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} />}
 
       {/* QR Modal */}
       {showQR && userProfile?.qrToken && (

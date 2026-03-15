@@ -7,6 +7,7 @@ import {
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation } from 'react-router-dom';
+import EditProfileModal from '../../components/shared/EditProfileModal';
 
 const BADGE = { admin: 'badge-red', staff: 'badge-gold', student: 'badge-green' };
 
@@ -123,6 +124,9 @@ export default function UserManagementPage() {
 
   // Password reset
   const [resetPwId,  setResetPwId]  = useState(null);
+
+  // Edit profile (college/course)
+  const [editProfileTarget, setEditProfileTarget] = useState(null); // { uid, profile }
 
   // Live users
   useEffect(() => {
@@ -401,6 +405,12 @@ export default function UserManagementPage() {
                             disabled={resetPwId === u.id}
                             title="Set flag to reset password to ID number on next login"
                           >{resetPwId === u.id ? 'Resetting…' : 'Reset PW'}</button>
+                          <button
+                            className="border text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors"
+                            style={{borderColor:'var(--gold-border)',color:'var(--gold)',background:'transparent'}}
+                            onClick={() => setEditProfileTarget({ uid: u.id, profile: u })}
+                            title="Edit college and course"
+                          >Edit Profile</button>
                           {saving === u.id && (
                             <span className="text-[10px] font-mono text-gray-400 animate-pulse">Saving…</span>
                           )}
@@ -496,6 +506,15 @@ export default function UserManagementPage() {
 
       {/* Audit modal */}
       {auditOpen && <AuditModal logs={auditLogs} onClose={() => setAuditOpen(false)} />}
+
+      {/* Edit Profile modal */}
+      {editProfileTarget && (
+        <EditProfileModal
+          onClose={() => setEditProfileTarget(null)}
+          targetUid={editProfileTarget.uid}
+          targetProfile={editProfileTarget.profile}
+        />
+      )}
 
       {/* Toast */}
       {toast && (
