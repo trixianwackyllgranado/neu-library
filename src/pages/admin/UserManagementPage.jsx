@@ -277,7 +277,12 @@ export default function UserManagementPage() {
 
     setSaving(pending.user.id);
     try {
-      await updateDoc(doc(db, 'users', pending.user.id), { role: pending.toRole });
+      // If demoting to student and user has no qrToken, generate one now
+      const updatePayload = { role: pending.toRole };
+      if (pending.toRole === 'student' && !pending.user.qrToken) {
+        updatePayload.qrToken = crypto.randomUUID().replace(/-/g, '');
+      }
+      await updateDoc(doc(db, 'users', pending.user.id), updatePayload);
       await addDoc(collection(db, 'adminAuditLogs'), {
         activityType:  'role_change',
         targetId:      pending.user.id,
@@ -290,9 +295,9 @@ export default function UserManagementPage() {
         timestamp:     serverTimestamp(),
       });
       setUsers(prev => prev.map(u =>
-        u.id === pending.user.id ? { ...u, role: pending.toRole } : u
+        u.id === pending.user.id ? { ...u, role: pending.toRole, ...(updatePayload.qrToken ? { qrToken: updatePayload.qrToken } : {}) } : u
       ));
-      showToast(`${pending.user.firstName}'s role updated to ${pending.toRole}.`, true);
+      showToast(`${pending.user.firstName}'s role updated to ${pending.toRole}${updatePayload.qrToken ? ' — QR code generated.' : '.'}`, true);
     } catch (e) {
       showToast('Error: ' + e.message, false);
     }

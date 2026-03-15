@@ -545,11 +545,17 @@ export default function QRLoggerPage() {
               </div>
             ) : (
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', minWidth: '500px', borderCollapse: 'collapse' }}>
+                <table style={{ width: '100%', minWidth: '420px', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: 'var(--thead-bg)' }}>
-                      {['Student', 'ID', 'Purpose', 'Since', 'Duration', 'Notify'].map(h => (
-                        <th key={h} style={{ ...MONO, fontSize: '9px', letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', padding: '11px 14px', textAlign: 'left', borderBottom: '1px solid var(--divider)', fontWeight: 600 }}>{h}</th>
+                      {[
+                        { label: 'Student',  w: '22%' },
+                        { label: 'Purpose',  w: '18%' },
+                        { label: 'Since',    w: '10%' },
+                        { label: 'Duration', w: '10%' },
+                        { label: 'Notify',   w: '20%' },
+                      ].map(h => (
+                        <th key={h.label} style={{ ...MONO, fontSize: '9px', letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid var(--divider)', fontWeight: 600, width: h.w }}>{h.label}</th>
                       ))}
                     </tr>
                   </thead>
@@ -558,43 +564,44 @@ export default function QRLoggerPage() {
                       const u = userMap[s.uid];
                       return (
                         <tr key={s.id} className="qr-row" style={{ background: i % 2 === 0 ? 'transparent' : 'var(--row-alt)', transition: 'background 0.15s' }}>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--row-border)' }}><p style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)' }}>{u ? `${u.lastName}, ${u.firstName}` : '—'}</p></td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--row-border)', ...MONO, fontSize: '11px', color: 'var(--text-muted)' }}>{u?.idNumber ?? '—'}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--row-border)' }}>
-                            <span style={{ ...MONO, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: '20px', background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', color: 'var(--blue)' }}>{s.purpose}</span>
+                          <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--row-border)' }}>
+                            <p style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.3 }}>{u ? `${u.lastName}, ${u.firstName}` : '—'}</p>
+                            <p style={{ ...MONO, fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{u?.idNumber ?? '—'}</p>
                           </td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--row-border)', ...MONO, fontSize: '11px', color: 'var(--text-muted)' }}>{fmtTime(s.entryTime)}</td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--row-border)', ...MONO, fontSize: '11px', color: 'var(--text-body)' }}><LiveDur entryTime={s.entryTime} /></td>
-                          <td style={{ padding: '11px 14px', borderBottom: '1px solid var(--row-border)' }}>
-                            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                              {(() => {
-                                const notif = activeNotifMap[s.uid];
-                                const nm = u ? `${u.lastName}, ${u.firstName}` : '—';
-                                if (!notif) return (
-                                  <button onClick={() => setCallTarget({ uid: s.uid, displayName: nm, idNumber: u?.idNumber ?? '' })}
-                                    style={{ ...MONO, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 10px', borderRadius: '7px', background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', color: 'var(--blue)', cursor: 'pointer' }}>
-                                    Call
+                          <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--row-border)' }}>
+                            <span style={{ ...MONO, fontSize: '9px', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '20px', background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', color: 'var(--blue)', whiteSpace: 'nowrap', display: 'inline-block' }}>{s.purpose}</span>
+                          </td>
+                          <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--row-border)', ...MONO, fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{fmtTime(s.entryTime)}</td>
+                          <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--row-border)', ...MONO, fontSize: '11px', color: 'var(--text-body)', whiteSpace: 'nowrap' }}><LiveDur entryTime={s.entryTime} /></td>
+                          <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--row-border)' }}>
+                            {(() => {
+                              const notif = activeNotifMap[s.uid];
+                              const nm = u ? `${u.lastName}, ${u.firstName}` : '—';
+                              const btnBase = { ...MONO, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 10px', borderRadius: '7px', cursor: 'pointer', whiteSpace: 'nowrap' };
+                              if (!notif) return (
+                                <button onClick={() => setCallTarget({ uid: s.uid, displayName: nm, idNumber: u?.idNumber ?? '' })}
+                                  style={{ ...btnBase, background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', color: 'var(--blue)' }}>
+                                  Call
+                                </button>
+                              );
+                              if (!notif.acknowledged) return (
+                                <span style={{ ...MONO, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '5px 10px', borderRadius: '7px', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', whiteSpace: 'nowrap', display: 'inline-block' }}>
+                                  Pending
+                                </span>
+                              );
+                              return (
+                                <div style={{ display: 'flex', gap: '5px', flexDirection: 'column' }}>
+                                  <button onClick={() => handleFollowUp(notif.id)}
+                                    style={{ ...btnBase, background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', color: 'var(--blue)' }}>
+                                    Follow Up
                                   </button>
-                                );
-                                if (!notif.acknowledged) return (
-                                  <span style={{ ...MONO, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '4px 10px', borderRadius: '7px', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)' }}>
-                                    Pending
-                                  </span>
-                                );
-                                return (
-                                  <>
-                                    <button onClick={() => handleFollowUp(notif.id)}
-                                      style={{ ...MONO, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 10px', borderRadius: '7px', background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', color: 'var(--blue)', cursor: 'pointer' }}>
-                                      Follow Up
-                                    </button>
-                                    <button onClick={() => handleResolve(notif.id)}
-                                      style={{ ...MONO, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600, padding: '5px 10px', borderRadius: '7px', background: 'var(--green-soft)', border: '1px solid var(--green-border)', color: 'var(--green)', cursor: 'pointer' }}>
-                                      Resolve
-                                    </button>
-                                  </>
-                                );
-                              })()}
-                            </div>
+                                  <button onClick={() => handleResolve(notif.id)}
+                                    style={{ ...btnBase, background: 'var(--green-soft)', border: '1px solid var(--green-border)', color: 'var(--green)' }}>
+                                    Resolve
+                                  </button>
+                                </div>
+                              );
+                            })()}
                           </td>
                         </tr>
                       );
