@@ -192,6 +192,11 @@ export default function StudentRecordsPage() {
     return (
       <div>
         <style>{`tr.log-row:hover td { background: var(--row-hover-bg) !important; color: var(--row-hover-text) !important; }`}</style>
+        {/* Header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1">
+            <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{color:"var(--text-muted)"}}>Student Records</p>
+            <h1 className="page-title">Student Profile</h1>
           </div>
           {isAdmin && (
             <button className="btn-secondary shrink-0 text-[10px]" onClick={() => exportCSV(students)}>
