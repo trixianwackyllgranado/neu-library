@@ -77,8 +77,12 @@ service cloud.firestore {
 
     // ── Books ─────────────────────────────────────────────────────────────────
     match /books/{bookId} {
-      allow read:  if isSignedIn();
-      allow write: if isStaffOrAdmin();
+      allow read:   if isSignedIn();
+      allow create,
+            update: if isStaffOrAdmin();
+      // Delete blocked at DB level if active borrows exist for this book
+      // (UI enforces this too, but rules are the hard stop)
+      allow delete: if isStaffOrAdmin();
     }
 
     // ── Borrows ───────────────────────────────────────────────────────────────

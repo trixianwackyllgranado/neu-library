@@ -127,6 +127,7 @@ export default function CatalogPage() {
   const [requestSuccess, setRequestSuccess] = useState('');
   const [requestError,   setRequestError]   = useState('');
   const [myBorrowMap,    setMyBorrowMap]    = useState({});
+  const [activeBookBorrowMap, setActiveBookBorrowMap] = useState({}); // bookId → count of active/overdue borrows
 
   // ── Loaders ───────────────────────────────────────────────────────────────
   // Refs for cross-collection derived state
@@ -171,11 +172,19 @@ export default function CatalogPage() {
     return unsub;
   }, []);
 
-  // Live borrows → recompute course data + student borrow map
+  // Live borrows → recompute course data + student borrow map + active-per-book count
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'borrows'), snap => {
       borrowsRefC.current = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       recomputeCourseData();
+      // Track active/overdue borrows per book for staff/admin safeguard
+      const abMap = {};
+      borrowsRefC.current.forEach(b => {
+        if (b.bookId && (b.status === 'active' || b.status === 'pending')) {
+          abMap[b.bookId] = (abMap[b.bookId] || 0) + 1;
+        }
+      });
+      setActiveBookBorrowMap(abMap);
       if (currentUser && isStudent) {
         const map = {};
         borrowsRefC.current.forEach(b => {
@@ -253,8 +262,20 @@ export default function CatalogPage() {
   };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  // Check if student has overdue books — blocks new borrow requests
+  const hasOverdueBooks = isStudent && borrowsRefC.current.some(b =>
+    b.userId === currentUser?.uid &&
+    b.status === 'active' &&
+    b.dueDate?.toDate && b.dueDate.toDate() < new Date()
+  );
+
   const handleRequest = async () => {
     setRequestError(''); setRequesting(true);
+    if (hasOverdueBooks) {
+      setRequestError('Borrowing disabled: You have overdue books. Please return them before borrowing new ones.');
+      setRequesting(false);
+      return;
+    }
     try {
       if ((requestBook.availableCopies ?? 0) <= 0) { setRequestError('No copies available at this time.'); setRequesting(false); return; }
       await addDoc(collection(db, 'borrows'), {
@@ -321,6 +342,14 @@ export default function CatalogPage() {
   };
 
   const handleDelete = (book) => {
+    const activeCount = activeBookBorrowMap[book.id] || 0;
+    if (activeCount > 0) {
+      showAlert(
+        'Action Denied',
+        `You cannot delete "${book.title}" because ${activeCount} ${activeCount === 1 ? 'copy is' : 'copies are'} currently checked out. Deleting this will cause the system to lose track of active borrowing records. Please ensure all copies are returned first.`
+      );
+      return;
+    }
     askConfirm(
       'Delete Book',
       `Permanently delete "${book.title}"? This cannot be undone.`,
@@ -747,6 +776,7 @@ export default function CatalogPage() {
                         borrowStatus === 'active'  ? <span className="badge-green badge">Borrowed</span>
                         : borrowStatus === 'pending' ? <span className="badge-gold badge">Pending Approval</span>
                         : unavailable ? <span className="badge-red badge">Unavailable</span>
+                        : hasOverdueBooks ? <span className="badge-red badge text-[9px]">Overdue — Return First</span>
                         : <button className="btn-primary py-2 px-4 text-xs w-full" onClick={() => { setRequestBook(book); setRequestError(''); setRequestSuccess(''); }}>Request Borrow</button>
                       )}
                       {canEdit && (
@@ -856,6 +886,13 @@ export default function CatalogPage() {
                       <td className="td text-center font-mono">{book.totalCopies??0}</td>
                       <td className="td text-center">
                         <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:600,color:(book.availableCopies??0)>0?'var(--green)':'var(--red)'}}>{book.availableCopies??0}</span>
+                        {canEdit && (activeBookBorrowMap[book.id] || 0) > 0 && (
+                          <div style={{marginTop:3}}>
+                            <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:9,fontWeight:700,padding:'2px 6px',borderRadius:10,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',whiteSpace:'nowrap'}}>
+                              {activeBookBorrowMap[book.id]} out
+                            </span>
+                          </div>
+                        )}
                       </td>
                       <td className="td">
                         <div className="flex items-center gap-2 flex-wrap">

@@ -322,15 +322,15 @@ export default function RegisterPage() {
               {/* Only show rest of form once code is verified for staff/admin, always show for students */}
               {(!isStaffOrAdmin || codeVerified) && (<>
 
-              {/* ID Number */}
+              {/* ID Number — label changes by role */}
               <div>
-                <FieldLabel required>ID Number</FieldLabel>
+                <FieldLabel required>{isStaffOrAdmin ? 'Staff ID' : 'Student Number'}</FieldLabel>
                 <input type="text" inputMode="numeric"
                   style={inputBase({ ...MONO, letterSpacing: '0.16em' })}
-                  placeholder="22-12345-123" value={idFormat}
+                  placeholder={isStaffOrAdmin ? 'Staff ID Number' : '22-12345-123'} value={idFormat}
                   onChange={e => { const f = formatId(e.target.value); setIdFormat(f); setIdNumber(f); setError(''); }}
                   onFocus={onFocus} onBlur={onBlur} required />
-                <Hint>Format: YY-NNNNN-NNN</Hint>
+                <Hint>{isStaffOrAdmin ? 'Enter your assigned staff ID number.' : 'Format: YY-NNNNN-NNN'}</Hint>
               </div>
 
               {/* Last + First name */}

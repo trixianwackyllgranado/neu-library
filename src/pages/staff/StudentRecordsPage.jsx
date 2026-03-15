@@ -67,6 +67,7 @@ function Section({ title, count, badge, badgeColor = 'gray', defaultOpen = false
 }
 
 export default function StudentRecordsPage() {
+  // Injected via <style> in render — log-row hover matches LoggerPage
   const { userProfile: myProfile } = useAuth();
   const isAdmin = myProfile?.role === 'admin';
 
@@ -190,11 +191,7 @@ export default function StudentRecordsPage() {
     const s = selected;
     return (
       <div>
-        {/* Header */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex-1">
-            <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{color:"var(--text-muted)"}}>Student Records</p>
-            <h1 className="page-title">Student Profile</h1>
+        <style>{`tr.log-row:hover td { background: var(--row-hover-bg) !important; color: var(--row-hover-text) !important; }`}</style>
           </div>
           {isAdmin && (
             <button className="btn-secondary shrink-0 text-[10px]" onClick={() => exportCSV(students)}>
@@ -274,7 +271,7 @@ export default function StudentRecordsPage() {
                     {detail.active.map(b => {
                       const od = b.dueDate?.toDate ? b.dueDate.toDate() < new Date() : false;
                       return (
-                        <tr key={b.id} className="hover:bg-gray-50">
+                        <tr key={b.id} className="log-row">
                           <td className="td font-semibold text-sm">{b.bookTitle}</td>
                           <td className="td font-mono text-xs">{fmt(b.borrowDate)}</td>
                           <td className={`td font-mono text-xs ${od ? 'text-red-700 font-bold' : ''}`}>{fmt(b.dueDate)}</td>
@@ -336,7 +333,7 @@ export default function StudentRecordsPage() {
                     </thead>
                     <tbody>
                       {filteredBorrows.map(b => (
-                        <tr key={b.id} className="hover:bg-gray-50">
+                        <tr key={b.id} className="log-row">
                           <td className="td font-semibold text-sm">{b.bookTitle}</td>
                           <td className="td font-mono text-xs">{fmt(b.borrowDate)}</td>
                           <td className="td font-mono text-xs">{fmt(b.dueDate)}</td>
@@ -396,7 +393,7 @@ export default function StudentRecordsPage() {
                             duration = 'Active';
                           }
                           return (
-                            <tr key={v.id} className="hover:bg-gray-50">
+                            <tr key={v.id} className="log-row">
                               <td className="td text-sm">{v.purpose}</td>
                               <td className="td font-mono text-xs">{fmtDt(v.entryTime)}</td>
                               <td className="td font-mono text-xs">{v.active ? '—' : fmtDt(v.exitTime)}</td>
@@ -426,6 +423,7 @@ export default function StudentRecordsPage() {
   // ── LIST VIEW ─────────────────────────────────────────────────────────────
   return (
     <div>
+      <style>{`tr.log-row:hover td { background: var(--row-hover-bg) !important; color: var(--row-hover-text) !important; }`}</style>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{color:"var(--text-muted)"}}>Records</p>
@@ -497,7 +495,7 @@ export default function StudentRecordsPage() {
               </thead>
               <tbody>
                 {filtered.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => openStudent(s)}>
+                  <tr key={s.id} className="log-row cursor-pointer" onClick={() => openStudent(s)}>
                     <td className="td font-semibold text-sm">{s.lastName}, {s.firstName} {s.middleInitial ? s.middleInitial + '.' : ''}</td>
                     <td className="td font-mono text-xs">{s.idNumber}</td>
                     <td className="td text-xs">

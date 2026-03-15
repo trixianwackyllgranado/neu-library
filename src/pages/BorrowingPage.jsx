@@ -243,20 +243,29 @@ export default function BorrowingPage() {
     if (emailSent[borrow.id]) return;
     try {
       const student = userMap[borrow.userId];
-      await addDoc(collection(db, 'emailQueue'), {
-        to: student?.email ?? borrow.userId,
-        studentName: student ? `${student.firstName} ${student.lastName}` : 'Student',
-        bookTitle: borrow.bookTitle,
-        dueDate: fmt(borrow.dueDate),
-        type: 'overdue_reminder',
-        sentBy: currentUser.uid,
-        sentAt: serverTimestamp(),
-        status: 'queued',
+      const sentByName = userProfile ? `${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}`.trim() : 'Library Staff';
+      // Fire real-time notification (same system as LoggerPage)
+      await addDoc(collection(db, 'notifications'), {
+        toUid:       borrow.userId,
+        toName:      student ? `${student.firstName} ${student.lastName}` : 'Student',
+        message:     `You have an overdue book: "${borrow.bookTitle}". It was due on ${fmt(borrow.dueDate)}. Please return it as soon as possible to avoid penalties.`,
+        sentBy:      currentUser.uid,
+        sentByName,
+        sentAt:      serverTimestamp(),
+        resolved:    false,
+        acknowledged: false,
+        followUp:    false,
+        type:        'overdue_reminder',
+        bookTitle:   borrow.bookTitle,
+        borrowId:    borrow.id,
       });
       setEmailSent(prev => ({ ...prev, [borrow.id]: true }));
-      showToast(`Reminder queued for ${student?.firstName ?? 'student'}.`, true);
-    } catch (e) { showToast('Failed to queue reminder: ' + e.message, false); }
+      showToast(`Overdue reminder sent to ${student?.firstName ?? 'student'}.`, true);
+    } catch (e) { showToast('Failed to send reminder: ' + e.message, false); }
   };
+
+  // Check if student has any overdue books before allowing new borrow request
+  const hasOverdueBooks = isStudent && borrows.some(b => isOverdue(b));
 
   const handleCancelRequest = async (borrow) => {
     askConfirm(
