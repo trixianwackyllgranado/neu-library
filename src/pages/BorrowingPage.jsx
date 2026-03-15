@@ -115,6 +115,25 @@ export default function BorrowingPage() {
     });
   }, [canManage]);
 
+  // Build remindedSet from Firestore — which borrows already have an active reminder notification
+  // This persists across page refreshes and navigation
+  useEffect(() => {
+    if (!canManage) return;
+    const unsub = onSnapshot(
+      query(
+        collection(db, 'notifications'),
+        where('type',     '==', 'overdue_reminder'),
+        where('resolved', '==', false),
+      ),
+      snap => {
+        const ids = new Set(snap.docs.map(d => d.data().borrowId).filter(Boolean));
+        setRemindedSet(ids);
+      },
+      () => {}
+    );
+    return unsub;
+  }, [canManage]);
+
   // ── Filters ───────────────────────────────────────────────────────────────
   const [filterBook,    setFilterBook]    = useState('');
   const [filterStudent, setFilterStudent] = useState('');
@@ -174,7 +193,7 @@ export default function BorrowingPage() {
   const [approving,     setApproving]     = useState(null);
   const [approveSaving, setApproveSaving] = useState(false);
   const [toast,         setToast]         = useState(null);
-  const [emailSent,     setEmailSent]     = useState({});
+  const [remindedSet,   setRemindedSet]   = useState(new Set()); // borrowId → already reminded (Firestore-backed)
   const [showAdd,       setShowAdd]       = useState(false);
   const [saving,        setSaving]        = useState(false);
   const [newBorrow,     setNewBorrow]     = useState({ studentSearch: '', selectedUserId: '', bookSearch: '', selectedBookId: '', selectedBookTitle: '', dueDate: '' });
@@ -244,26 +263,26 @@ export default function BorrowingPage() {
   };
 
   const handleSendReminder = async (borrow) => {
-    if (emailSent[borrow.id]) return;
+    if (remindedSet.has(borrow.id)) return;
     try {
       const student = userMap[borrow.userId];
       const sentByName = userProfile ? `${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}`.trim() : 'Library Staff';
-      // Fire real-time notification (same system as LoggerPage)
       await addDoc(collection(db, 'notifications'), {
-        toUid:       borrow.userId,
-        toName:      student ? `${student.firstName} ${student.lastName}` : 'Student',
-        message:     `You have an overdue book: "${borrow.bookTitle}". It was due on ${fmt(borrow.dueDate)}. Please return it as soon as possible to avoid penalties.`,
-        sentBy:      currentUser.uid,
+        toUid:        borrow.userId,
+        toName:       student ? `${student.firstName} ${student.lastName}` : 'Student',
+        message:      `You have an overdue book: "${borrow.bookTitle}". It was due on ${fmt(borrow.dueDate)}. Please return it as soon as possible to avoid penalties.`,
+        sentBy:       currentUser.uid,
         sentByName,
-        sentAt:      serverTimestamp(),
-        resolved:    false,
+        sentAt:       serverTimestamp(),
+        resolved:     false,
         acknowledged: false,
-        followUp:    false,
-        type:        'overdue_reminder',
-        bookTitle:   borrow.bookTitle,
-        borrowId:    borrow.id,
+        followUp:     false,
+        type:         'overdue_reminder',
+        bookTitle:    borrow.bookTitle,
+        borrowId:     borrow.id,
       });
-      setEmailSent(prev => ({ ...prev, [borrow.id]: true }));
+      // Optimistically add to local set so button flips instantly
+      setRemindedSet(prev => new Set([...prev, borrow.id]));
       showToast(`Overdue reminder sent to ${student?.firstName ?? 'student'}.`, true);
     } catch (e) { showToast('Failed to send reminder: ' + e.message, false); }
   };
@@ -593,9 +612,9 @@ export default function BorrowingPage() {
                           )}
                           {canManage && isOverdue(b) && (
                             <button className="btn-secondary text-[10px] py-1 px-2"
-                              disabled={emailSent[b.id]}
+                              disabled={remindedSet.has(b.id)}
                               onClick={() => handleSendReminder(b)}>
-                              {emailSent[b.id] ? '✓ Sent' : 'Remind'}
+                              {remindedSet.has(b.id) ? '✓ Reminded' : 'Remind'}
                             </button>
                           )}
                           {isStudent && b.status === 'pending' && (

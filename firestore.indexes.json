@@ -43,6 +43,14 @@
       ]
     },
     {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "resolved", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "adminAuditLogs",
       "queryScope": "COLLECTION",
       "fields": [
