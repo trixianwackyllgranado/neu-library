@@ -41,6 +41,14 @@
         { "fieldPath": "acknowledged", "order": "ASCENDING" },
         { "fieldPath": "resolved", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "adminAuditLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "activityType", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

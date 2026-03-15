@@ -8,6 +8,7 @@ import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import EditProfileModal from '../../components/shared/EditProfileModal';
+import EditNameModal from '../../components/shared/EditNameModal';
 
 const BADGE = { admin: 'badge-red', staff: 'badge-gold', student: 'badge-green' };
 
@@ -42,52 +43,113 @@ function exportUsersCSV(users) {
 }
 
 // ── Audit log modal ───────────────────────────────────────────────────────────
+const ACTIVITY_TABS = [
+  { key: 'all',            label: 'All'            },
+  { key: 'role_change',    label: 'Role Changes'   },
+  { key: 'password_reset', label: 'Password Resets'},
+  { key: 'name_change',    label: 'Name Changes'   },
+  { key: 'program_change', label: 'Program Changes'},
+];
+
+const ACTIVITY_BADGE = {
+  role_change:    { bg: 'var(--badge-red-bg)',   border: 'var(--badge-red-border)',   color: 'var(--badge-red-text)',   label: 'Role'     },
+  password_reset: { bg: 'var(--badge-blue-bg)',  border: 'var(--badge-blue-border)',  color: 'var(--badge-blue-text)',  label: 'Password' },
+  name_change:    { bg: 'var(--badge-gold-bg)',  border: 'var(--badge-gold-border)',  color: 'var(--badge-gold-text)',  label: 'Name'     },
+  program_change: { bg: 'var(--badge-green-bg)', border: 'var(--badge-green-border)', color: 'var(--badge-green-text)', label: 'Program'  },
+};
+
 function AuditModal({ logs, onClose }) {
+  const [actFilter, setActFilter] = useState('all');
   const fmt = (ts) => {
     if (!ts) return '—';
     const d = ts.toDate ? ts.toDate() : new Date(ts);
     return d.toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
   };
+
+  const filtered = actFilter === 'all' ? logs : logs.filter(l => l.activityType === actFilter);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="bg-white w-full max-w-3xl shadow-2xl max-h-[80vh] flex flex-col">
-        <div className="bg-primary-800 text-white px-6 py-4 flex items-center justify-between">
+    <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.6)', padding:16 }}>
+      <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:16, width:'100%', maxWidth:780, maxHeight:'85vh', display:'flex', flexDirection:'column', boxShadow:'var(--shadow-modal)', overflow:'hidden' }}>
+        {/* Header */}
+        <div style={{ background:'var(--thead-bg)', borderBottom:'1px solid var(--divider)', padding:'16px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
           <div>
-            <p className="font-mono text-[10px] tracking-widest uppercase opacity-60 mb-0.5">Immutable Log</p>
-            <h2 className="font-display text-lg font-bold">Role Change Audit Log</h2>
+            <p style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:9, letterSpacing:'0.2em', color:'var(--text-muted)', textTransform:'uppercase', marginBottom:4 }}>Immutable Log</p>
+            <h2 style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:'var(--text-primary)' }}>Admin Audit Log</h2>
           </div>
-          <button onClick={onClose} className="text-white/60 hover:text-white text-xl leading-none">✕</button>
+          <button onClick={onClose} style={{ background:'var(--surface)', border:'1px solid var(--card-border)', borderRadius:8, width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-muted)', cursor:'pointer' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
         </div>
-        <div className="overflow-y-auto flex-1">
-          {logs.length === 0 ? (
-            <p className="p-6 text-sm text-gray-400 text-center">No role changes recorded yet.</p>
+
+        {/* Activity type filter tabs */}
+        <div style={{ display:'flex', borderBottom:'1px solid var(--divider)', flexShrink:0, overflowX:'auto', background:'var(--card)' }}>
+          {ACTIVITY_TABS.map(t => (
+            <button key={t.key} onClick={() => setActFilter(t.key)}
+              style={{ padding:'10px 18px', fontFamily:"'IBM Plex Mono',monospace", fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', cursor:'pointer', background:'transparent', border:'none', borderBottom: actFilter === t.key ? '2px solid var(--gold)' : '2px solid transparent', color: actFilter === t.key ? 'var(--gold)' : 'var(--text-muted)', whiteSpace:'nowrap', transition:'all 0.15s' }}>
+              {t.label}
+              <span style={{ marginLeft:6, fontSize:9, padding:'1px 6px', borderRadius:10, background: actFilter === t.key ? 'var(--gold-soft)' : 'var(--surface)', color: actFilter === t.key ? 'var(--gold)' : 'var(--text-dim)', border:`1px solid ${actFilter === t.key ? 'var(--gold-border)' : 'var(--card-border)'}` }}>
+                {t.key === 'all' ? logs.length : logs.filter(l => l.activityType === t.key).length}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Table */}
+        <div style={{ overflowY:'auto', flex:1 }}>
+          {filtered.length === 0 ? (
+            <p style={{ padding:24, textAlign:'center', fontFamily:"'Poppins',sans-serif", fontSize:13, color:'var(--text-muted)' }}>No records found.</p>
           ) : (
-            <table className="w-full min-w-[600px]">
-              <thead className="sticky top-0 bg-gray-50">
+            <table style={{ width:'100%', minWidth:600, borderCollapse:'collapse' }}>
+              <thead style={{ position:'sticky', top:0 }}>
                 <tr>
                   <th className="th">Date</th>
+                  <th className="th">Type</th>
                   <th className="th">Target User</th>
-                  <th className="th">Change</th>
+                  <th className="th">Detail</th>
                   <th className="th">Changed By</th>
-                  <th className="th">Reason</th>
+                  <th className="th">Note</th>
                 </tr>
               </thead>
               <tbody>
-                {logs.map(l => (
-                  <tr key={l.id} className="hover:bg-gray-50">
-                    <td className="td font-mono text-xs text-gray-400">{fmt(l.timestamp)}</td>
-                    <td className="td text-sm font-semibold">{l.targetName || '—'}</td>
-                    <td className="td">
-                      <span className="flex items-center gap-1 text-xs">
-                        <span className={`badge ${BADGE[l.fromRole] || 'badge-gray'}`}>{l.fromRole}</span>
-                        <span className="text-gray-400">→</span>
-                        <span className={`badge ${BADGE[l.toRole] || 'badge-gray'}`}>{l.toRole}</span>
-                      </span>
-                    </td>
-                    <td className="td text-xs text-gray-500">{l.changedByName || '—'}</td>
-                    <td className="td text-xs text-gray-600 max-w-[180px]">{l.reason || '—'}</td>
-                  </tr>
-                ))}
+                {filtered.map(l => {
+                  const ab = ACTIVITY_BADGE[l.activityType] || ACTIVITY_BADGE.role_change;
+                  return (
+                    <tr key={l.id} style={{ borderBottom:'1px solid var(--row-border)' }}
+                      onMouseEnter={e => e.currentTarget.style.background='var(--row-hover-bg)'}
+                      onMouseLeave={e => e.currentTarget.style.background='transparent'}>
+                      <td className="td" style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{fmt(l.timestamp)}</td>
+                      <td className="td">
+                        <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:9, fontWeight:700, padding:'2px 8px', borderRadius:20, background:ab.bg, border:`1px solid ${ab.border}`, color:ab.color, textTransform:'uppercase', letterSpacing:'0.08em', whiteSpace:'nowrap' }}>{ab.label}</span>
+                      </td>
+                      <td className="td" style={{ fontWeight:600, fontSize:13, color:'var(--text-primary)', whiteSpace:'nowrap' }}>{l.targetName || '—'}</td>
+                      <td className="td" style={{ fontSize:12, color:'var(--text-body)', maxWidth:200 }}>
+                        {l.activityType === 'role_change' && (
+                          <span style={{ display:'flex', alignItems:'center', gap:4 }}>
+                            <span className={`badge ${BADGE[l.fromRole] || 'badge-gray'}`}>{l.fromRole}</span>
+                            <span style={{ color:'var(--text-dim)' }}>→</span>
+                            <span className={`badge ${BADGE[l.toRole] || 'badge-gray'}`}>{l.toRole}</span>
+                          </span>
+                        )}
+                        {l.activityType === 'password_reset' && (
+                          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-muted)' }}>Reset flag set</span>
+                        )}
+                        {l.activityType === 'name_change' && (
+                          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-body)' }}>
+                            {l.oldName || '—'} → {l.newName || '—'}
+                          </span>
+                        )}
+                        {l.activityType === 'program_change' && (
+                          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:11, color:'var(--text-body)' }}>
+                            {l.oldProgram || '—'} → {l.newProgram || '—'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="td" style={{ fontSize:12, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{l.changedByName || '—'}</td>
+                      <td className="td" style={{ fontSize:12, color:'var(--text-body)', maxWidth:160 }}>{l.reason || '—'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -126,7 +188,10 @@ export default function UserManagementPage() {
   const [resetPwId,  setResetPwId]  = useState(null);
 
   // Edit profile (college/course)
-  const [editProfileTarget, setEditProfileTarget] = useState(null); // { uid, profile }
+  const [editProfileTarget, setEditProfileTarget] = useState(null);
+
+  // Edit name (admin only)
+  const [editNameTarget, setEditNameTarget] = useState(null);
 
   // Live users
   useEffect(() => {
@@ -140,9 +205,9 @@ export default function UserManagementPage() {
     return unsub;
   }, []);
 
-  // Live audit logs
+  // Live audit logs — unified collection
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'roleChangeLogs'), snap => {
+    const unsub = onSnapshot(collection(db, 'adminAuditLogs'), snap => {
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       docs.sort((a, b) => (b.timestamp?.toMillis?.() ?? 0) - (a.timestamp?.toMillis?.() ?? 0));
       setAuditLogs(docs);
@@ -186,6 +251,15 @@ export default function UserManagementPage() {
         adminPasswordResetAt: serverTimestamp(),
         adminPasswordResetBy: myProfile?.uid || null,
       });
+      await addDoc(collection(db, 'adminAuditLogs'), {
+        activityType:  'password_reset',
+        targetId:      user.id,
+        targetName:    `${user.lastName}, ${user.firstName}`,
+        changedBy:     myProfile?.uid,
+        changedByName: `${myProfile?.lastName}, ${myProfile?.firstName}`,
+        reason:        'Admin-initiated password reset to ID number',
+        timestamp:     serverTimestamp(),
+      });
       showToast(`Password reset flag set for ${user.firstName}. They will be prompted to change their password on next login.`, true);
     } catch (err) {
       showToast('Failed to set reset flag: ' + err.message, false);
@@ -207,7 +281,8 @@ export default function UserManagementPage() {
     setSaving(pending.user.id);
     try {
       await updateDoc(doc(db, 'users', pending.user.id), { role: pending.toRole });
-      await addDoc(collection(db, 'roleChangeLogs'), {
+      await addDoc(collection(db, 'adminAuditLogs'), {
+        activityType:  'role_change',
         targetId:      pending.user.id,
         targetName:    `${pending.user.lastName}, ${pending.user.firstName}`,
         fromRole:      pending.user.role,
@@ -411,6 +486,12 @@ export default function UserManagementPage() {
                             onClick={() => setEditProfileTarget({ uid: u.id, profile: u })}
                             title="Edit college and course"
                           >Edit Profile</button>
+                          <button
+                            className="border text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors"
+                            style={{borderColor:'var(--badge-green-border)',color:'var(--badge-green-text)',background:'transparent'}}
+                            onClick={() => setEditNameTarget({ uid: u.id, profile: u })}
+                            title="Edit student name"
+                          >Edit Name</button>
                           {saving === u.id && (
                             <span className="text-[10px] font-mono text-gray-400 animate-pulse">Saving…</span>
                           )}
@@ -513,6 +594,15 @@ export default function UserManagementPage() {
           onClose={() => setEditProfileTarget(null)}
           targetUid={editProfileTarget.uid}
           targetProfile={editProfileTarget.profile}
+        />
+      )}
+
+      {/* Edit Name modal */}
+      {editNameTarget && (
+        <EditNameModal
+          onClose={() => setEditNameTarget(null)}
+          targetUid={editNameTarget.uid}
+          targetProfile={editNameTarget.profile}
         />
       )}
 

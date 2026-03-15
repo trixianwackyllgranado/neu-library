@@ -1,6 +1,6 @@
 // src/components/shared/EditProfileModal.jsx
 import { useState } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import { COLLEGES } from '../../data/colleges';
@@ -41,11 +41,27 @@ export default function EditProfileModal({ onClose, targetUid, targetProfile }) 
     if (courses.length > 0 && !course) { setError('Please select a course.'); return; }
     setLoading(true);
     try {
+      const newCollege = college.trim().toUpperCase();
+      const newCourse  = (course.trim() || college.trim()).toUpperCase();
       await updateDoc(doc(db, 'users', uid), {
-        college: college.trim().toUpperCase(),
-        course:  (course.trim() || college.trim()).toUpperCase(),
+        college: newCollege,
+        course:  newCourse,
       });
-      if (!targetUid) refreshProfile(); // only refresh self
+      // Write audit log when admin edits another user
+      if (targetUid && userProfile) {
+        await addDoc(collection(db, 'adminAuditLogs'), {
+          activityType:  'program_change',
+          targetId:      uid,
+          targetName:    `${profile.lastName}, ${profile.firstName}`,
+          oldProgram:    `${profile.college || '—'} / ${profile.course || '—'}`,
+          newProgram:    `${newCollege} / ${newCourse}`,
+          changedBy:     userProfile.uid,
+          changedByName: `${userProfile.lastName}, ${userProfile.firstName}`,
+          reason:        'Admin-edited college/course',
+          timestamp:     serverTimestamp(),
+        });
+      }
+      if (!targetUid) refreshProfile();
       setSuccess(true);
       setTimeout(onClose, 1600);
     } catch (err) {
