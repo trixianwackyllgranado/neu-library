@@ -55,6 +55,9 @@ export default function LoginPage() {
       background: 'linear-gradient(160deg, var(--bg-base) 0%, var(--bg-mid) 55%, var(--bg-top) 100%)',
       display: 'flex', flexDirection: 'column', transition: 'background 0.25s',
     }}>
+      {/* NEU colour bar */}
+      <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', flexShrink: 0 }} />
+
       {/* Header */}
       <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '1px solid var(--divider)', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -62,7 +65,7 @@ export default function LoginPage() {
           <img
             src="/liblogo.png"
             alt="NEU"
-            style={{ width: 38, height: 38, objectFit: 'contain' }}
+            style={{ width: 38, height: 38, objectFit: 'cover', borderRadius: '50%' }}
             onError={e => { e.currentTarget.style.display = 'none'; }}
           />
           <div>
