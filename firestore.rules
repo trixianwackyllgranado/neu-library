@@ -33,7 +33,6 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         request.auth.uid == userId ||
         isStaffOrAdmin() ||
-        // QR ghost account reading the main profile it maps to
         (exists(/databases/$(database)/documents/qrUsers/$(request.auth.uid)) &&
          get(/databases/$(database)/documents/qrUsers/$(request.auth.uid)).data.mainUid == userId)
       );
@@ -46,7 +45,10 @@ service cloud.firestore {
         (
           isAdmin() &&
           request.auth.uid != userId &&
-          resource.data.role != 'admin'
+          resource.data.role != 'admin' &&
+          // Admins can only promote to 'staff' or demote to 'student' — NEVER to 'admin'
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+           request.resource.data.role in ['staff', 'student'])
         )
       );
       allow delete: if false;

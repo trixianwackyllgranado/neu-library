@@ -116,6 +116,9 @@ export default function RegisterPage() {
 
   const [role,          setRole]          = useState('student');
   const [inviteCode,    setInviteCode]    = useState('');
+  const [codeVerified,  setCodeVerified]  = useState(false); // gate for staff/admin
+  const [codeInput,     setCodeInput]     = useState('');
+  const [codeError,     setCodeError]     = useState('');
   const [idNumber,      setIdNumber]      = useState('');
   const [idFormat,      setIdFormat]      = useState('');
   const [lastName,      setLastName]      = useState('');
@@ -130,8 +133,31 @@ export default function RegisterPage() {
   const [registered,    setRegistered]    = useState(null);
 
   const needsCode = role === 'staff' || role === 'admin';
+  const isStaffOrAdmin = needsCode;
   const selectedCollege = COLLEGES.find(c => c.name === college);
   const courses = selectedCollege?.courses || [];
+
+  // When role switches, reset the code gate
+  const handleRoleChange = (key) => {
+    setRole(key);
+    setInviteCode('');
+    setCodeInput('');
+    setCodeError('');
+    setCodeVerified(false);
+    setError('');
+  };
+
+  const handleVerifyCode = (e) => {
+    e.preventDefault();
+    setCodeError('');
+    if (!codeInput.trim()) { setCodeError('Please enter the invitation code.'); return; }
+    if (codeInput.trim() !== INVITE_CODES[role]) {
+      setCodeError('Invalid invitation code. Contact your library administrator.');
+      return;
+    }
+    setInviteCode(codeInput.trim());
+    setCodeVerified(true);
+  };
 
   const inputBase = (extra = {}) => ({
     width: '100%', background: C.surface, border: `1px solid ${C.border}`,
@@ -146,18 +172,24 @@ export default function RegisterPage() {
     e.preventDefault(); setError('');
     if (!ID_REGEX.test(idNumber))             { setError('ID Number must be in format 22-12345-123.'); return; }
     if (!lastName.trim() || !firstName.trim()){ setError('Last name and first name are required.'); return; }
-    if (!college)                             { setError('Please select a college.'); return; }
-    if (courses.length > 0 && !course)        { setError('Please select a course.'); return; }
-    if (needsCode && !inviteCode.trim())      { setError(`An invite code is required to register as ${ROLES[role].label}.`); return; }
-    if (needsCode && inviteCode.trim() !== INVITE_CODES[role]) { setError(`Invalid invite code for ${ROLES[role].label}.`); return; }
+    if (!isStaffOrAdmin && !college)          { setError('Please select a college.'); return; }
+    if (!isStaffOrAdmin && courses.length > 0 && !course) { setError('Please select a course.'); return; }
     if (password.length < 8)                  { setError('Password must be at least 8 characters.'); return; }
     if (password !== confirm)                 { setError('Passwords do not match.'); return; }
 
     setLoading(true);
     try {
-      await register({ idNumber: idNumber.trim(), lastName: lastName.trim(), firstName: firstName.trim(),
-        middleInitial: middleInitial.trim().replace(/\.+$/, ''), college: college.trim(),
-        course: course.trim() || college.trim(), role, password });
+      await register({
+        idNumber: idNumber.trim(), lastName: lastName.trim(), firstName: firstName.trim(),
+        middleInitial: middleInitial.trim().replace(/\.+$/, ''),
+        college: isStaffOrAdmin ? 'LIBRARY STAFF' : college.trim(),
+        course:  isStaffOrAdmin ? role.toUpperCase() : (course.trim() || college.trim()),
+        role, password,
+      });
+      setRegistered({ idNumber: idNumber.trim(), name: `${lastName.trim()}, ${firstName.trim()}` });
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
+  };
       setRegistered({ idNumber: idNumber.trim(), name: `${lastName.trim()}, ${firstName.trim()}` });
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
@@ -231,7 +263,7 @@ export default function RegisterPage() {
                     const active = role === key;
                     return (
                       <button key={key} type="button"
-                        onClick={() => { setRole(key); setInviteCode(''); setError(''); }}
+                        onClick={() => handleRoleChange(key)}
                         style={{
                           padding: '11px 8px', borderRadius: '9px', cursor: 'pointer', transition: 'all 0.15s',
                           background: active ? 'rgba(245,158,11,0.14)' : 'rgba(255,255,255,0.04)',
@@ -249,17 +281,50 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Invite code */}
-              {needsCode && (
-                <div>
-                  <FieldLabel required>Invite Code</FieldLabel>
-                  <input style={inputBase({ ...MONO, letterSpacing: '0.14em' })}
-                    placeholder={`NEU-${role.toUpperCase()}-XXXX`}
-                    value={inviteCode} onChange={e => { setInviteCode(e.target.value); setError(''); }}
-                    onFocus={onFocus} onBlur={onBlur} autoComplete="off" />
-                  <Hint>Ask your library administrator for this code.</Hint>
+              {/* ── Staff/Admin: code gate ── */}
+              {isStaffOrAdmin && !codeVerified && (
+                <div style={{ background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', borderRadius: '12px', padding: '20px' }}>
+                  <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.18em', color: C.gold, textTransform: 'uppercase', marginBottom: '8px' }}>
+                    {ROLES[role].label} Access Required
+                  </p>
+                  <p style={{ fontSize: '13px', color: C.body, marginBottom: '16px', lineHeight: 1.6 }}>
+                    {ROLES[role].label} accounts require an invitation code from the library administrator before you can continue.
+                  </p>
+                  {codeError && (
+                    <div style={{ background: 'var(--red-soft)', border: '1px solid var(--red-border)', borderRadius: '8px', padding: '10px 13px', marginBottom: '12px' }}>
+                      <p style={{ ...MONO, fontSize: '11px', color: C.red }}>{codeError}</p>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input
+                      style={{ ...inputBase({ ...MONO, letterSpacing: '0.14em', flex: 1 }), flex: 1 }}
+                      placeholder={`NEU-${role.toUpperCase()}-XXXX`}
+                      value={codeInput}
+                      onChange={e => { setCodeInput(e.target.value); setCodeError(''); }}
+                      onFocus={onFocus} onBlur={onBlur}
+                      autoComplete="off"
+                    />
+                    <button type="button" onClick={handleVerifyCode}
+                      style={{ padding: '11px 18px', borderRadius: '9px', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: C.gold, cursor: 'pointer', ...MONO, fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                      Verify
+                    </button>
+                  </div>
+                  <p style={{ ...MONO, fontSize: '10px', color: C.muted, marginTop: '8px' }}>
+                    Contact your library administrator for this code.
+                  </p>
                 </div>
               )}
+
+              {/* ── Staff/Admin: verified badge ── */}
+              {isStaffOrAdmin && codeVerified && (
+                <div style={{ background: 'var(--green-soft)', border: '1px solid var(--green-border)', borderRadius: '10px', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  <p style={{ ...MONO, fontSize: '11px', color: C.green }}>Invitation code verified — {ROLES[role].label} access granted</p>
+                </div>
+              )}
+
+              {/* Only show rest of form once code is verified for staff/admin, always show for students */}
+              {(!isStaffOrAdmin || codeVerified) && (<>
 
               {/* ID Number */}
               <div>
@@ -297,7 +362,8 @@ export default function RegisterPage() {
                   onFocus={onFocus} onBlur={onBlur} />
               </div>
 
-              {/* College */}
+              {/* College — students only */}
+              {!isStaffOrAdmin && (
               <div>
                 <FieldLabel required>College</FieldLabel>
                 <select style={{ ...inputBase(), appearance: 'none', cursor: 'pointer' }}
@@ -307,9 +373,10 @@ export default function RegisterPage() {
                   {COLLEGES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                 </select>
               </div>
+              )}
 
-              {/* Course */}
-              {college && courses.length > 0 && (
+              {/* Course — students only */}
+              {!isStaffOrAdmin && college && courses.length > 0 && (
                 <div>
                   <FieldLabel required>Course</FieldLabel>
                   <select style={{ ...inputBase(), appearance: 'none', cursor: 'pointer' }}
@@ -337,7 +404,9 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <button type="submit" disabled={loading} style={primaryBtn(loading)}>
+              </>)}
+
+              <button type="submit" disabled={loading || (isStaffOrAdmin && !codeVerified)} style={primaryBtn(loading || (isStaffOrAdmin && !codeVerified))}>
                 {loading ? 'Creating Account…' : 'Create Account & Get QR Code'}
               </button>
             </form>

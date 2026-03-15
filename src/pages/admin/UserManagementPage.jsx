@@ -179,7 +179,6 @@ export default function UserManagementPage() {
   // Role change modal state
   const [pending,     setPending]     = useState(null);
   const [reason,      setReason]      = useState('');
-  const [confirmWord, setConfirmWord] = useState('');
 
   // Audit modal
   const [auditOpen,  setAuditOpen]  = useState(false);
@@ -237,7 +236,7 @@ export default function UserManagementPage() {
 
   // ── Role rules ────────────────────────────────────────────────────────────
   const canPromoteToStaff  = (u) => u.role === 'student' && u.id !== myProfile?.uid;
-  const canPromoteToAdmin  = (u) => u.role === 'staff'   && u.id !== myProfile?.uid;
+  // Admin promotion disabled — use role management policy
   const canDemoteToStudent = (u) => u.role === 'staff'   && u.id !== myProfile?.uid;
 
   // Admin resets a user's password to their ID number via Firestore flag
@@ -269,14 +268,12 @@ export default function UserManagementPage() {
   const initChange = (user, toRole) => {
     setPending({ user, toRole });
     setReason('');
-    setConfirmWord('');
   };
 
   // ── Confirm role change ───────────────────────────────────────────────────
   const handleConfirm = async () => {
     if (!pending) return;
     if (reason.trim().length < 10) { showToast('Reason must be at least 10 characters.', false); return; }
-    if (pending.toRole === 'admin' && confirmWord !== 'CONFIRM') { showToast('Type CONFIRM to proceed.', false); return; }
 
     setSaving(pending.user.id);
     try {
@@ -461,13 +458,6 @@ export default function UserManagementPage() {
                               disabled={saving === u.id}
                             >↑ Staff</button>
                           )}
-                          {canPromoteToAdmin(u) && (
-                            <button
-                              className="text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors" style={{border:"1px solid var(--badge-red-border)",color:"var(--badge-red-text)",background:"transparent",borderRadius:4,cursor:"pointer"}}
-                              onClick={() => initChange(u, 'admin')}
-                              disabled={saving === u.id}
-                            >↑ Admin</button>
-                          )}
                           {canDemoteToStudent(u) && (
                             <button
                               className="text-[10px] font-mono font-semibold px-2.5 py-1 transition-colors" style={{border:"1px solid var(--card-border)",color:"var(--text-muted)",background:"transparent",borderRadius:4,cursor:"pointer"}}
@@ -550,31 +540,16 @@ export default function UserManagementPage() {
                   {reason.trim().length} / 10 characters minimum
                 </p>
               </div>
-              {pending.toRole === 'admin' && (
-                <div>
-                  <label className="label">
-                    Type <span className="font-mono font-bold" style={{color:"var(--red)"}}>CONFIRM</span> to proceed
-                  </label>
-                  <input
-                    className="input font-mono tracking-widest"
-                    placeholder="CONFIRM"
-                    value={confirmWord}
-                    onChange={e => setConfirmWord(e.target.value)}
-                    autoComplete="off"
-                  />
-                </div>
-              )}
             </div>
             <div className="modal-role-footer flex justify-end gap-3" style={{padding:"16px 24px",borderTop:"1px solid var(--divider)",background:"var(--surface)"}}>
               <button className="btn-secondary" onClick={() => setPending(null)} disabled={!!saving}>
                 Cancel
               </button>
               <button
-                className={pending.toRole === 'admin' ? 'btn-danger' : 'btn-primary'}
+                className='btn-primary'
                 disabled={
                   reason.trim().length < 10 ||
-                  !!saving ||
-                  (pending.toRole === 'admin' && confirmWord !== 'CONFIRM')
+                  !!saving
                 }
                 onClick={handleConfirm}
               >

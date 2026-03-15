@@ -22,34 +22,34 @@ function exportCSV(students) {
 // ── Collapsible section wrapper ───────────────────────────────────────────────
 function Section({ title, count, badge, badgeColor = 'gray', defaultOpen = false, children, searchable, searchValue, onSearch, searchPlaceholder }) {
   const [open, setOpen] = useState(defaultOpen);
-  const badgeClasses = {
-    gray:  'bg-gray-100 text-gray-600',
-    green: 'bg-green-100 text-green-700',
-    red:   'bg-red-100 text-red-700',
-    gold:  'bg-yellow-100 text-yellow-700',
+  const badgeStyle = {
+    gray:  { background:'var(--badge-gray-bg)',  color:'var(--badge-gray-text)',  border:'1px solid var(--badge-gray-border)'  },
+    green: { background:'var(--badge-green-bg)', color:'var(--badge-green-text)', border:'1px solid var(--badge-green-border)' },
+    red:   { background:'var(--badge-red-bg)',   color:'var(--badge-red-text)',   border:'1px solid var(--badge-red-border)'   },
+    gold:  { background:'var(--badge-gold-bg)',  color:'var(--badge-gold-text)',  border:'1px solid var(--badge-gold-border)'  },
   };
 
   return (
     <div className="card p-0 overflow-hidden mb-4">
       <button
-        className="w-full px-6 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors border-b border-gray-100"
+        className="w-full px-6 py-3 flex items-center justify-between transition-colors" style={{ background:'var(--thead-bg)', borderBottom:'1px solid var(--divider)' }}
         onClick={() => setOpen(o => !o)}
       >
         <div className="flex items-center gap-3">
-          <p className="font-mono text-[10px] tracking-widest uppercase text-gray-500">{title}</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase" style={{color:'var(--text-muted)'}}>{title}</p>
           {count !== undefined && (
-            <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${badgeClasses[badgeColor]}`}>
+            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded" style={badgeStyle[badgeColor] || badgeStyle.gray}>
               {count}
             </span>
           )}
         </div>
-        <span className="text-gray-400 text-sm">{open ? '▲' : '▼'}</span>
+        <span style={{color:'var(--text-muted)', fontSize:'13px'}}>{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
         <>
           {searchable && (
-            <div className="px-4 py-3 border-b border-gray-100 bg-white">
+            <div className="px-4 py-3" style={{background:'var(--card)', borderBottom:'1px solid var(--divider)'}}>
               <input
                 className="input text-sm py-1.5"
                 placeholder={searchPlaceholder || 'Search…'}
@@ -193,7 +193,7 @@ export default function StudentRecordsPage() {
         {/* Header */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-gray-400 mb-1">Student Records</p>
+            <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{color:"var(--text-muted)"}}>Student Records</p>
             <h1 className="page-title">Student Profile</h1>
           </div>
           {isAdmin && (
@@ -213,13 +213,13 @@ export default function StudentRecordsPage() {
 
         {/* Profile card */}
         <div className="card mb-4">
-          <div className="flex items-start justify-between mb-4 pb-4 border-b border-gray-100">
-            <div className="border-l-4 border-primary-600 pl-4">
-              <p className="font-mono text-[10px] tracking-widest text-gray-400 mb-0.5">{s.idNumber}</p>
-              <p className="font-display text-2xl font-bold text-primary-800">
+          <div className="flex items-start justify-between mb-4 pb-4" style={{borderBottom:"1px solid var(--divider)"}}>
+            <div className="pl-4" style={{borderLeft:"4px solid var(--gold)"}}>
+              <p className="font-mono text-[10px] tracking-widest mb-0.5" style={{color:"var(--text-muted)"}}>{s.idNumber}</p>
+              <p className="font-display text-2xl font-bold" style={{color:"var(--text-primary)"}}>
                 {s.lastName}, {s.firstName} {s.middleInitial ?? ''}.
               </p>
-              <p className="text-sm text-gray-500 mt-0.5">{s.email}</p>
+              <p className="text-sm mt-0.5" style={{color:"var(--text-muted)"}}>{s.email}</p>
             </div>
             <span className="badge-green badge">Student</span>
           </div>
@@ -231,7 +231,7 @@ export default function StudentRecordsPage() {
         </div>
 
         {detailLoading ? (
-          <div className="card mb-4 text-center text-gray-400 font-mono text-sm py-8">Loading records…</div>
+          <div className="card mb-4 text-center font-mono text-sm py-8" style={{color:"var(--text-muted)"}}>Loading records…</div>
         ) : detail && (
           <>
             {/* Stats row */}
@@ -299,27 +299,27 @@ export default function StudentRecordsPage() {
               searchPlaceholder="Search by book title or date…"
             >
               {/* Status filter pills */}
-              <div className="px-4 py-2 border-b border-gray-100 flex flex-wrap gap-2 bg-white">
+              <div className="px-4 py-2 flex flex-wrap gap-2" style={{background:'var(--card)', borderBottom:'1px solid var(--divider)'}}>
                 {['all','active','returned','pending','rejected'].map(status => (
                   <button
                     key={status}
                     onClick={() => setBorrowStatusFilter(status)}
-                    className={`text-[10px] font-mono font-semibold px-2.5 py-1 border transition-colors ${
-                      borrowStatusFilter === status
-                        ? 'bg-primary-700 text-white border-primary-700'
-                        : 'border-gray-200 text-gray-500 hover:border-primary-400 hover:text-primary-600'
-                    }`}
+                    className="text-[10px] font-mono font-semibold px-2.5 py-1 border transition-colors"
+                    style={borrowStatusFilter === status
+                      ? { background:'var(--gold-soft)', borderColor:'var(--gold-border)', color:'var(--gold)' }
+                      : { background:'transparent', borderColor:'var(--card-border)', color:'var(--text-muted)' }
+                    }
                   >
                     {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
                   </button>
                 ))}
-                <span className="text-[10px] font-mono text-gray-400 self-center ml-auto">
+                <span className="text-[10px] font-mono self-center ml-auto" style={{color:'var(--text-muted)'}}>
                   {filteredBorrows.length} result{filteredBorrows.length !== 1 ? 's' : ''}
                 </span>
               </div>
 
               {filteredBorrows.length === 0 ? (
-                <p className="text-sm text-gray-400 p-6">
+                <p className="text-sm p-6" style={{color:"var(--text-muted)"}}>
                   {detail.borrows.length === 0 ? 'No borrow history.' : 'No records match your search.'}
                 </p>
               ) : (
@@ -368,7 +368,7 @@ export default function StudentRecordsPage() {
                 searchPlaceholder="Search by purpose or date…"
               >
                 {filteredVisits.length === 0 ? (
-                  <p className="text-sm text-gray-400 p-6">
+                  <p className="text-sm p-6" style={{color:"var(--text-muted)"}}>
                     {detail.visits.length === 0 ? 'No visit history.' : 'No visits match your search.'}
                   </p>
                 ) : (
@@ -400,7 +400,7 @@ export default function StudentRecordsPage() {
                               <td className="td text-sm">{v.purpose}</td>
                               <td className="td font-mono text-xs">{fmtDt(v.entryTime)}</td>
                               <td className="td font-mono text-xs">{v.active ? '—' : fmtDt(v.exitTime)}</td>
-                              <td className="td font-mono text-xs text-gray-500">{duration}</td>
+                              <td className="td font-mono text-xs" style={{color:"var(--text-muted)"}}>{duration}</td>
                               <td className="td">
                                 {v.active
                                   ? <span className="badge-green badge">Active</span>
@@ -428,7 +428,7 @@ export default function StudentRecordsPage() {
     <div>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <p className="font-mono text-[10px] tracking-widest uppercase text-gray-400 mb-1">Records</p>
+          <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{color:"var(--text-muted)"}}>Records</p>
           <h1 className="page-title">Student Records</h1>
         </div>
         {isAdmin && (
@@ -472,17 +472,17 @@ export default function StudentRecordsPage() {
 
         {/* Result count */}
         {(search || filterCourse || filterCollege || filterYear) && (
-          <p className="text-xs font-mono text-gray-400">
-            Showing <strong className="text-gray-700">{filtered.length}</strong> of {students.length} students
+          <p className="text-xs font-mono" style={{color:"var(--text-muted)"}}>
+            Showing <strong style={{color:"var(--text-primary)"}}>{filtered.length}</strong> of {students.length} students
           </p>
         )}
       </div>
 
       <div className="card p-0 overflow-hidden">
         {loading ? (
-          <p className="text-sm text-gray-400 font-mono p-6">Loading students…</p>
+          <p className="text-sm font-mono p-6" style={{color:"var(--text-muted)"}}>Loading students…</p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-gray-400 p-6">No students found.</p>
+          <p className="text-sm p-6" style={{color:"var(--text-muted)"}}>No students found.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px]">
@@ -502,9 +502,9 @@ export default function StudentRecordsPage() {
                     <td className="td font-mono text-xs">{s.idNumber}</td>
                     <td className="td text-xs">
                       <p className="font-medium">{s.course || '—'}</p>
-                      {s.college && <p className="text-gray-400">{s.college}</p>}
+                      {s.college && <p style={{color:"var(--text-muted)"}}>{s.college}</p>}
                     </td>
-                    <td className="td font-mono text-xs text-gray-500">{s.email}</td>
+                    <td className="td font-mono text-xs" style={{color:"var(--text-muted)"}}>{s.email}</td>
                     <td className="td">
                       <button className="btn-secondary py-1 px-3 text-[10px]"
                         onClick={e => { e.stopPropagation(); openStudent(s); }}>
@@ -526,7 +526,7 @@ function Info({ label, value }) {
   return (
     <div>
       <p className="label">{label}</p>
-      <p className="text-sm font-semibold text-gray-800">{value || '—'}</p>
+      <p className="text-sm font-semibold" style={{color:"var(--text-primary)"}}>{value || '—'}</p>
     </div>
   );
 }
