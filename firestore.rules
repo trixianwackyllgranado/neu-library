@@ -59,8 +59,15 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // ── Role Change Audit Log ─────────────────────────────────────────────────
+    // ── Role Change Audit Log (legacy) ────────────────────────────────────────
     match /roleChangeLogs/{logId} {
+      allow read:           if isAdmin();
+      allow create:         if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ── Admin Audit Log (unified — role, password, name, program changes) ─────
+    match /adminAuditLogs/{logId} {
       allow read:           if isAdmin();
       allow create:         if isAdmin();
       allow update, delete: if false;
