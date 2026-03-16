@@ -61,13 +61,13 @@ export default function StudentDashboard() {
   }, [needsPasswordReset]);
 
   useEffect(() => {
-    if (!currentUser?.uid) return;
-    return onSnapshot(query(collection(db,'borrows'),where('userId','==',currentUser.uid)), snap => {
+    if (!userProfile?.uid) return;
+    return onSnapshot(query(collection(db,'borrows'),where('userId','==',userProfile.uid)), snap => {
       const docs = snap.docs.map(d=>({id:d.id,...d.data()}))
         .sort((a,b)=>(b.borrowDate?.toDate?.()?.getTime()??0)-(a.borrowDate?.toDate?.()?.getTime()??0));
       setBorrows(docs); setLoading(false);
     });
-  }, [currentUser?.uid]);
+  }, [userProfile?.uid]);
 
   const now      = new Date();
   const active   = borrows.filter(b=>b.status==='active');

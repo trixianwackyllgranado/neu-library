@@ -6,12 +6,22 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function getRootUid() {
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      let isUser = exists(userPath);
+      let hasLink = isUser && 'linkedUid' in get(userPath).data;
+      let qrPath = /databases/$(database)/documents/qrUsers/$(request.auth.uid);
+      let isQr = exists(qrPath);
+      
+      return hasLink ? get(userPath).data.linkedUid
+           : isUser ? request.auth.uid
+           : isQr ? get(qrPath).data.mainUid
+           : request.auth.uid;
+    }
+
     function getUserData() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data
-        : get(/databases/$(database)/documents/users/$(
-            get(/databases/$(database)/documents/qrUsers/$(request.auth.uid)).data.mainUid
-          )).data;
+      let path = /databases/$(database)/documents/users/$(getRootUid());
+      return exists(path) ? get(path).data : {"role": "guest"};
     }
 
     function hasRole(role) {
@@ -41,13 +51,11 @@ service cloud.firestore {
       ];
     }
 
-    // ── Users ─────────────────────────────────────────────────────────────────
     match /users/{userId} {
       allow read: if isSignedIn() && (
-        request.auth.uid == userId ||
+        getRootUid() == userId ||
         isStaffOrAdmin() ||
-        (exists(/databases/$(database)/documents/qrUsers/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/qrUsers/$(request.auth.uid)).data.mainUid == userId)
+        resource.data.email == request.auth.token.email
       );
 
       // 🔒 Create rule: Must be own UID AND if using Google auth, must be @neu.edu.ph
@@ -58,12 +66,12 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         // Regular user can update own doc — but cannot change role
         (
-          request.auth.uid == userId &&
+          getRootUid() == userId &&
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
         ) ||
         // Allowed admins can self-switch role between 'student' and 'admin' only
         (
-          request.auth.uid == userId &&
+          getRootUid() == userId &&
           isAllowedAdmin() &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']) &&
           request.resource.data.role in ['student', 'admin']
@@ -71,7 +79,7 @@ service cloud.firestore {
         // Admin can update non-admin users (but only to staff or student)
         (
           isAdmin() &&
-          request.auth.uid != userId &&
+          getRootUid() != userId &&
           resource.data.role != 'admin' &&
           (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
            request.resource.data.role in ['staff', 'student'])
@@ -105,7 +113,7 @@ service cloud.firestore {
     // ── Delete Requests ───────────────────────────────────────────────────────
     match /deleteRequests/{reqId} {
       allow create: if isStaffOrAdmin();
-      allow read:   if isAdmin() || (isStaffOrAdmin() && resource.data.requestedBy == request.auth.uid);
+      allow read:   if isAdmin() || (isStaffOrAdmin() && resource.data.requestedBy == getRootUid());
       allow update: if isAdmin();
       allow delete: if false;
     }
@@ -119,14 +127,14 @@ service cloud.firestore {
 
     // ── Borrows ───────────────────────────────────────────────────────────────
     match /borrows/{borrowId} {
-      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isStaffOrAdmin());
+      allow read: if isSignedIn() && (resource.data.userId == getRootUid() || isStaffOrAdmin());
       allow create: if isSignedIn() && (
         isStaffOrAdmin() ||
-        (request.resource.data.userId == request.auth.uid && request.resource.data.status == 'pending')
+        (request.resource.data.userId == getRootUid() && request.resource.data.status == 'pending')
       );
       allow update: if isStaffOrAdmin() || (
         isSignedIn() &&
-        resource.data.userId == request.auth.uid &&
+        resource.data.userId == getRootUid() &&
         resource.data.status == 'pending' &&
         request.resource.data.status == 'cancelled' &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
@@ -138,21 +146,21 @@ service cloud.firestore {
     match /logger/{logId} {
       // Professor (admin role) can read all for statistics
       allow read: if isSignedIn() && (
-        resource.data.uid == request.auth.uid ||
+        resource.data.uid == getRootUid() ||
         isStaffOrAdmin()
       );
       allow create: if isSignedIn() && (
-        request.resource.data.uid == request.auth.uid || isStaffOrAdmin()
+        request.resource.data.uid == getRootUid() || isStaffOrAdmin()
       );
       allow update: if isSignedIn() && (
-        resource.data.uid == request.auth.uid || isStaffOrAdmin()
+        resource.data.uid == getRootUid() || isStaffOrAdmin()
       );
       allow delete: if isAdmin();
     }
 
     // ── Penalties ─────────────────────────────────────────────────────────────
     match /penalties/{penaltyId} {
-      allow read:  if isSignedIn() && (resource.data.userId == request.auth.uid || isStaffOrAdmin());
+      allow read:  if isSignedIn() && (resource.data.userId == getRootUid() || isStaffOrAdmin());
       allow write: if isStaffOrAdmin();
     }
 
@@ -172,11 +180,11 @@ service cloud.firestore {
 
     // ── Notifications ─────────────────────────────────────────────────────────
     match /notifications/{notifId} {
-      allow read: if isSignedIn() && (resource.data.toUid == request.auth.uid || isStaffOrAdmin());
+      allow read: if isSignedIn() && (resource.data.toUid == getRootUid() || isStaffOrAdmin());
       allow create: if isStaffOrAdmin();
       allow update: if isStaffOrAdmin() || (
         isSignedIn() &&
-        resource.data.toUid == request.auth.uid &&
+        resource.data.toUid == getRootUid() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledged', 'acknowledgedAt'])
       );
       allow delete: if isAdmin();

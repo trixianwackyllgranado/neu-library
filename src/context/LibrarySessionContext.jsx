@@ -10,17 +10,17 @@ import { useAuth } from './AuthContext';
 const LibrarySessionContext = createContext(null);
 
 export function LibrarySessionProvider({ children }) {
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const [session, setSession] = useState(undefined); // undefined = loading
   const [elapsed, setElapsed] = useState(0);
 
   // Real-time listener for the current user's active session
   useEffect(() => {
-    if (!currentUser) { setSession(null); return; }
+    if (!userProfile?.uid) { setSession(null); return; }
 
     const q = query(
       collection(db, 'logger'),
-      where('uid',    '==', currentUser.uid),
+      where('uid',    '==', userProfile.uid),
       where('active', '==', true),
     );
 
@@ -51,9 +51,9 @@ export function LibrarySessionProvider({ children }) {
   }, [session]);
 
   const checkIn = async (purpose) => {
-    if (!currentUser || session) return;
+    if (!userProfile?.uid || session) return;
     await addDoc(collection(db, 'logger'), {
-      uid:       currentUser.uid,
+      uid:       userProfile.uid,
       purpose,
       entryTime: serverTimestamp(),
       active:    true,

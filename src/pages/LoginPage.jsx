@@ -77,11 +77,11 @@ function PasswordResetModal({ onAcknowledge }) {
               <p style={{ ...MONO, fontSize: '15px', fontWeight: 700, color: 'var(--gold)', marginTop: '8px', textAlign: 'center', letterSpacing: '0.06em' }}>24-12345-678</p>
             </div>
 
-            {/* Google login */}
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '12px', padding: '14px 16px' }}>
-              <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.1em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 700 }}>New: Google Sign-In</p>
+            {/* Google login limitation */}
+            <div style={{ background: 'var(--red-soft)', border: '1px solid var(--red-border)', borderRadius: '12px', padding: '14px 16px' }}>
+              <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.1em', color: 'var(--red)', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 700 }}>Important: Google Login</p>
               <p style={{ ...PP, fontSize: '13px', color: 'var(--text-body)', lineHeight: 1.65 }}>
-                You can now also sign in using <strong>Continue with Google</strong> with your <span style={{ ...MONO, color: 'var(--gold)', fontSize: '12px' }}>@neu.edu.ph</span> school email — no password needed.
+                <strong>Continue with Google</strong> is currently for new accounts only. Existing users <strong>MUST</strong> use their ID and Password to access their original data.
               </p>
             </div>
 
@@ -100,7 +100,7 @@ function PasswordResetModal({ onAcknowledge }) {
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(245,158,11,0.25)'; }}
             onMouseLeave={e => { e.currentTarget.style.background = 'var(--gold-soft)'; }}
           >
-            I Understand — Continue to Sign In
+            I Understand — Proceed to Login
           </button>
         </div>
       </div>
@@ -289,8 +289,9 @@ export default function LoginPage() {
                 </button>
 
                 {/* Google hint */}
-                <p style={{ ...MONO, fontSize: '10px', color: 'var(--text-dim)', textAlign: 'center', marginTop: '10px', letterSpacing: '0.06em' }}>
-                  Use your <span style={{ color: 'var(--gold)' }}>@neu.edu.ph</span> Google account
+                <p style={{ ...MONO, fontSize: '10px', color: 'var(--red)', textAlign: 'center', marginTop: '10px', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Existing users: Please use ID and Password.<br/>
+                  <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>Google is currently for new accounts only.</span>
                 </p>
 
                 <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--divider)', textAlign: 'center' }}>

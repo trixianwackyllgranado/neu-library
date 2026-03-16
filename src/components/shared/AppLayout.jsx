@@ -213,8 +213,8 @@ export default function AppLayout({ children }) {
           </div>
         </div>
 
-        {role==='student' && (currentUser?.uid||effectiveUid) && (
-          <NotificationBanner userId={effectiveUid||currentUser?.uid} />
+        {role==='student' && (userProfile?.uid||effectiveUid) && (
+          <NotificationBanner userId={effectiveUid||userProfile?.uid} />
         )}
 
         <main style={{flex:1,padding:'clamp(16px,4vw,28px) clamp(14px,4vw,24px)',maxWidth:1280,width:'100%',margin:'0 auto'}}>

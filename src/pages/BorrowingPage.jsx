@@ -63,7 +63,7 @@ function ApproveModal({ borrow, onConfirm, onCancel, saving }) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function BorrowingPage() {
-  const { userProfile, currentUser, loadingAuth } = useAuth();
+  const { userProfile, currentUser, effectiveId, loadingAuth } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -90,11 +90,11 @@ export default function BorrowingPage() {
   const [loading,  setLoading]  = useState(true);
 
   useEffect(() => {
-    if (!role || !currentUser?.uid) return;
+    if (!role || !effectiveId) return;
 
     let q;
     if (role === 'student') {
-      q = query(collection(db, 'borrows'), where('userId', '==', currentUser.uid));
+      q = query(collection(db, 'borrows'), where('userId', '==', effectiveId));
     } else {
       q = query(collection(db, 'borrows'), orderBy('borrowDate', 'desc'));
     }
@@ -218,7 +218,7 @@ export default function BorrowingPage() {
     try {
       await updateDoc(doc(db, 'borrows', approving.id), {
         status: 'active', dueDate: Timestamp.fromDate(dueDateEndOfDay),
-        approvedBy: currentUser.uid, approvedAt: serverTimestamp(),
+        approvedBy: effectiveId, approvedAt: serverTimestamp(),
       });
       // Auto-cancel all other pending requests from the same student for the same book
       const duplicates = borrows.filter(b =>
@@ -256,7 +256,7 @@ export default function BorrowingPage() {
       async () => {
         try {
           await updateDoc(doc(db, 'borrows', borrow.id), {
-            status: 'rejected', rejectedBy: currentUser.uid, rejectedAt: serverTimestamp(),
+            status: 'rejected', rejectedBy: effectiveId, rejectedAt: serverTimestamp(),
           });
           showToast(`Request for "${borrow.bookTitle}" rejected.`, true);
         } catch (e) { showToast('Failed to reject: ' + e.message, false); }
@@ -296,7 +296,7 @@ export default function BorrowingPage() {
         toUid:        borrow.userId,
         toName:       student ? `${student.firstName} ${student.lastName}` : 'Student',
         message:      `You have an overdue book: "${borrow.bookTitle}". It was due on ${fmt(borrow.dueDate)}. Please return it as soon as possible to avoid penalties.`,
-        sentBy:       currentUser.uid,
+        sentBy:       effectiveId,
         sentByName,
         sentAt:       serverTimestamp(),
         resolved:     false,
@@ -365,7 +365,7 @@ export default function BorrowingPage() {
       await addDoc(collection(db, 'borrows'), {
         userId: newBorrow.selectedUserId, bookId: newBorrow.selectedBookId,
         bookTitle: newBorrow.selectedBookTitle, dueDate: (() => { const d = new Date(newBorrow.dueDate); d.setHours(23,59,59,999); return Timestamp.fromDate(d); })(),
-        borrowDate: serverTimestamp(), status: 'active', walkUp: true, processedBy: currentUser.uid,
+        borrowDate: serverTimestamp(), status: 'active', walkUp: true, processedBy: effectiveId,
       });
       await updateDoc(doc(db, 'books', newBorrow.selectedBookId), {
         availableCopies: Math.max(0, (bookSnap.data().availableCopies || 0) - 1),

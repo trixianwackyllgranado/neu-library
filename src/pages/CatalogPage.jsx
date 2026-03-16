@@ -191,7 +191,7 @@ export default function CatalogPage() {
       setActiveBookBorrowMap(abMap);
     }, () => {});
     return unsub;
-  }, [currentUser, isStudent]);
+  }, [effectiveId, isStudent]);
 
   // ── Filtering ─────────────────────────────────────────────────────────────
   const allCategories = [...new Set(books.map(b => b.category).filter(Boolean))].sort();
@@ -277,7 +277,7 @@ export default function CatalogPage() {
       try {
         const dupSnap = await getDocs(query(
           collection(db, 'borrows'),
-          where('userId', '==', currentUser.uid),
+          where('userId', '==', effectiveId),
           where('bookId', '==', requestBook.id),
           where('status', 'in', ['pending', 'active'])
         ));
@@ -292,7 +292,7 @@ export default function CatalogPage() {
       }
       if ((requestBook.availableCopies ?? 0) <= 0) { setRequestError('No copies available at this time.'); setRequesting(false); return; }
       await addDoc(collection(db, 'borrows'), {
-        userId: currentUser.uid, bookId: requestBook.id, bookTitle: requestBook.title,
+        userId: effectiveId, bookId: requestBook.id, bookTitle: requestBook.title,
         authors: requestBook.authors||'', isbn: requestBook.isbn||'',
         shelfLocation: requestBook.shelfLocation||'', borrowDate: serverTimestamp(),
         dueDate: null, status: 'pending', requestedAt: serverTimestamp(), approvedBy: null,

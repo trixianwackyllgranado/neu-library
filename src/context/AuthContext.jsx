@@ -180,13 +180,13 @@ export function AuthProvider({ children }) {
   // ── Role switch ──────────────────────────────────────────────────────────────
   const switchRole = async () => {
     try {
-      if (!currentUser || !userProfile) return;
+      if (!userProfile?.uid) return;
       if (!ALLOWED_ADMIN_EMAILS.includes(currentUser.email)) {
         alert("Unauthorized: Your email does not have permission to switch roles.");
         return;
       }
       const newRole = userProfile.role === 'admin' ? 'student' : 'admin';
-      await updateDoc(doc(db, 'users', currentUser.uid), { role: newRole });
+      await updateDoc(doc(db, 'users', userProfile.uid), { role: newRole });
       setUserProfile(prev => ({ ...prev, role: newRole }));
     } catch (err) {
       console.error("[AuthContext] Error switching role:", err);
@@ -220,28 +220,57 @@ export function AuthProvider({ children }) {
       const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
         const data = snap.data();
-        setUserProfile(data);
+        if (data.linkedUid) {
+          // This is a Google pointer account. Fetch the real, unified account.
+          const realSnap = await getDoc(doc(db, 'users', data.linkedUid));
+          if (realSnap.exists()) {
+            const realData = realSnap.data();
+            setUserProfile({ ...realData, uid: data.linkedUid });
+            if (realData.adminPasswordReset) setNeedsPasswordReset(true);
+            return;
+          }
+        } else if (data.authProvider === 'google' && data.email) {
+          // REPAIR: Found a Google doc without a linkedUid. Try to re-link.
+          const email = data.email.toLowerCase();
+          const emailSnap = await getDocs(
+            query(collection(db, 'users'), where('email', '==', email))
+          );
+          // Find the doc that is NOT this doc and has no linkedUid (the root doc)
+          const rootDoc = emailSnap.docs.find(d => d.id !== uid && !d.data().linkedUid);
+          if (rootDoc) {
+            await updateDoc(doc(db, 'users', uid), { linkedUid: rootDoc.id });
+            const rootData = rootDoc.data();
+            setUserProfile({ ...rootData, uid: rootDoc.id });
+            if (rootData.adminPasswordReset) setNeedsPasswordReset(true);
+            return;
+          }
+        }
+
+        // This is the real account
+        setUserProfile({ ...data, uid: uid });
         if (data.adminPasswordReset) setNeedsPasswordReset(true);
         return;
       }
 
       // ── Fallback: Google user whose Firestore doc hasn't been written yet ──
-      const email = userObj?.email;
+      const email = userObj?.email?.toLowerCase();
       if (email?.endsWith('@neu.edu.ph')) {
         const emailSnap = await getDocs(
           query(collection(db, 'users'), where('email', '==', email))
         );
         if (!emailSnap.empty) {
-          const existingData = emailSnap.docs[0].data();
+          const existingDoc = emailSnap.docs[0];
+          const existingData = existingDoc.data();
           const directRef   = doc(db, 'users', uid);
-          // Write the merged doc so future lookups are instant
+          // Write a POINTER doc so future lookups instantly resolve to the single, merged profile.
           await setDoc(directRef, {
-            ...existingData,
-            uid,
+            linkedUid:      existingDoc.id, // Use the real document ID (e.g. student ID)
             authProvider:   'google',
+            email:          email,
             googleLinkedAt: serverTimestamp(),
           });
-          setUserProfile({ ...existingData, uid, authProvider: 'google' });
+          setUserProfile({ ...existingData, uid: existingDoc.id }); // The unified profile
+          console.log("[AuthContext] Linked Google user to root:", existingDoc.id);
           return;
         }
       }
@@ -253,9 +282,9 @@ export function AuthProvider({ children }) {
   };
 
   const clearPasswordResetFlag = async () => {
-    if (!currentUser) return;
+    if (!userProfile?.uid) return;
     try {
-      await updateDoc(doc(db, 'users', currentUser.uid), {
+      await updateDoc(doc(db, 'users', userProfile.uid), {
         adminPasswordReset: false, adminPasswordResetAt: null,
       });
       setNeedsPasswordReset(false);
@@ -266,7 +295,7 @@ export function AuthProvider({ children }) {
 
   // ── Live borrow snapshot for students ───────────────────────────────────────
   useEffect(() => {
-    if (!currentUser || !userProfile || userProfile.role !== 'student') {
+    if (!userProfile?.uid || userProfile.role !== 'student') {
       setStudentBorrowMap({});
       setStudentHasOverdue(false);
       setBorrowMapReady(userProfile?.role !== 'student');
@@ -275,7 +304,7 @@ export function AuthProvider({ children }) {
     setBorrowMapReady(false);
     const STATUS_PRIORITY = { active: 3, pending: 1 };
     const unsub = onSnapshot(
-      query(collection(db, 'borrows'), where('userId', '==', currentUser.uid)),
+      query(collection(db, 'borrows'), where('userId', '==', userProfile.uid)),
       snap => {
         const map = {};
         const now = new Date();
@@ -310,9 +339,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user) await fetchProfile(user.uid, user); // pass user for Google email fallback
-      else setUserProfile(null);
-      setLoadingAuth(false);
+      try {
+        if (user) await fetchProfile(user.uid, user);
+        else setUserProfile(null);
+      } catch (err) {
+        console.error("[AuthContext] Auth state error:", err);
+      } finally {
+        setLoadingAuth(false);
+      }
     });
     return unsub;
   }, []);
@@ -326,6 +360,7 @@ export function AuthProvider({ children }) {
       updateUserPassword, idToEmail,
       switchRole,
       isProfessor: ALLOWED_ADMIN_EMAILS.includes(currentUser?.email),
+      effectiveId: userProfile?.uid || currentUser?.uid,
     }}>
       {children}
     </AuthContext.Provider>
