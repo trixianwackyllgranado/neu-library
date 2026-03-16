@@ -1,4 +1,4 @@
-# NEU Library Management System
+# NEU Library Visitor Log
 
 **Technical Documentation & System Manual**
 
@@ -7,9 +7,37 @@ Granado, Trixian Wackyll C — 2BSIT-5 — Academic Year 2025–2026
 ---
 
 **Links:**
-- [Full Documentation (Google Docs — easier to navigate and with images)](https://docs.google.com/document/d/1itbqZc4-17EsljgMnfr4uOMbAT7ww3SjBoMi5ls2tlc/edit?usp=sharing) 
-- [Live Web App](https://neu-library-henna.vercel.app) 
 - [GitHub Repository](https://github.com/trixianwackyllgranado/neu-library)
+- [Live Web App](https://neu-library-henna.vercel.app)
+- [Full Documentation (Detailed Manual)](https://docs.google.com/document/d/1itbqZc4-17EsljgMnfr4uOMbAT7ww3SjBoMi5ls2tlc/edit?usp=sharing)
+
+> [!IMPORTANT]
+> **Project Status & Limitations (v2.1 Update)**
+> - **Google Sign-In**: While implemented, "Continue with Google" currently creates a *new* account. Linking existing accounts to Google via institutional email is not yet live. Existing users (Students/Staff) **must** use their ID and Password.
+> - **Special Admin Access**: The role-switching feature is currently restricted to verified administrative emails (e.g., `jcesperanza@neu.edu.ph`).
+
+---
+
+## Core Requirements & Features
+
+### 1. Unified Authentication
+- **ID & Password**: Primary method for existing users to prevent account duplication.
+- **Google Sign-In**: Supported for new @neu.edu.ph accounts (Registration and auto-naming).
+
+### 2. Role‑Based Access Control (RBAC)
+- **Regular User (Student)**: 
+  - Personalized greeting: "Welcome to NEU Library!"
+  - Personal library dashboard with QR code and borrow history.
+- **Admin / Professor**:
+  - Secure authorization to switch between Student and Admin views safely.
+  - Interactive dashboard with visitor statistics in cards.
+  - **Statistics Filtering**: Stats can be filtered by:
+    - Reason for visit
+    - College
+    - Employee Type (Teacher/Staff vs Student)
+  - Time-range filtering: View stats by Day, Week, or custom Date Range.
+
+---
 
 **Test Accounts:**
 
@@ -17,7 +45,7 @@ Granado, Trixian Wackyll C — 2BSIT-5 — Academic Year 2025–2026
 |---------|---------------|-------------|
 | Student | 33-33333-333  | 123456789   |
 | Staff   | 11-11111-111  | 123456789   |
-| Admin   | 22-22222-222  | 123456789   |
+| Admin   | 22-22222-222  | 22-22222-222|
 
 ---
 
