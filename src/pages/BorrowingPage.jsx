@@ -43,6 +43,7 @@ function ApproveModal({ borrow, onConfirm, onCancel, saving }) {
           <div>
             <label className="label">Due Date <span className="text-red-500">*</span></label>
             <input type="date" className="input" value={dueDate}
+              min={new Date().toISOString().split('T')[0]}
               onChange={e => setDueDate(e.target.value)} />
           </div>
           <div style={{background:"var(--gold-soft)",border:"1px solid var(--gold-border)",borderRadius:8,padding:"12px 16px"}}>
@@ -219,6 +220,20 @@ export default function BorrowingPage() {
         status: 'active', dueDate: Timestamp.fromDate(dueDateEndOfDay),
         approvedBy: currentUser.uid, approvedAt: serverTimestamp(),
       });
+      // Auto-cancel all other pending requests from the same student for the same book
+      const duplicates = borrows.filter(b =>
+        b.id !== approving.id &&
+        b.userId === approving.userId &&
+        b.bookId === approving.bookId &&
+        b.status === 'pending'
+      );
+      await Promise.all(duplicates.map(b =>
+        updateDoc(doc(db, 'borrows', b.id), {
+          status: 'cancelled',
+          cancelledAt: serverTimestamp(),
+          cancelReason: 'auto-cancelled: duplicate request superseded by approval',
+        })
+      ));
       if (approving.bookId) {
         const bookSnap = await getDoc(doc(db, 'books', approving.bookId));
         if (bookSnap.exists()) {
@@ -227,7 +242,8 @@ export default function BorrowingPage() {
           });
         }
       }
-      showToast(`"${approving.bookTitle}" approved.`, true);
+      const cancelMsg = duplicates.length > 0 ? ` (${duplicates.length} duplicate request${duplicates.length>1?'s':''} auto-cancelled)` : '';
+      showToast(`"${approving.bookTitle}" approved.${cancelMsg}`, true);
       setApproving(null);
     } catch (e) { showToast('Failed to approve: ' + e.message, false); }
     setApproveSaving(false);

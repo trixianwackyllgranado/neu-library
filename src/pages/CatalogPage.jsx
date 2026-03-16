@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc,
-  doc, serverTimestamp, writeBatch, query, where
+  doc, serverTimestamp, writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
@@ -175,29 +175,26 @@ export default function CatalogPage() {
 
   // Live borrows → recompute course data + student borrow map + active-per-book count
   useEffect(() => {
-    // Use full collection for staff/admin (need all borrows), filtered query for students (efficiency + correctness)
-    const borrowQuery = (currentUser && isStudent)
-      ? query(collection(db, 'borrows'), where('userId', '==', currentUser.uid))
-      : collection(db, 'borrows');
-    const unsub = onSnapshot(borrowQuery, snap => {
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const unsub = onSnapshot(collection(db, 'borrows'), snap => {
+      borrowsRefC.current = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      recomputeCourseData();
+      // Track active/overdue borrows per book for staff/admin safeguard
+      const abMap = {};
+      borrowsRefC.current.forEach(b => {
+        if (b.bookId && (b.status === 'active' || b.status === 'pending')) {
+          abMap[b.bookId] = (abMap[b.bookId] || 0) + 1;
+        }
+      });
+      setActiveBookBorrowMap(abMap);
       if (currentUser && isStudent) {
-        // Student: only their own borrows — no need to store in ref or recompute courses
-        const STATUS_PRIORITY = { active: 3, overdue: 2, pending: 1 };
         const map = {};
         const now = new Date();
         let overdueFound = false;
-        docs.forEach(b => {
-          if (b.status !== 'returned' && b.status !== 'rejected' && b.status !== 'cancelled') {
-            // Keep highest-priority status per book (active > pending)
-            const current = map[b.bookId];
-            const newPriority = STATUS_PRIORITY[b.status] || 0;
-            const oldPriority = STATUS_PRIORITY[current] || 0;
-            if (!current || newPriority > oldPriority) {
-              map[b.bookId] = b.status;
-            }
+        borrowsRefC.current.forEach(b => {
+          if (b.userId === currentUser.uid && b.status !== 'returned' && b.status !== 'rejected') {
+            map[b.bookId] = b.status;
           }
-          if (b.status === 'active') {
+          if (b.userId === currentUser.uid && b.status === 'active') {
             const due = b.dueDate?.toDate ? b.dueDate.toDate()
               : b.dueDate instanceof Date ? b.dueDate
               : typeof b.dueDate === 'string' ? new Date(b.dueDate)
@@ -208,17 +205,6 @@ export default function CatalogPage() {
         });
         setMyBorrowMap(map);
         setHasOverdueBooks(overdueFound);
-      } else {
-        // Staff/admin: store all borrows for course data and active-per-book count
-        borrowsRefC.current = docs;
-        recomputeCourseData();
-        const abMap = {};
-        docs.forEach(b => {
-          if (b.bookId && (b.status === 'active' || b.status === 'pending')) {
-            abMap[b.bookId] = (abMap[b.bookId] || 0) + 1;
-          }
-        });
-        setActiveBookBorrowMap(abMap);
       }
     }, () => {});
     return unsub;
@@ -295,7 +281,27 @@ export default function CatalogPage() {
       setRequesting(false);
       return;
     }
+    // Layer 1: local state check (fast)
+    const existingStatus = myBorrowMap[requestBook.id];
+    if (existingStatus === 'pending' || existingStatus === 'active') {
+      setRequestError('You already have an active or pending request for this book.');
+      setRequesting(false);
+      return;
+    }
     try {
+      // Layer 2: Firestore-level authoritative check (catches stale local state)
+      const dupSnap = await getDocs(query(
+        collection(db, 'borrows'),
+        where('userId', '==', currentUser.uid),
+        where('bookId', '==', requestBook.id),
+        where('status', 'in', ['pending', 'active'])
+      ));
+      if (!dupSnap.empty) {
+        setMyBorrowMap(prev => ({ ...prev, [requestBook.id]: dupSnap.docs[0].data().status }));
+        setRequestError('You already have an active or pending request for this book.');
+        setRequesting(false);
+        return;
+      }
       if ((requestBook.availableCopies ?? 0) <= 0) { setRequestError('No copies available at this time.'); setRequesting(false); return; }
       await addDoc(collection(db, 'borrows'), {
         userId: currentUser.uid, bookId: requestBook.id, bookTitle: requestBook.title,
@@ -804,7 +810,7 @@ export default function CatalogPage() {
                     <div className="flex gap-2 flex-wrap">
                       {isStudent && (
                         borrowStatus === 'active'  ? <span className="badge-green badge">Borrowed</span>
-                        : borrowStatus === 'pending' ? <span className="badge-gold badge">Pending Approval</span>
+                        : borrowStatus === 'pending' ? <span className="badge-gold badge" style={{whiteSpace:'nowrap',fontSize:9}}>⏳ Pending</span>
                         : unavailable ? <span className="badge-red badge">Unavailable</span>
                         : hasOverdueBooks ? <span className="badge-red badge text-[9px]">Overdue — Return First</span>
                         : <button className="btn-primary py-2 px-4 text-xs w-full" onClick={() => { if(hasOverdueBooks)return; setRequestBook(book); setRequestError(''); setRequestSuccess(''); }}>Request Borrow</button>
@@ -928,7 +934,7 @@ export default function CatalogPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           {isStudent && (
                             borrowStatus==='active' ? <span className="badge-green badge">Borrowed</span>
-                            : borrowStatus==='pending' ? <span className="badge-gold badge">Pending Approval</span>
+                            : borrowStatus==='pending' ? <span className="badge-gold badge" style={{whiteSpace:'nowrap',fontSize:9}}>⏳ Pending</span>
                             : unavailable ? <span className="badge-red badge">Unavailable</span>
                             : hasOverdueBooks ? (
                               <span
