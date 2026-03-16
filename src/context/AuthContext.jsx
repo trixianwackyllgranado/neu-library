@@ -64,11 +64,11 @@ export function AuthProvider({ children }) {
   const [borrowMapReady,    setBorrowMapReady]    = useState(false);
 
   // ── Register (ID-number flow) ───────────────────────────────────────────────
-  const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, role = 'student', password }) => {
-    const email   = idToEmail(idNumber);
-    const qrToken = crypto.randomUUID().replace(/-/g, '');
+  const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, role = 'student', password, email }) => {
+    const authEmail = idToEmail(idNumber);
+    const qrToken   = crypto.randomUUID().replace(/-/g, '');
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const cred = await createUserWithEmailAndPassword(auth, authEmail, password);
       await setDoc(doc(db, 'users', cred.user.uid), {
         uid:           cred.user.uid,
         idNumber:      idNumber.trim(),
@@ -79,6 +79,8 @@ export function AuthProvider({ children }) {
         course:        course.trim().toUpperCase(),
         college:       college.trim().toUpperCase(),
         role,
+        // If they provided an institutional email, save it so Google Sign-in can merge later
+        ...(email ? { email: email.trim().toLowerCase() } : {}),
         createdAt:     serverTimestamp(),
       });
       return cred;

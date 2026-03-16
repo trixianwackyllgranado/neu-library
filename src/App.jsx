@@ -7,6 +7,7 @@ import AppLayout from './components/shared/AppLayout';
 
 import LoginPage          from './pages/LoginPage';
 import RegisterPage       from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage      from './pages/DashboardPage';
 import CatalogPage        from './pages/CatalogPage';
 import LoggerPage         from './pages/LoggerPage';
@@ -28,8 +29,9 @@ export default function App() {
         <LibrarySessionProvider>
           <Routes>
             {/* Public */}
-            <Route path="/login"    element={<RequireGuest><LoginPage /></RequireGuest>} />
-            <Route path="/register" element={<RequireGuest><RegisterPage /></RequireGuest>} />
+            <Route path="/login"           element={<RequireGuest><LoginPage /></RequireGuest>} />
+            <Route path="/register"        element={<RequireGuest><RegisterPage /></RequireGuest>} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             {/* App shell — all auth-required routes */}
             <Route path="/dashboard" element={<RequireAuth><Layout><DashboardPage /></Layout></RequireAuth>} />

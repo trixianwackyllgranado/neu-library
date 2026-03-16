@@ -116,7 +116,7 @@ export default function RegisterPage() {
 
   const [role,          setRole]          = useState('student');
   const [inviteCode,    setInviteCode]    = useState('');
-  const [codeVerified,  setCodeVerified]  = useState(false); // gate for staff/admin
+  const [codeVerified,  setCodeVerified]  = useState(false);
   const [codeInput,     setCodeInput]     = useState('');
   const [codeError,     setCodeError]     = useState('');
   const [idNumber,      setIdNumber]      = useState('');
@@ -126,6 +126,7 @@ export default function RegisterPage() {
   const [middleInitial, setMiddleInitial] = useState('');
   const [college,       setCollege]       = useState('');
   const [course,        setCourse]        = useState('');
+  const [email,         setEmail]         = useState('');
   const [password,      setPassword]      = useState('');
   const [confirm,       setConfirm]       = useState('');
   const [error,         setError]         = useState('');
@@ -202,6 +203,7 @@ export default function RegisterPage() {
         middleInitial: middleInitial.trim().replace(/\.+$/, ''),
         college: isStaffOrAdmin ? 'LIBRARY STAFF' : college.trim(),
         course:  isStaffOrAdmin ? role.toUpperCase() : (course.trim() || college.trim()),
+        email:   email.trim() || undefined,
         role, password,
       });
       setRegistered({ idNumber: idNumber.trim(), name: `${lastName.trim()}, ${firstName.trim()}` });
@@ -410,6 +412,21 @@ export default function RegisterPage() {
                   </select>
                 </div>
               )}
+
+              {/* Email — optional but recommended */}
+              <div>
+                <FieldLabel>Institutional Email</FieldLabel>
+                <input
+                  type="email"
+                  style={inputBase()}
+                  placeholder="firstname.lastname@neu.edu.ph"
+                  value={email}
+                  onChange={e => { setEmail(e.target.value); setError(''); }}
+                  onFocus={onFocus} onBlur={onBlur}
+                  autoComplete="email"
+                />
+                <Hint>Optional. Use your @neu.edu.ph email to also enable Google Sign-In.</Hint>
+              </div>
 
               {/* Password */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
