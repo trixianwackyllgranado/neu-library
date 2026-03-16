@@ -14,7 +14,7 @@ const CATEGORIES = [
 
 const EMPTY = {
   title: '', authors: '', isbn: '', publisher: '', edition: '',
-  category: '', shelfLocation: '', totalCopies: '', availableCopies: '',
+  category: '', shelfLocation: '', totalCopies: '',
   description: '', courses: [],
 };
 
@@ -33,7 +33,6 @@ export default function BookDrawer({ book, saving, onSave, onClose }) {
         category:        book.category        || '',
         shelfLocation:   book.shelfLocation   || '',
         totalCopies:     book.totalCopies     ?? '',
-        availableCopies: book.availableCopies ?? '',
         description:     book.description     || '',
         courses:         Array.isArray(book.courses) ? book.courses : [],
       });
@@ -57,8 +56,7 @@ export default function BookDrawer({ book, saving, onSave, onClose }) {
     e.preventDefault();
     onSave({
       ...form,
-      totalCopies:     parseInt(form.totalCopies,     10) || 0,
-      availableCopies: parseInt(form.availableCopies, 10) || 0,
+      totalCopies: parseInt(form.totalCopies, 10) || 0,
     });
   };
 
@@ -122,15 +120,9 @@ export default function BookDrawer({ book, saving, onSave, onClose }) {
             <label style={labelSt}>Shelf Location</label>
             <input style={inputSt} placeholder="e.g. Sec. B, Row 4" value={form.shelfLocation} onChange={e => set('shelfLocation', e.target.value)} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label style={labelSt}>Total Copies</label>
-              <input type="number" min="0" style={inputSt} value={form.totalCopies} onChange={e => set('totalCopies', e.target.value)} />
-            </div>
-            <div>
-              <label style={labelSt}>Available Copies</label>
-              <input type="number" min="0" style={inputSt} value={form.availableCopies} onChange={e => set('availableCopies', e.target.value)} />
-            </div>
+          <div>
+            <label style={labelSt}>Total Copies <span style={{ color: '#64748b', fontSize: '8px', fontWeight: 400, letterSpacing: 'normal', textTransform: 'none' }}>(Available = Total - Currently Borrowed)</span></label>
+            <input type="number" min="0" style={inputSt} value={form.totalCopies} onChange={e => set('totalCopies', e.target.value)} />
           </div>
           <div>
             <label style={labelSt}>Description</label>

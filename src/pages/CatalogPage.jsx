@@ -788,7 +788,12 @@ export default function CatalogPage() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-dim font-mono tracking-wider text-[10px]">AVAIL</span>
-                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:(book.availableCopies??0)>0?'var(--green)':'var(--red)'}}>{book.availableCopies ?? 0}</span>
+                      {(() => {
+                        const totalCopies = book.totalCopies ?? 0;
+                        const borrowedCount = activeBookBorrowMap[book.id] || 0;
+                        const available = Math.max(0, totalCopies - borrowedCount);
+                        return <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:available>0?'var(--green)':'var(--red)'}}>{available>0?available:'Out'}</span>;
+                      })()}
                     </div>
                   </div>
                   {isStudent && book.description && (
@@ -851,7 +856,9 @@ export default function CatalogPage() {
               <tbody>
                 {filtered.map(book => {
                   const borrowStatus    = myBorrowMap[book.id];
-                  const unavailable     = (book.availableCopies ?? 0) <= 0;
+                  const borrowedCount   = activeBookBorrowMap[book.id] || 0;
+                  const available       = Math.max(0, (book.totalCopies ?? 0) - borrowedCount);
+                  const unavailable     = available === 0;
                   const coursesBorrowed = courseBorrowMap[book.id] ?? [];
                   const coursesAssigned = Array.isArray(book.courses) ? book.courses : [];
                   const isSelected      = selectedIds.has(book.id);
@@ -910,14 +917,24 @@ export default function CatalogPage() {
                       <td className="td font-mono text-xs">{book.shelfLocation||'—'}</td>
                       <td className="td text-center font-mono">{book.totalCopies??0}</td>
                       <td className="td text-center">
-                        <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:600,color:(book.availableCopies??0)>0?'var(--green)':'var(--red)'}}>{book.availableCopies??0}</span>
-                        {canEdit && (activeBookBorrowMap[book.id] || 0) > 0 && (
-                          <div style={{marginTop:3}}>
-                            <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:9,fontWeight:700,padding:'2px 6px',borderRadius:10,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',whiteSpace:'nowrap'}}>
-                              {activeBookBorrowMap[book.id]} out
-                            </span>
-                          </div>
-                        )}
+                        {(() => {
+                          const totalCopies = book.totalCopies ?? 0;
+                          const borrowedCount = activeBookBorrowMap[book.id] || 0;
+                          const available = Math.max(0, totalCopies - borrowedCount);
+                          const unavailable = available === 0;
+                          return (
+                            <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+                              <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:600,color:unavailable?'var(--red)':'var(--green)'}}>
+                                {unavailable ? 'Out of Stock' : available}
+                              </span>
+                              {canEdit && borrowedCount > 0 && (
+                                <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:9,fontWeight:700,padding:'2px 6px',borderRadius:10,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',whiteSpace:'nowrap'}}>
+                                  {borrowedCount} out
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="td text-center">
                         <div className="flex items-center justify-center gap-2 flex-wrap">
@@ -1006,7 +1023,10 @@ export default function CatalogPage() {
                 ) : (
                   <div>
                     <div className="mb-5 grid grid-cols-2 gap-3 text-sm">
-                      <div><p className="label">Available Copies</p><p className="font-semibold text-primary-700">{requestBook.availableCopies}</p></div>
+                      <div><p className="label">Available Copies</p><p className="font-semibold text-primary-700">{(() => {
+                        const borrowedCount = activeBookBorrowMap[requestBook.id] || 0;
+                        return Math.max(0, (requestBook.totalCopies ?? 0) - borrowedCount);
+                      })()}</p></div>
                       <div><p className="label">Shelf Location</p><p className="text-muted">{requestBook.shelfLocation||'—'}</p></div>
                       <div><p className="label">ISBN</p><p className="font-mono text-xs text-muted">{requestBook.isbn||'—'}</p></div>
                       <div><p className="label">Category</p><p className="text-muted">{requestBook.category||'—'}</p></div>
