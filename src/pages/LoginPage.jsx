@@ -85,10 +85,12 @@ export default function LoginPage() {
         <div style={{ width: '100%', maxWidth: '400px', animation: 'fadeUp 0.35s ease both' }}>
 
           {/* Card */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: '20px', padding: '38px 32px', boxShadow: 'var(--shadow-modal)' }}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: '20px', overflow: 'hidden', boxShadow: 'var(--shadow-modal)' }}>
 
-            {/* Gold top accent */}
-            <div style={{ height: '3px', background: 'linear-gradient(90deg, var(--gold), transparent)', borderRadius: '3px', marginBottom: '28px', marginLeft: '-32px', marginRight: '-32px', marginTop: '-38px', borderTopLeftRadius: '20px', borderTopRightRadius: '20px' }} />
+            {/* Gold top accent — sits flush at top edge thanks to overflow:hidden on parent */}
+            <div style={{ height: '3px', background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
+
+            <div style={{ padding: '32px 32px 38px' }}>
 
             <div style={{ marginBottom: '28px' }}>
               <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '8px' }}>Secure Access Portal</p>
@@ -163,6 +165,7 @@ export default function LoginPage() {
                   Create Account
                 </Link>
               </p>
+            </div>
             </div>
           </div>
 
