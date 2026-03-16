@@ -109,6 +109,14 @@ export function AuthProvider({ children }) {
       const user   = result.user;
       console.log("[AuthContext] Google Sign-In Success! UID:", user.uid);
 
+      // 🔒 SECURITY: Only allow @neu.edu.ph emails
+      if (!user.email?.endsWith('@neu.edu.ph')) {
+        console.error("[AuthContext] Blocked non-NEU email:", user.email);
+        // Sign them out immediately
+        await signOut(auth);
+        throw new Error('Access Denied: Only NEU institutional emails (@neu.edu.ph) are permitted.');
+      }
+
       // Create or update their Firestore profile on first login
       const ref  = doc(db, 'users', user.uid);
       const snap = await getDoc(ref);
@@ -146,10 +154,6 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Role switch — only allowed for the professor's Google account ────────────
-  // Toggles between 'student' (regular user) and 'admin'.
-  // Protected: only the professor's own UID can call this, and Firestore rules
-  // only allow the special email to self-update role (see firestore.rules).
   // ── Role switch — Bulletproof version ────────────
   const switchRole = async () => {
     try {
@@ -176,8 +180,6 @@ export function AuthProvider({ children }) {
       // If Firestore blocks the test email, this alert will catch it!
       alert(`Role Switch Failed: ${err.message}\n\nIf this says "permission-denied", you need to whitelist your test email in Firestore Security Rules!`);
     }
-  };
-    // refreshProfile will be triggered by the onSnapshot in useEffect
   };
 
   // ── Logout ───────────────────────────────────────────────────────────────────

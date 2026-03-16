@@ -26,9 +26,19 @@ service cloud.firestore {
       return hasRole('admin');
     }
 
-    // The professor's Google email is the only account allowed to self-switch roles.
-    function isProfessor() {
-      return isSignedIn() && request.auth.token.email == 'jcesperanza@neu.edu.ph';
+    // 🔒 Security helper: Check if email is valid NEU institutional email
+    function isNEUEmail() {
+      return isSignedIn() && 
+             request.auth.token.email != null && 
+             request.auth.token.email.matches('.*@neu[.]edu[.]ph$');
+    }
+
+    // The allowed admin emails can self-switch roles
+    function isAllowedAdmin() {
+      return isSignedIn() && request.auth.token.email in [
+        'jcesperanza@neu.edu.ph',
+        'trixianwackyll.granado@neu.edu.ph'
+      ];
     }
 
     // ── Users ─────────────────────────────────────────────────────────────────
@@ -40,8 +50,10 @@ service cloud.firestore {
          get(/databases/$(database)/documents/qrUsers/$(request.auth.uid)).data.mainUid == userId)
       );
 
-      // Normal create: own UID
-      allow create: if isSignedIn() && request.auth.uid == userId;
+      // 🔒 Create rule: Must be own UID AND if using Google auth, must be @neu.edu.ph
+      allow create: if isSignedIn() && 
+                       request.auth.uid == userId &&
+                       (request.auth.token.firebase.sign_in_provider != 'google.com' || isNEUEmail());
 
       allow update: if isSignedIn() && (
         // Regular user can update own doc — but cannot change role
@@ -49,10 +61,10 @@ service cloud.firestore {
           request.auth.uid == userId &&
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
         ) ||
-        // Professor can self-switch role between 'student' and 'admin' only
+        // Allowed admins can self-switch role between 'student' and 'admin' only
         (
           request.auth.uid == userId &&
-          isProfessor() &&
+          isAllowedAdmin() &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']) &&
           request.resource.data.role in ['student', 'admin']
         ) ||
