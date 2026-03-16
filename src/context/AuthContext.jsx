@@ -150,11 +150,33 @@ export function AuthProvider({ children }) {
   // Toggles between 'student' (regular user) and 'admin'.
   // Protected: only the professor's own UID can call this, and Firestore rules
   // only allow the special email to self-update role (see firestore.rules).
+  // ── Role switch — Bulletproof version ────────────
   const switchRole = async () => {
-    if (!currentUser || !userProfile) return;
-    if (!ALLOWED_ADMIN_EMAILS.includes(currentUser.email)) return; // hard guard in JS too
-    const newRole = userProfile.role === 'admin' ? 'student' : 'admin';
-    await updateDoc(doc(db, 'users', currentUser.uid), { role: newRole });
+    try {
+      if (!currentUser || !userProfile) return;
+      
+      // 1. Ensure only authorized emails can do this
+      if (!ALLOWED_ADMIN_EMAILS.includes(currentUser.email)) {
+        alert("Unauthorized: Your email does not have permission to switch roles.");
+        return;
+      }
+
+      const newRole = userProfile.role === 'admin' ? 'student' : 'admin';
+      console.log(`[AuthContext] Switching role to: ${newRole}...`);
+
+      // 2. Update Firestore Database
+      await updateDoc(doc(db, 'users', currentUser.uid), { role: newRole });
+      console.log(`[AuthContext] Firestore updated successfully to ${newRole}!`);
+
+      // 3. IMMEDIATELY update React state so the UI changes without needing a page refresh
+      setUserProfile(prev => ({ ...prev, role: newRole }));
+
+    } catch (err) {
+      console.error("[AuthContext] Error switching role:", err);
+      // If Firestore blocks the test email, this alert will catch it!
+      alert(`Role Switch Failed: ${err.message}\n\nIf this says "permission-denied", you need to whitelist your test email in Firestore Security Rules!`);
+    }
+  };
     // refreshProfile will be triggered by the onSnapshot in useEffect
   };
 
