@@ -797,11 +797,11 @@ export default function CatalogPage() {
                   {!selectMode && (
                     <div className="flex gap-2 flex-wrap">
                       {isStudent && (
-                        !borrowMapReady ? <span className="badge badge-gray text-[9px]" style={{opacity:0.5}}>•••</span>
+                        !borrowMapReady ? <span className="badge badge-gray text-[9px]" style={{opacity:0.4,letterSpacing:2}}>···</span>
                         : borrowStatus === 'active'  ? <span className="badge-green badge">Borrowed</span>
-                        : borrowStatus === 'pending' ? <span className="badge-gold badge" style={{whiteSpace:'nowrap',fontSize:9}}>⏳ Pending</span>
+                        : borrowStatus === 'pending' ? <span className="badge-gold badge" style={{whiteSpace:'nowrap'}}>Pending</span>
                         : unavailable ? <span className="badge-red badge">Unavailable</span>
-                        : hasOverdueBooks ? <span className="badge-red badge text-[9px]">Overdue — Return First</span>
+                        : hasOverdueBooks ? <span className="badge-red badge" style={{whiteSpace:'nowrap'}}>Overdue — Return First</span>
                         : <button className="btn-primary py-2 px-4 text-xs w-full" onClick={() => { if(hasOverdueBooks)return; setRequestBook(book); setRequestError(''); setRequestSuccess(''); }}>Request Borrow</button>
                       )}
                       {canEdit && (
@@ -919,20 +919,20 @@ export default function CatalogPage() {
                           </div>
                         )}
                       </td>
-                      <td className="td">
-                        <div className="flex items-center gap-2 flex-wrap">
+                      <td className="td text-center">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
                           {isStudent && (
-                            !borrowMapReady ? <span className="badge badge-gray text-[9px]" style={{opacity:0.5}}>•••</span>
+                            !borrowMapReady ? <span className="badge badge-gray text-[9px]" style={{opacity:0.4,letterSpacing:2}}>···</span>
                             : borrowStatus==='active' ? <span className="badge-green badge">Borrowed</span>
-                            : borrowStatus==='pending' ? <span className="badge-gold badge" style={{whiteSpace:'nowrap',fontSize:9}}>⏳ Pending</span>
+                            : borrowStatus==='pending' ? <span className="badge-gold badge" style={{whiteSpace:'nowrap'}}>Pending</span>
                             : unavailable ? <span className="badge-red badge">Unavailable</span>
                             : hasOverdueBooks ? (
                               <span
                                 className="badge"
                                 title="You have overdue books. Return them before borrowing new ones."
-                                style={{background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',cursor:'not-allowed',whiteSpace:'nowrap'}}
+                                style={{background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',cursor:'not-allowed',whiteSpace:'nowrap',display:'inline-flex',alignItems:'center'}}
                               >
-                                ⚠ Overdue — Return First
+                                Overdue — Return First
                               </span>
                             )
                             : <button className="btn-primary py-1 px-3 text-[10px]" onClick={()=>{if(hasOverdueBooks)return;setRequestBook(book);setRequestError('');setRequestSuccess('');}}>Request Borrow</button>
