@@ -127,7 +127,8 @@ export default function CatalogPage() {
   const [requestSuccess, setRequestSuccess] = useState('');
   const [requestError,   setRequestError]   = useState('');
   const [myBorrowMap,    setMyBorrowMap]    = useState({});
-  const [activeBookBorrowMap, setActiveBookBorrowMap] = useState({}); // bookId → count of active/overdue borrows
+  const [activeBookBorrowMap, setActiveBookBorrowMap] = useState({});
+  const [hasOverdueBooks, setHasOverdueBooks] = useState(false);
 
   // ── Loaders ───────────────────────────────────────────────────────────────
   // Refs for cross-collection derived state
@@ -187,12 +188,18 @@ export default function CatalogPage() {
       setActiveBookBorrowMap(abMap);
       if (currentUser && isStudent) {
         const map = {};
+        const now = new Date();
+        let overdueFound = false;
         borrowsRefC.current.forEach(b => {
           if (b.userId === currentUser.uid && b.status !== 'returned' && b.status !== 'rejected') {
             map[b.bookId] = b.status;
           }
+          if (b.userId === currentUser.uid && b.status === 'active' && b.dueDate?.toDate && b.dueDate.toDate() < now) {
+            overdueFound = true;
+          }
         });
         setMyBorrowMap(map);
+        setHasOverdueBooks(overdueFound);
       }
     }, () => {});
     return unsub;
@@ -262,13 +269,6 @@ export default function CatalogPage() {
   };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  // Check if student has overdue books — blocks new borrow requests
-  const hasOverdueBooks = isStudent && borrowsRefC.current.some(b =>
-    b.userId === currentUser?.uid &&
-    b.status === 'active' &&
-    b.dueDate?.toDate && b.dueDate.toDate() < new Date()
-  );
-
   const handleRequest = async () => {
     setRequestError(''); setRequesting(true);
     if (hasOverdueBooks) {
