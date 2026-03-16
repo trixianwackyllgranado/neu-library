@@ -494,7 +494,6 @@ export default function StudentRecordsPage() {
                   <th className="th">Name</th>
                   <th className="th">ID Number</th>
                   <th className="th">College / Course</th>
-                  <th className="th">Email</th>
                   <th className="th">Action</th>
                 </tr>
               </thead>
@@ -507,7 +506,6 @@ export default function StudentRecordsPage() {
                       <p className="font-medium">{s.course || '—'}</p>
                       {s.college && <p style={{color:"var(--text-muted)"}}>{s.college}</p>}
                     </td>
-                    <td className="td font-mono text-xs" style={{color:"var(--text-muted)"}}>{s.email}</td>
                     <td className="td">
                       <button className="btn-secondary py-1 px-3 text-[10px]"
                         onClick={e => { e.stopPropagation(); openStudent(s); }}>

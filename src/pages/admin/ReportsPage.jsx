@@ -302,7 +302,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      <style>{`tr.log-row:hover td { background: var(--row-hover-bg) !important; color: var(--row-hover-text) !important; }`}</style>
       <div className="pb-5 border-b border-gray-200 flex items-start justify-between gap-4">
         <div>
           <p className="font-mono text-[10px] tracking-widest uppercase text-gray-400 mb-1">Administration</p>
@@ -492,7 +492,7 @@ export default function ReportsPage() {
                   {sessions.slice(0, 30).map(s => {
                     const u = userMap[s.uid];
                     return (
-                      <tr key={s.id} className="hover:bg-gray-50">
+                      <tr key={s.id} className="log-row">
                         <td className="td font-semibold text-sm">{u ? `${u.lastName}, ${u.firstName}` : '—'}</td>
                         <td className="td font-mono text-xs">{u?.idNumber ?? '—'}</td>
                         <td className="td text-xs">{s.purpose}</td>
@@ -582,7 +582,7 @@ export default function ReportsPage() {
                   </thead>
                   <tbody>
                     {filteredCatalogLogs.map(l => (
-                      <tr key={l.id} className="hover:bg-gray-50">
+                      <tr key={l.id} className="log-row">
                         <td className="td">
                           {l.action === 'added'         && <span className="badge-green badge">Added</span>}
                           {l.action === 'edited'        && <span className="badge-gold badge">Edited</span>}
@@ -680,7 +680,7 @@ export default function ReportsPage() {
                       {selectedUserBorrows.map(b => {
                         const od = b.status==='active' && b.dueDate?.toDate ? b.dueDate.toDate()<new Date() : false;
                         return (
-                          <tr key={b.id} className="hover:bg-gray-50">
+                          <tr key={b.id} className="log-row">
                             <td className="td font-semibold text-sm">{b.bookTitle||'—'}</td>
                             <td className="td font-mono text-xs">{fmt(b.borrowDate)}</td>
                             <td className={`td font-mono text-xs ${od?'text-red-700 font-bold':''}`}>{fmt(b.dueDate)}</td>
@@ -744,7 +744,7 @@ export default function ReportsPage() {
                           duration = mins < 60 ? `${mins}m` : `${Math.floor(mins/60)}h ${mins%60}m`;
                         } else if (s.active) { duration = 'Active'; }
                         return (
-                          <tr key={s.id} className="hover:bg-gray-50">
+                          <tr key={s.id} className="log-row">
                             <td className="td text-sm">{s.purpose||'—'}</td>
                             <td className="td font-mono text-xs">{fmtDt(s.entryTime)}</td>
                             <td className="td font-mono text-xs">{s.active ? '—' : fmtDt(s.exitTime)}</td>
