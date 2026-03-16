@@ -61,6 +61,8 @@ export default function ReportsPage() {
   // User activity filters
   const [activityUser, setActivityUser] = useState('');
   const [activityType, setActivityType] = useState('borrows');
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentDropOpen, setStudentDropOpen] = useState(false);
 
   // ── One-time fetch (replaces 5 onSnapshot listeners) ─────────────────────
   const fetchAll = useCallback(async (isRefresh = false) => {
@@ -613,15 +615,69 @@ export default function ReportsPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <select className="select flex-1 text-sm" value={activityUser}
-              onChange={e => setActivityUser(e.target.value)}>
-              <option value="">— Select a Student —</option>
-              {studentUsers.map(u => (
-                <option key={u.id} value={u.id}>
-                  {u.lastName}, {u.firstName} — {u.idNumber || 'No ID'} ({u.course || 'No course'})
-                </option>
-              ))}
-            </select>
+            {/* Searchable student combobox */}
+            <div className="relative flex-1" onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget)) setStudentDropOpen(false); }}>
+              <div
+                className="select text-sm flex items-center justify-between cursor-pointer gap-2"
+                style={{minHeight:38}}
+                onClick={() => setStudentDropOpen(o => !o)}
+              >
+                <span className={activityUser ? 'text-primary' : 'text-muted'} style={{flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                  {activityUser
+                    ? (() => { const u = studentUsers.find(u => u.id === activityUser); return u ? `${u.lastName}, ${u.firstName} — ${u.idNumber || 'No ID'}` : '— Select a Student —'; })()
+                    : '— Select a Student —'}
+                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,opacity:0.5,transform:studentDropOpen?'rotate(180deg)':'none',transition:'transform 0.15s'}}><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              {studentDropOpen && (
+                <div className="absolute z-50 w-full mt-1 shadow-2xl" style={{background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:10,overflow:'hidden',maxHeight:320}}>
+                  <div className="p-2" style={{borderBottom:'1px solid var(--divider)'}}>
+                    <input
+                      autoFocus
+                      className="input text-sm w-full"
+                      placeholder="Search by name, ID, or course…"
+                      value={studentSearch}
+                      onChange={e => setStudentSearch(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                  </div>
+                  <div style={{overflowY:'auto',maxHeight:260}}>
+                    {(() => {
+                      const q = studentSearch.toLowerCase();
+                      const filtered = studentUsers.filter(u =>
+                        !q ||
+                        `${u.lastName} ${u.firstName}`.toLowerCase().includes(q) ||
+                        (u.idNumber||'').toLowerCase().includes(q) ||
+                        (u.course||'').toLowerCase().includes(q)
+                      );
+                      if (filtered.length === 0) return (
+                        <p className="text-xs text-center py-4 text-muted font-mono">No students found</p>
+                      );
+                      return filtered.map(u => (
+                        <div
+                          key={u.id}
+                          tabIndex={0}
+                          className="px-3 py-2 cursor-pointer text-sm"
+                          style={{background: activityUser===u.id ? 'var(--primary-soft,rgba(180,140,30,0.12))' : 'transparent', borderBottom:'1px solid var(--divider)'}}
+                          onMouseEnter={e => { if (activityUser !== u.id) e.currentTarget.style.background = 'var(--surface)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = activityUser===u.id ? 'var(--primary-soft,rgba(180,140,30,0.12))' : 'transparent'; }}
+                          onMouseDown={e => {
+                            e.preventDefault();
+                            setActivityUser(u.id);
+                            setStudentSearch('');
+                            setStudentDropOpen(false);
+                          }}
+                        >
+                          <span className="font-semibold" style={{color:'var(--text-primary)'}}>{u.lastName}, {u.firstName}</span>
+                          <span className="font-mono text-xs ml-2" style={{color:'var(--text-muted)'}}>{u.idNumber || 'No ID'}</span>
+                          {u.course && <span className="ml-2 text-xs" style={{color:'var(--text-dim)'}}>{u.course}</span>}
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
             <div className="flex border border-gray-200 shrink-0">
               <button onClick={() => setActivityType('borrows')}
                 className={`px-5 py-2 text-[10px] font-mono font-semibold uppercase tracking-widest transition-colors ${
