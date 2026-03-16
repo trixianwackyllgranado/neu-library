@@ -23,7 +23,6 @@ Granado, Trixian Wackyll C — 2BSIT-5 — Academic Year 2025–2026
 
 ### 1. Unified Authentication
 - **ID & Password**: The primary and only supported method for accessing pre-configured test data.
-- **Google Sign-In**: Functional for new user registration only.
 
 ### 2. Role‑Based Access Control (RBAC)
 - **Regular User (Student)**: 
