@@ -22,14 +22,16 @@ import { resolve } from 'path';
 
 // ── SCRYPT hash config from original project ──────────────────────────────────
 const HASH_CONFIG = {
-  hashAlgorithm:  'SCRYPT',
-  signerKey:      Buffer.from(
-    'k0IZeEi6RbQ7IGOMEJ6kasUj1Vc0MD+ZjRl3zC5GVfdnQtVVt13R/YDZOdJM1pjwmQ4tmm8z17N/viyBbeZBkA==',
-    'base64',
-  ),
-  saltSeparator:  Buffer.from('Bw==', 'base64'),
-  rounds:         8,
-  memoryCost:     14,
+  hash: {
+    algorithm:  'SCRYPT',
+    key:      Buffer.from(
+      'k0IZeEi6RbQ7IGOMEJ6kasUj1Vc0MD+ZjRl3zC5GVfdnQtVVt13R/YDZOdJM1pjwmQ4tmm8z17N/viyBbeZBkA==',
+      'base64',
+    ),
+    saltSeparator:  Buffer.from('Bw==', 'base64'),
+    rounds:         8,
+    memoryCost:     14,
+  }
 };
 
 // ── Args ──────────────────────────────────────────────────────────────────────
@@ -96,7 +98,7 @@ async function run() {
       },
     }));
 
-    const result = await auth.importUsers(chunk, { hash: HASH_CONFIG });
+    const result = await auth.importUsers(chunk, HASH_CONFIG);
 
     imported += result.successCount;
     failed   += result.failureCount;
