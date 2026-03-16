@@ -3,18 +3,23 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
   updatePassword,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, onSnapshot, query, where } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import {
+  doc, getDoc, setDoc, updateDoc, serverTimestamp,
+  collection, onSnapshot, query, where,
+} from 'firebase/firestore';
+import { auth, db, googleProvider } from '../firebase/config';
 
 const AuthContext = createContext(null);
 
-function parseFirebaseError(error) {
+// ── The professor's Google email — only this account can self-switch roles ──
+const PROFESSOR_EMAIL = 'jcesperanza@neu.edu.ph';
+
+export function parseFirebaseError(error) {
   const code = error?.code || '';
   const map = {
     'auth/invalid-email':          'The email address format is invalid.',
@@ -30,6 +35,8 @@ function parseFirebaseError(error) {
     'auth/missing-email':          'Please enter your ID number.',
     'auth/internal-error':         'An internal error occurred. Please try again.',
     'permission-denied':           'You do not have permission to perform this action.',
+    'auth/popup-closed-by-user':   'Sign-in popup was closed. Please try again.',
+    'auth/cancelled-popup-request':'Sign-in was cancelled. Please try again.',
   };
   if (map[code]) return map[code];
   if (error?.message) {
@@ -37,8 +44,6 @@ function parseFirebaseError(error) {
   }
   return 'An unexpected error occurred. Please try again.';
 }
-
-export { parseFirebaseError };
 
 const idToEmail = (idNumber) => `${idNumber.trim().replace(/\s/g, '')}@neu-lib.internal`;
 
@@ -48,28 +53,29 @@ export function AuthProvider({ children }) {
   const [loadingAuth,    setLoadingAuth]    = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
+
   // Student borrow state — persists across page navigations
   const [studentBorrowMap,  setStudentBorrowMap]  = useState({});
   const [studentHasOverdue, setStudentHasOverdue] = useState(false);
   const [borrowMapReady,    setBorrowMapReady]    = useState(false);
 
+  // ── Register (existing ID-number flow — unchanged) ──────────────────────────
   const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, role = 'student', password }) => {
     const email   = idToEmail(idNumber);
-    // qrToken is kept so the student QR code works for staff scanner check-in
     const qrToken = crypto.randomUUID().replace(/-/g, '');
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       await setDoc(doc(db, 'users', cred.user.uid), {
-        uid: cred.user.uid,
-        idNumber: idNumber.trim(),
+        uid:           cred.user.uid,
+        idNumber:      idNumber.trim(),
         qrToken,
-        lastName: lastName.trim().toUpperCase(),
-        firstName: firstName.trim().toUpperCase(),
+        lastName:      lastName.trim().toUpperCase(),
+        firstName:     firstName.trim().toUpperCase(),
         middleInitial: middleInitial ? middleInitial.trim().toUpperCase().replace(/\.+$/, '') : '',
-        course: course.trim().toUpperCase(),
-        college: college.trim().toUpperCase(),
+        course:        course.trim().toUpperCase(),
+        college:       college.trim().toUpperCase(),
         role,
-        createdAt: serverTimestamp(),
+        createdAt:     serverTimestamp(),
       });
       return cred;
     } catch (err) {
@@ -79,6 +85,7 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ── Login with ID + password (existing flow — unchanged) ────────────────────
   const login = async (idNumber, password) => {
     try {
       return await signInWithEmailAndPassword(auth, idToEmail(idNumber), password);
@@ -89,8 +96,60 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ── Google Sign-In (new — for professor account) ─────────────────────────────
+  const loginWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user   = result.user;
+
+      // Create or update their Firestore profile on first login
+      const ref  = doc(db, 'users', user.uid);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        // First-time Google login — create a minimal profile
+        // Default role: 'student' (regular user). Professor can switch to 'admin' via UI.
+        const nameParts = (user.displayName || '').split(' ');
+        const firstName = nameParts[0]?.toUpperCase() || '';
+        const lastName  = nameParts.slice(1).join(' ').toUpperCase() || '';
+        await setDoc(ref, {
+          uid:           user.uid,
+          email:         user.email,
+          firstName,
+          lastName,
+          idNumber:      '',           // Google users have no ID number
+          qrToken:       crypto.randomUUID().replace(/-/g, ''),
+          college:       '',
+          course:        '',
+          role:          'student',    // start as regular user
+          authProvider:  'google',
+          createdAt:     serverTimestamp(),
+        });
+      }
+      return result;
+    } catch (err) {
+      const friendly = new Error(parseFirebaseError(err));
+      friendly.code = err.code;
+      throw friendly;
+    }
+  };
+
+  // ── Role switch — only allowed for the professor's Google account ────────────
+  // Toggles between 'student' (regular user) and 'admin'.
+  // Protected: only the professor's own UID can call this, and Firestore rules
+  // only allow the special email to self-update role (see firestore.rules).
+  const switchRole = async () => {
+    if (!currentUser || !userProfile) return;
+    if (currentUser.email !== PROFESSOR_EMAIL) return; // hard guard in JS too
+    const newRole = userProfile.role === 'admin' ? 'student' : 'admin';
+    await updateDoc(doc(db, 'users', currentUser.uid), { role: newRole });
+    // refreshProfile will be triggered by the onSnapshot in useEffect
+  };
+
+  // ── Logout ───────────────────────────────────────────────────────────────────
   const logout = () => signOut(auth);
 
+  // ── Password update ──────────────────────────────────────────────────────────
   const updateUserPassword = async (newPassword) => {
     if (!auth.currentUser) throw new Error('Not authenticated.');
     try {
@@ -102,6 +161,7 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ── Fetch / refresh profile ──────────────────────────────────────────────────
   const fetchProfile = async (uid) => {
     setProfileLoading(true);
     try {
@@ -109,7 +169,6 @@ export function AuthProvider({ children }) {
       if (snap.exists()) {
         const data = snap.data();
         setUserProfile(data);
-        // Check if admin has flagged a password reset
         if (data.adminPasswordReset) setNeedsPasswordReset(true);
       }
     } finally {
@@ -117,13 +176,11 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Clear the admin reset flag after user has changed their password
   const clearPasswordResetFlag = async () => {
     if (!currentUser) return;
     try {
       await updateDoc(doc(db, 'users', currentUser.uid), {
-        adminPasswordReset: false,
-        adminPasswordResetAt: null,
+        adminPasswordReset: false, adminPasswordResetAt: null,
       });
       setNeedsPasswordReset(false);
     } catch (_) {}
@@ -131,12 +188,12 @@ export function AuthProvider({ children }) {
 
   const refreshProfile = () => { if (currentUser) return fetchProfile(currentUser.uid); };
 
-  // Live student borrow snapshot — starts when user logs in, clears on logout
+  // ── Live borrow snapshot for students ───────────────────────────────────────
   useEffect(() => {
     if (!currentUser || !userProfile || userProfile.role !== 'student') {
       setStudentBorrowMap({});
       setStudentHasOverdue(false);
-      setBorrowMapReady(userProfile?.role !== 'student'); // non-students are always "ready"
+      setBorrowMapReady(userProfile?.role !== 'student');
       return;
     }
     setBorrowMapReady(false);
@@ -173,7 +230,8 @@ export function AuthProvider({ children }) {
     return unsub;
   }, [currentUser, userProfile]);
 
-    useEffect(() => {
+  // ── Auth state listener ──────────────────────────────────────────────────────
+  useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) await fetchProfile(user.uid);
@@ -188,7 +246,10 @@ export function AuthProvider({ children }) {
       currentUser, userProfile, loadingAuth, profileLoading,
       needsPasswordReset, clearPasswordResetFlag,
       studentBorrowMap, setStudentBorrowMap, studentHasOverdue, borrowMapReady,
-      register, login, logout, refreshProfile, updateUserPassword, idToEmail,
+      register, login, loginWithGoogle, logout, refreshProfile,
+      updateUserPassword, idToEmail,
+      switchRole,
+      isProfessor: currentUser?.email === PROFESSOR_EMAIL,
     }}>
       {children}
     </AuthContext.Provider>
