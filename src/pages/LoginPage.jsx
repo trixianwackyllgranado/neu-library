@@ -63,14 +63,18 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogle = async () => {
+  const handleGoogle = async (e) => {
+    e?.preventDefault(); // Added to prevent accidental form submissions
     setError('');
     setGoogleLoading(true);
+    console.log("[LoginPage] Google Login button clicked.");
     try {
       await loginWithGoogle();
+      console.log("[LoginPage] Google Login successful! Redirecting to dashboard...");
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err.message);
+      console.error("[LoginPage] Caught Error from Google Login:", err);
+      setError(err.message || 'Failed to sign in with Google. Please try again.');
     } finally {
       setGoogleLoading(false);
     }

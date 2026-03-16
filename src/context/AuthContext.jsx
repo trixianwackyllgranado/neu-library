@@ -37,6 +37,8 @@ export function parseFirebaseError(error) {
     'permission-denied':           'You do not have permission to perform this action.',
     'auth/popup-closed-by-user':   'Sign-in popup was closed. Please try again.',
     'auth/cancelled-popup-request':'Sign-in was cancelled. Please try again.',
+    'auth/popup-blocked':          'Sign-in popup was blocked by your browser. Please allow popups for this site.',
+    'auth/unauthorized-domain':    'This domain is not authorized for Google Sign-In. Check your Firebase Console settings.',
   };
   if (map[code]) return map[code];
   if (error?.message) {
@@ -99,14 +101,17 @@ export function AuthProvider({ children }) {
   // ── Google Sign-In (new — for professor account) ─────────────────────────────
   const loginWithGoogle = async () => {
     try {
+      console.log("[AuthContext] Initiating Google Sign-In...");
       const result = await signInWithPopup(auth, googleProvider);
       const user   = result.user;
+      console.log("[AuthContext] Google Sign-In Success! UID:", user.uid);
 
       // Create or update their Firestore profile on first login
       const ref  = doc(db, 'users', user.uid);
       const snap = await getDoc(ref);
 
       if (!snap.exists()) {
+        console.log("[AuthContext] First-time Google user detected. Creating Firestore document...");
         // First-time Google login — create a minimal profile
         // Default role: 'student' (regular user). Professor can switch to 'admin' via UI.
         const nameParts = (user.displayName || '').split(' ');
@@ -125,11 +130,15 @@ export function AuthProvider({ children }) {
           authProvider:  'google',
           createdAt:     serverTimestamp(),
         });
+        console.log("[AuthContext] Firestore document created successfully.");
+      } else {
+        console.log("[AuthContext] Existing Google user profile found in Firestore.");
       }
       return result;
     } catch (err) {
+      console.error("[AuthContext] Google Sign-In Error Details:", err);
       const friendly = new Error(parseFirebaseError(err));
-      friendly.code = err.code;
+      friendly.code = err?.code;
       throw friendly;
     }
   };
