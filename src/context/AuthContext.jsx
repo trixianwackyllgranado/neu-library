@@ -9,7 +9,7 @@ import {
   reauthenticateWithCredential,
   EmailAuthProvider,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, onSnapshot, query, where } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
 const AuthContext = createContext(null);
@@ -48,6 +48,10 @@ export function AuthProvider({ children }) {
   const [loadingAuth,    setLoadingAuth]    = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
   const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
+  // Student borrow state — persists across page navigations
+  const [studentBorrowMap,  setStudentBorrowMap]  = useState({});
+  const [studentHasOverdue, setStudentHasOverdue] = useState(false);
+  const [borrowMapReady,    setBorrowMapReady]    = useState(false);
 
   const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, role = 'student', password }) => {
     const email   = idToEmail(idNumber);
@@ -127,7 +131,49 @@ export function AuthProvider({ children }) {
 
   const refreshProfile = () => { if (currentUser) return fetchProfile(currentUser.uid); };
 
+  // Live student borrow snapshot — starts when user logs in, clears on logout
   useEffect(() => {
+    if (!currentUser || !userProfile || userProfile.role !== 'student') {
+      setStudentBorrowMap({});
+      setStudentHasOverdue(false);
+      setBorrowMapReady(userProfile?.role !== 'student'); // non-students are always "ready"
+      return;
+    }
+    setBorrowMapReady(false);
+    const STATUS_PRIORITY = { active: 3, pending: 1 };
+    const unsub = onSnapshot(
+      query(collection(db, 'borrows'), where('userId', '==', currentUser.uid)),
+      snap => {
+        const map = {};
+        const now = new Date();
+        let overdueFound = false;
+        snap.docs.forEach(d => {
+          const b = d.data();
+          if (b.status !== 'returned' && b.status !== 'rejected' && b.status !== 'cancelled') {
+            const current = map[b.bookId];
+            const newP = STATUS_PRIORITY[b.status] || 0;
+            const oldP = STATUS_PRIORITY[current] || 0;
+            if (!current || newP > oldP) map[b.bookId] = b.status;
+          }
+          if (b.status === 'active') {
+            const due = b.dueDate?.toDate ? b.dueDate.toDate()
+              : b.dueDate instanceof Date ? b.dueDate
+              : typeof b.dueDate === 'string' ? new Date(b.dueDate)
+              : b.dueDate?.seconds ? new Date(b.dueDate.seconds * 1000)
+              : null;
+            if (due && due < now) overdueFound = true;
+          }
+        });
+        setStudentBorrowMap(map);
+        setStudentHasOverdue(overdueFound);
+        setBorrowMapReady(true);
+      },
+      () => { setBorrowMapReady(true); }
+    );
+    return unsub;
+  }, [currentUser, userProfile]);
+
+    useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) await fetchProfile(user.uid);
@@ -141,6 +187,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       currentUser, userProfile, loadingAuth, profileLoading,
       needsPasswordReset, clearPasswordResetFlag,
+      studentBorrowMap, setStudentBorrowMap, studentHasOverdue, borrowMapReady,
       register, login, logout, refreshProfile, updateUserPassword, idToEmail,
     }}>
       {children}

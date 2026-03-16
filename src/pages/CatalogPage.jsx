@@ -74,7 +74,7 @@ async function logBookActivity(action, book, user) {
 }
 
 export default function CatalogPage() {
-  const { userProfile, currentUser } = useAuth();
+  const { userProfile, currentUser, studentBorrowMap, setStudentBorrowMap, studentHasOverdue, borrowMapReady } = useAuth();
   const role      = userProfile?.role;
   const canEdit   = role === 'admin' || role === 'staff';
   const isAdmin   = role === 'admin';
@@ -126,9 +126,11 @@ export default function CatalogPage() {
   const [requesting,     setRequesting]     = useState(false);
   const [requestSuccess, setRequestSuccess] = useState('');
   const [requestError,   setRequestError]   = useState('');
-  const [myBorrowMap,    setMyBorrowMap]    = useState({});
   const [activeBookBorrowMap, setActiveBookBorrowMap] = useState({});
-  const [hasOverdueBooks, setHasOverdueBooks] = useState(false);
+  // myBorrowMap and hasOverdueBooks now come from AuthContext (persist across nav)
+  const myBorrowMap    = studentBorrowMap;
+  const setMyBorrowMap = setStudentBorrowMap;
+  const hasOverdueBooks = studentHasOverdue;
 
   // ── Loaders ───────────────────────────────────────────────────────────────
   // Refs for cross-collection derived state
@@ -173,12 +175,13 @@ export default function CatalogPage() {
     return unsub;
   }, []);
 
-  // Live borrows → recompute course data + student borrow map + active-per-book count
+  // Live borrows → staff/admin only (course data + active-per-book count)
+  // Students use AuthContext's studentBorrowMap instead (persists across page navigations)
   useEffect(() => {
+    if (isStudent) return; // students handled by AuthContext
     const unsub = onSnapshot(collection(db, 'borrows'), snap => {
       borrowsRefC.current = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       recomputeCourseData();
-      // Track active/overdue borrows per book for staff/admin safeguard
       const abMap = {};
       borrowsRefC.current.forEach(b => {
         if (b.bookId && (b.status === 'active' || b.status === 'pending')) {
@@ -186,26 +189,6 @@ export default function CatalogPage() {
         }
       });
       setActiveBookBorrowMap(abMap);
-      if (currentUser && isStudent) {
-        const map = {};
-        const now = new Date();
-        let overdueFound = false;
-        borrowsRefC.current.forEach(b => {
-          if (b.userId === currentUser.uid && b.status !== 'returned' && b.status !== 'rejected') {
-            map[b.bookId] = b.status;
-          }
-          if (b.userId === currentUser.uid && b.status === 'active') {
-            const due = b.dueDate?.toDate ? b.dueDate.toDate()
-              : b.dueDate instanceof Date ? b.dueDate
-              : typeof b.dueDate === 'string' ? new Date(b.dueDate)
-              : b.dueDate?.seconds ? new Date(b.dueDate.seconds * 1000)
-              : null;
-            if (due && due < now) overdueFound = true;
-          }
-        });
-        setMyBorrowMap(map);
-        setHasOverdueBooks(overdueFound);
-      }
     }, () => {});
     return unsub;
   }, [currentUser, isStudent]);
@@ -814,7 +797,8 @@ export default function CatalogPage() {
                   {!selectMode && (
                     <div className="flex gap-2 flex-wrap">
                       {isStudent && (
-                        borrowStatus === 'active'  ? <span className="badge-green badge">Borrowed</span>
+                        !borrowMapReady ? <span className="badge badge-gray text-[9px]" style={{opacity:0.5}}>•••</span>
+                        : borrowStatus === 'active'  ? <span className="badge-green badge">Borrowed</span>
                         : borrowStatus === 'pending' ? <span className="badge-gold badge" style={{whiteSpace:'nowrap',fontSize:9}}>⏳ Pending</span>
                         : unavailable ? <span className="badge-red badge">Unavailable</span>
                         : hasOverdueBooks ? <span className="badge-red badge text-[9px]">Overdue — Return First</span>
@@ -938,7 +922,8 @@ export default function CatalogPage() {
                       <td className="td">
                         <div className="flex items-center gap-2 flex-wrap">
                           {isStudent && (
-                            borrowStatus==='active' ? <span className="badge-green badge">Borrowed</span>
+                            !borrowMapReady ? <span className="badge badge-gray text-[9px]" style={{opacity:0.5}}>•••</span>
+                            : borrowStatus==='active' ? <span className="badge-green badge">Borrowed</span>
                             : borrowStatus==='pending' ? <span className="badge-gold badge" style={{whiteSpace:'nowrap',fontSize:9}}>⏳ Pending</span>
                             : unavailable ? <span className="badge-red badge">Unavailable</span>
                             : hasOverdueBooks ? (
