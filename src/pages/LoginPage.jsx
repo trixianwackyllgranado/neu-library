@@ -55,7 +55,7 @@ function PasswordResetModal({ onAcknowledge }) {
             <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '12px', padding: '14px 16px' }}>
               <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.1em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 700 }}>What happened</p>
               <p style={{ ...PP, fontSize: '13px', color: 'var(--text-body)', lineHeight: 1.65 }}>
-                The library system was updated to support <strong>institutional email login</strong>. As part of this update, all passwords were reset.
+                The library system has been updated for <strong>improved security and performance</strong>. As part of this upgrade, all user passwords have been reset.
               </p>
             </div>
 
