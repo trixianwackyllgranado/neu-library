@@ -281,6 +281,13 @@ export default function CatalogPage() {
       setRequesting(false);
       return;
     }
+    // Prevent duplicate requests — block if already active or pending for this book
+    const existingStatus = myBorrowMap[requestBook.id];
+    if (existingStatus === 'pending' || existingStatus === 'active') {
+      setRequestError('You already have an active or pending request for this book.');
+      setRequesting(false);
+      return;
+    }
     try {
       if ((requestBook.availableCopies ?? 0) <= 0) { setRequestError('No copies available at this time.'); setRequesting(false); return; }
       await addDoc(collection(db, 'borrows'), {

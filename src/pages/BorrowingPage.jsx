@@ -212,9 +212,12 @@ export default function BorrowingPage() {
   const handleApprove = async (dueDate) => {
     if (!approving) return;
     setApproveSaving(true);
+    // Set to end of day (23:59:59) so the due date doesn't expire early due to UTC vs local time
+    const dueDateEndOfDay = new Date(dueDate);
+    dueDateEndOfDay.setHours(23, 59, 59, 999);
     try {
       await updateDoc(doc(db, 'borrows', approving.id), {
-        status: 'active', dueDate: Timestamp.fromDate(new Date(dueDate)),
+        status: 'active', dueDate: Timestamp.fromDate(dueDateEndOfDay),
         approvedBy: currentUser.uid, approvedAt: serverTimestamp(),
       });
       if (approving.bookId) {
@@ -346,7 +349,7 @@ export default function BorrowingPage() {
       if ((bookSnap.data().availableCopies || 0) <= 0) throw new Error('No available copies.');
       await addDoc(collection(db, 'borrows'), {
         userId: newBorrow.selectedUserId, bookId: newBorrow.selectedBookId,
-        bookTitle: newBorrow.selectedBookTitle, dueDate: Timestamp.fromDate(new Date(newBorrow.dueDate)),
+        bookTitle: newBorrow.selectedBookTitle, dueDate: (() => { const d = new Date(newBorrow.dueDate); d.setHours(23,59,59,999); return Timestamp.fromDate(d); })(),
         borrowDate: serverTimestamp(), status: 'active', walkUp: true, processedBy: currentUser.uid,
       });
       await updateDoc(doc(db, 'books', newBorrow.selectedBookId), {
