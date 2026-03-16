@@ -654,6 +654,17 @@ export default function CatalogPage() {
         </div>
       )}
 
+      {/* Overdue warning banner */}
+      {isStudent && hasOverdueBooks && (
+        <div className="mb-4 flex items-start gap-3 px-4 py-3" style={{background:'var(--red-soft)',border:'1px solid var(--red-border)',borderRadius:10}}>
+          <div className="shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold mt-0.5" style={{background:'var(--red)',color:'var(--bg-base)'}}>!</div>
+          <div>
+            <p className="text-sm font-semibold" style={{color:'var(--red)'}}>Borrowing Suspended — Overdue Book(s)</p>
+            <p className="text-xs mt-0.5" style={{color:'var(--text-muted)'}}>You have one or more overdue books. Please return them at the library desk. Borrowing will be re-enabled once all overdue books are marked as returned.</p>
+          </div>
+        </div>
+      )}
+
       {/* Search + Filter */}
       <div className="mb-3 flex flex-col gap-3">
         {/* Search + filter toggle row */}
@@ -777,7 +788,7 @@ export default function CatalogPage() {
                         : borrowStatus === 'pending' ? <span className="badge-gold badge">Pending Approval</span>
                         : unavailable ? <span className="badge-red badge">Unavailable</span>
                         : hasOverdueBooks ? <span className="badge-red badge text-[9px]">Overdue — Return First</span>
-                        : <button className="btn-primary py-2 px-4 text-xs w-full" onClick={() => { setRequestBook(book); setRequestError(''); setRequestSuccess(''); }}>Request Borrow</button>
+                        : <button className="btn-primary py-2 px-4 text-xs w-full" onClick={() => { if(hasOverdueBooks)return; setRequestBook(book); setRequestError(''); setRequestSuccess(''); }}>Request Borrow</button>
                       )}
                       {canEdit && (
                         <>
@@ -900,7 +911,16 @@ export default function CatalogPage() {
                             borrowStatus==='active' ? <span className="badge-green badge">Borrowed</span>
                             : borrowStatus==='pending' ? <span className="badge-gold badge">Pending Approval</span>
                             : unavailable ? <span className="badge-red badge">Unavailable</span>
-                            : <button className="btn-primary py-1 px-3 text-[10px]" onClick={()=>{setRequestBook(book);setRequestError('');setRequestSuccess('');}}>Request Borrow</button>
+                            : hasOverdueBooks ? (
+                              <span
+                                className="badge"
+                                title="You have overdue books. Return them before borrowing new ones."
+                                style={{background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',cursor:'not-allowed',whiteSpace:'nowrap'}}
+                              >
+                                ⚠ Overdue — Return First
+                              </span>
+                            )
+                            : <button className="btn-primary py-1 px-3 text-[10px]" onClick={()=>{if(hasOverdueBooks)return;setRequestBook(book);setRequestError('');setRequestSuccess('');}}>Request Borrow</button>
                           )}
                           {canEdit && !selectMode && (
                             <>
