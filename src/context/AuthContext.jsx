@@ -10,16 +10,16 @@ import {
 } from 'firebase/auth';
 import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
-  collection, onSnapshot, query, where,
+  collection, onSnapshot, query, where, getDocs,
 } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase/config';
 
 const AuthContext = createContext(null);
 
-// ── The professor's Google email — only this account can self-switch roles ──
+// ── The professor's Google email — only these accounts can self-switch roles ──
 const ALLOWED_ADMIN_EMAILS = [
-  'jcesperanza@neu.edu.ph', 
-  'trixianwackyll.granado@neu.edu.ph' 
+  'jcesperanza@neu.edu.ph',
+  'trixianwackyll.granado@neu.edu.ph'
 ];
 
 export function parseFirebaseError(error) {
@@ -59,12 +59,11 @@ export function AuthProvider({ children }) {
   const [profileLoading, setProfileLoading] = useState(false);
   const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
 
-  // Student borrow state — persists across page navigations
   const [studentBorrowMap,  setStudentBorrowMap]  = useState({});
   const [studentHasOverdue, setStudentHasOverdue] = useState(false);
   const [borrowMapReady,    setBorrowMapReady]    = useState(false);
 
-  // ── Register (existing ID-number flow — unchanged) ──────────────────────────
+  // ── Register (ID-number flow) ───────────────────────────────────────────────
   const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, role = 'student', password }) => {
     const email   = idToEmail(idNumber);
     const qrToken = crypto.randomUUID().replace(/-/g, '');
@@ -90,7 +89,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Login with ID + password (existing flow — unchanged) ────────────────────
+  // ── Login with ID + password ────────────────────────────────────────────────
   const login = async (idNumber, password) => {
     try {
       return await signInWithEmailAndPassword(auth, idToEmail(idNumber), password);
@@ -101,84 +100,95 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Google Sign-In (new — for professor account) ─────────────────────────────
+  // ── Google Sign-In — merges with existing student profile via @neu.edu.ph email
   const loginWithGoogle = async () => {
+    let googleUser = null;
     try {
-      console.log("[AuthContext] Initiating Google Sign-In...");
       const result = await signInWithPopup(auth, googleProvider);
-      const user   = result.user;
-      console.log("[AuthContext] Google Sign-In Success! UID:", user.uid);
+      googleUser = result.user;
 
-      // 🔒 SECURITY: Only allow @neu.edu.ph emails
-      if (!user.email?.endsWith('@neu.edu.ph')) {
-        console.error("[AuthContext] Blocked non-NEU email:", user.email);
-        // Sign them out immediately
+      // 🔒 Block non-NEU emails with a clear, specific error message
+      if (!googleUser.email?.endsWith('@neu.edu.ph')) {
         await signOut(auth);
-        throw new Error('Access Denied: Only NEU institutional emails (@neu.edu.ph) are permitted.');
+        const err = new Error('NEU_ONLY');
+        err.code = 'auth/neu-only';
+        throw err;
       }
 
-      // Create or update their Firestore profile on first login
-      const ref  = doc(db, 'users', user.uid);
-      const snap = await getDoc(ref);
+      // Step 1: Check if there's already a Firestore doc under this Google UID
+      const directRef  = doc(db, 'users', googleUser.uid);
+      const directSnap = await getDoc(directRef);
 
-      if (!snap.exists()) {
-        console.log("[AuthContext] First-time Google user detected. Creating Firestore document...");
-        // First-time Google login — create a minimal profile
-        // Default role: 'student' (regular user). Professor can switch to 'admin' via UI.
-        const nameParts = (user.displayName || '').split(' ');
-        const firstName = nameParts[0]?.toUpperCase() || '';
-        const lastName  = nameParts.slice(1).join(' ').toUpperCase() || '';
-        await setDoc(ref, {
-          uid:           user.uid,
-          email:         user.email,
-          firstName,
-          lastName,
-          idNumber:      '',           // Google users have no ID number
-          qrToken:       crypto.randomUUID().replace(/-/g, ''),
-          college:       '',
-          course:        '',
-          role:          'student',    // start as regular user
-          authProvider:  'google',
-          createdAt:     serverTimestamp(),
+      if (directSnap.exists()) {
+        // Already fully merged — nothing else to do
+        return result;
+      }
+
+      // Step 2: Find the existing student profile by their @neu.edu.ph email field
+      // (This was stored by add-institutional-emails.js)
+      const emailSnap = await getDocs(
+        query(collection(db, 'users'), where('email', '==', googleUser.email))
+      );
+
+      if (!emailSnap.empty) {
+        // Found the existing student profile (it lives under the old ID-based UID)
+        const existingData = emailSnap.docs[0].data();
+
+        // Write the SAME profile data under the Google UID so the auth-state
+        // listener can find it going forward. All borrow records, QR code, etc.
+        // remain intact because the data is directly copied over.
+        await setDoc(directRef, {
+          ...existingData,
+          uid:            googleUser.uid,
+          authProvider:   'google',
+          googleLinkedAt: serverTimestamp(),
         });
-        console.log("[AuthContext] Firestore document created successfully.");
-      } else {
-        console.log("[AuthContext] Existing Google user profile found in Firestore.");
+
+        console.log('[AuthContext] Merged Google login with existing student profile.');
+        return result;
       }
+
+      // Step 3: Truly brand-new user (no existing record) — create a minimal profile
+      const nameParts = (googleUser.displayName || '').split(' ');
+      await setDoc(directRef, {
+        uid:          googleUser.uid,
+        email:        googleUser.email,
+        firstName:    nameParts[0]?.toUpperCase() || '',
+        lastName:     nameParts.slice(1).join(' ').toUpperCase() || '',
+        idNumber:     '',
+        qrToken:      crypto.randomUUID().replace(/-/g, ''),
+        college:      '',
+        course:       '',
+        role:         'student',
+        authProvider: 'google',
+        createdAt:    serverTimestamp(),
+      });
+
       return result;
     } catch (err) {
-      console.error("[AuthContext] Google Sign-In Error Details:", err);
-      const friendly = new Error(parseFirebaseError(err));
-      friendly.code = err?.code;
+      const msg = err.code === 'auth/neu-only'
+        ? 'Access Denied: This library system is only for NEU students and staff. Please use your @neu.edu.ph school email to continue with Google.'
+        : parseFirebaseError(err);
+      const friendly = new Error(msg);
+      friendly.code  = err?.code;
       throw friendly;
     }
   };
 
-  // ── Role switch — Bulletproof version ────────────
+  // ── Role switch ──────────────────────────────────────────────────────────────
   const switchRole = async () => {
     try {
       if (!currentUser || !userProfile) return;
-      
-      // 1. Ensure only authorized emails can do this
       if (!ALLOWED_ADMIN_EMAILS.includes(currentUser.email)) {
         alert("Unauthorized: Your email does not have permission to switch roles.");
         return;
       }
-
       const newRole = userProfile.role === 'admin' ? 'student' : 'admin';
-      console.log(`[AuthContext] Switching role to: ${newRole}...`);
-
-      // 2. Update Firestore Database
       await updateDoc(doc(db, 'users', currentUser.uid), { role: newRole });
-      console.log(`[AuthContext] Firestore updated successfully to ${newRole}!`);
-
-      // 3. IMMEDIATELY update React state so the UI changes without needing a page refresh
       setUserProfile(prev => ({ ...prev, role: newRole }));
-
     } catch (err) {
       console.error("[AuthContext] Error switching role:", err);
-      // If Firestore blocks the test email, this alert will catch it!
-      alert(`Role Switch Failed: ${err.message}\n\nIf this says "permission-denied", you need to whitelist your test email in Firestore Security Rules!`);
+      alert(`Role Switch Failed: ${err.message}`);
     }
   };
 
@@ -206,6 +216,8 @@ export function AuthProvider({ children }) {
         const data = snap.data();
         setUserProfile(data);
         if (data.adminPasswordReset) setNeedsPasswordReset(true);
+      } else {
+        setUserProfile(null);
       }
     } finally {
       setProfileLoading(false);
