@@ -17,7 +17,10 @@ import { auth, db, googleProvider } from '../firebase/config';
 const AuthContext = createContext(null);
 
 // ── The professor's Google email — only this account can self-switch roles ──
-const PROFESSOR_EMAIL = 'jcesperanza@neu.edu.ph';
+const ALLOWED_ADMIN_EMAILS = [
+  'jcesperanza@neu.edu.ph', 
+  'trixianwackyll.granado@neu.edu.ph' 
+];
 
 export function parseFirebaseError(error) {
   const code = error?.code || '';
@@ -149,7 +152,7 @@ export function AuthProvider({ children }) {
   // only allow the special email to self-update role (see firestore.rules).
   const switchRole = async () => {
     if (!currentUser || !userProfile) return;
-    if (currentUser.email !== PROFESSOR_EMAIL) return; // hard guard in JS too
+    if (!ALLOWED_ADMIN_EMAILS.includes(currentUser.email)) return; // hard guard in JS too
     const newRole = userProfile.role === 'admin' ? 'student' : 'admin';
     await updateDoc(doc(db, 'users', currentUser.uid), { role: newRole });
     // refreshProfile will be triggered by the onSnapshot in useEffect
@@ -258,7 +261,7 @@ export function AuthProvider({ children }) {
       register, login, loginWithGoogle, logout, refreshProfile,
       updateUserPassword, idToEmail,
       switchRole,
-      isProfessor: currentUser?.email === PROFESSOR_EMAIL,
+      isProfessor: ALLOWED_ADMIN_EMAILS.includes(currentUser?.email),
     }}>
       {children}
     </AuthContext.Provider>
