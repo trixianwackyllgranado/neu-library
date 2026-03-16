@@ -194,7 +194,7 @@ export default function StudentDashboard() {
 
       {/* Recent Borrows */}
       <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:14, overflow:'hidden', boxShadow:'var(--shadow-card)' }}>
-        <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--divider)', display:'flex', alignItems:'center', justify-content:'space-between' }}>
+        <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--divider)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <p style={{...PP,fontSize:16,fontWeight:600,color:'var(--text-primary)'}}>Recent Borrows</p>
           <button onClick={() => navigate('/borrows')}
             style={{...PP,fontSize:13,fontWeight:600,background:'none',border:'none',color:'var(--gold)',cursor:'pointer'}}>
