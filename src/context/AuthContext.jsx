@@ -3,7 +3,6 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
   signOut,
   onAuthStateChanged,
   updatePassword,
@@ -12,7 +11,7 @@ import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
   collection, onSnapshot, query, where, getDocs,
 } from 'firebase/firestore';
-import { auth, db, googleProvider } from '../firebase/config';
+import { auth, db } from '../firebase/config';
 
 const AuthContext = createContext(null);
 
@@ -102,97 +101,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Google Sign-In — merges with existing student profile via @neu.edu.ph email
-  const loginWithGoogle = async () => {
-    let googleUser = null;
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      googleUser = result.user;
 
-      // 🔒 Block non-NEU emails with a clear, specific error message
-      if (!googleUser.email?.endsWith('@neu.edu.ph')) {
-        await signOut(auth);
-        const err = new Error('NEU_ONLY');
-        err.code = 'auth/neu-only';
-        throw err;
-      }
 
-      // Step 1: Check if there's already a Firestore doc under this Google UID
-      const directRef  = doc(db, 'users', googleUser.uid);
-      const directSnap = await getDoc(directRef);
 
-      if (directSnap.exists()) {
-        // Already fully merged — nothing else to do
-        return result;
-      }
-
-      // Step 2: Find the existing student profile by their @neu.edu.ph email field
-      // (This was stored by add-institutional-emails.js)
-      const emailSnap = await getDocs(
-        query(collection(db, 'users'), where('email', '==', googleUser.email))
-      );
-
-      if (!emailSnap.empty) {
-        // Found the existing student profile (it lives under the old ID-based UID)
-        const existingData = emailSnap.docs[0].data();
-
-        // Write the SAME profile data under the Google UID so the auth-state
-        // listener can find it going forward. All borrow records, QR code, etc.
-        // remain intact because the data is directly copied over.
-        await setDoc(directRef, {
-          ...existingData,
-          uid:            googleUser.uid,
-          authProvider:   'google',
-          googleLinkedAt: serverTimestamp(),
-        });
-
-        console.log('[AuthContext] Merged Google login with existing student profile.');
-        return result;
-      }
-
-      // Step 3: Truly brand-new user (no existing record) — create a minimal profile
-      const nameParts = (googleUser.displayName || '').split(' ');
-      await setDoc(directRef, {
-        uid:          googleUser.uid,
-        email:        googleUser.email,
-        firstName:    nameParts[0]?.toUpperCase() || '',
-        lastName:     nameParts.slice(1).join(' ').toUpperCase() || '',
-        idNumber:     '',
-        qrToken:      crypto.randomUUID().replace(/-/g, ''),
-        college:      '',
-        course:       '',
-        role:         'student',
-        authProvider: 'google',
-        createdAt:    serverTimestamp(),
-      });
-
-      return result;
-    } catch (err) {
-      const msg = err.code === 'auth/neu-only'
-        ? 'Access Denied: This library system is only for NEU students and staff. Please use your @neu.edu.ph school email to continue with Google.'
-        : parseFirebaseError(err);
-      const friendly = new Error(msg);
-      friendly.code  = err?.code;
-      throw friendly;
-    }
-  };
-
-  // ── Role switch ──────────────────────────────────────────────────────────────
-  const switchRole = async () => {
-    try {
-      if (!userProfile?.uid) return;
-      if (!ALLOWED_ADMIN_EMAILS.includes(currentUser.email)) {
-        alert("Unauthorized: Your email does not have permission to switch roles.");
-        return;
-      }
-      const newRole = userProfile.role === 'admin' ? 'student' : 'admin';
-      await updateDoc(doc(db, 'users', userProfile.uid), { role: newRole });
-      setUserProfile(prev => ({ ...prev, role: newRole }));
-    } catch (err) {
-      console.error("[AuthContext] Error switching role:", err);
-      alert(`Role Switch Failed: ${err.message}`);
-    }
-  };
 
   // ── Logout ───────────────────────────────────────────────────────────────────
   const logout = () => signOut(auth);
@@ -214,68 +125,17 @@ export function AuthProvider({ children }) {
   // do an email-based fallback for Google users if their Firestore doc hasn't
   // been written yet (race condition between signInWithPopup resolving and our
   // loginWithGoogle setDoc completing).
-  const fetchProfile = async (uid, userObj = null) => {
+  const fetchProfile = async (uid) => {
     setProfileLoading(true);
     try {
       const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
         const data = snap.data();
-        if (data.linkedUid) {
-          // This is a Google pointer account. Fetch the real, unified account.
-          const realSnap = await getDoc(doc(db, 'users', data.linkedUid));
-          if (realSnap.exists()) {
-            const realData = realSnap.data();
-            setUserProfile({ ...realData, uid: data.linkedUid });
-            if (realData.adminPasswordReset) setNeedsPasswordReset(true);
-            return;
-          }
-        } else if (data.authProvider === 'google' && data.email) {
-          // REPAIR: Found a Google doc without a linkedUid. Try to re-link.
-          const email = data.email.toLowerCase();
-          const emailSnap = await getDocs(
-            query(collection(db, 'users'), where('email', '==', email))
-          );
-          // Find the doc that is NOT this doc and has no linkedUid (the root doc)
-          const rootDoc = emailSnap.docs.find(d => d.id !== uid && !d.data().linkedUid);
-          if (rootDoc) {
-            await updateDoc(doc(db, 'users', uid), { linkedUid: rootDoc.id });
-            const rootData = rootDoc.data();
-            setUserProfile({ ...rootData, uid: rootDoc.id });
-            if (rootData.adminPasswordReset) setNeedsPasswordReset(true);
-            return;
-          }
-        }
-
-        // This is the real account
-        setUserProfile({ ...data, uid: uid });
+        setUserProfile({ ...data, uid });
         if (data.adminPasswordReset) setNeedsPasswordReset(true);
-        return;
+      } else {
+        setUserProfile(null);
       }
-
-      // ── Fallback: Google user whose Firestore doc hasn't been written yet ──
-      const email = userObj?.email?.toLowerCase();
-      if (email?.endsWith('@neu.edu.ph')) {
-        const emailSnap = await getDocs(
-          query(collection(db, 'users'), where('email', '==', email))
-        );
-        if (!emailSnap.empty) {
-          const existingDoc = emailSnap.docs[0];
-          const existingData = existingDoc.data();
-          const directRef   = doc(db, 'users', uid);
-          // Write a POINTER doc so future lookups instantly resolve to the single, merged profile.
-          await setDoc(directRef, {
-            linkedUid:      existingDoc.id, // Use the real document ID (e.g. student ID)
-            authProvider:   'google',
-            email:          email,
-            googleLinkedAt: serverTimestamp(),
-          });
-          setUserProfile({ ...existingData, uid: existingDoc.id }); // The unified profile
-          console.log("[AuthContext] Linked Google user to root:", existingDoc.id);
-          return;
-        }
-      }
-
-      setUserProfile(null);
     } finally {
       setProfileLoading(false);
     }
@@ -340,7 +200,7 @@ export function AuthProvider({ children }) {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       try {
-        if (user) await fetchProfile(user.uid, user);
+        if (user) await fetchProfile(user.uid);
         else setUserProfile(null);
       } catch (err) {
         console.error("[AuthContext] Auth state error:", err);
@@ -356,10 +216,8 @@ export function AuthProvider({ children }) {
       currentUser, userProfile, loadingAuth, profileLoading,
       needsPasswordReset, clearPasswordResetFlag,
       studentBorrowMap, setStudentBorrowMap, studentHasOverdue, borrowMapReady,
-      register, login, loginWithGoogle, logout, refreshProfile,
+      register, login, logout, refreshProfile,
       updateUserPassword, idToEmail,
-      switchRole,
-      isProfessor: ALLOWED_ADMIN_EMAILS.includes(currentUser?.email),
       effectiveId: userProfile?.uid || currentUser?.uid,
     }}>
       {children}

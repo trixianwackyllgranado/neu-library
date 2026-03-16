@@ -3,7 +3,7 @@
 // Only add the two new lines marked with // NEW — everything else stays identical.
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth'; // NEW: add GoogleAuthProvider
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -18,4 +18,3 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 export const auth     = getAuth(app);
 export const db       = getFirestore(app);
-export const googleProvider = new GoogleAuthProvider(); // NEW

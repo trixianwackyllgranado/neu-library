@@ -17,16 +17,7 @@ function formatId(raw) {
   return `${d.slice(0,2)}-${d.slice(2,7)}-${d.slice(7)}`;
 }
 
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-    </svg>
-  );
-}
+
 
 // One-time modal: shown until user clicks Acknowledge
 function PasswordResetModal({ onAcknowledge }) {
@@ -77,13 +68,7 @@ function PasswordResetModal({ onAcknowledge }) {
               <p style={{ ...MONO, fontSize: '15px', fontWeight: 700, color: 'var(--gold)', marginTop: '8px', textAlign: 'center', letterSpacing: '0.06em' }}>24-12345-678</p>
             </div>
 
-            {/* Google login limitation */}
-            <div style={{ background: 'var(--red-soft)', border: '1px solid var(--red-border)', borderRadius: '12px', padding: '14px 16px' }}>
-              <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.1em', color: 'var(--red)', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 700 }}>Important: Google Login</p>
-              <p style={{ ...PP, fontSize: '13px', color: 'var(--text-body)', lineHeight: 1.65 }}>
-                <strong>Continue with Google</strong> is currently for new accounts only. Existing users <strong>MUST</strong> use their ID and Password to access their original data.
-              </p>
-            </div>
+
 
           </div>
 
@@ -109,7 +94,7 @@ function PasswordResetModal({ onAcknowledge }) {
 }
 
 export default function LoginPage() {
-  const { login, loginWithGoogle } = useAuth();
+  const { login } = useAuth();
   const navigate   = useNavigate();
   const { dark, toggle } = useTheme();
 
@@ -121,7 +106,7 @@ export default function LoginPage() {
   const [password,      setPassword]      = useState('');
   const [error,         setError]         = useState('');
   const [loading,       setLoading]       = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+
   const [showPw,        setShowPw]        = useState(false);
 
   const handleAcknowledge = () => {
@@ -152,19 +137,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogle = async (e) => {
-    e?.preventDefault();
-    setError('');
-    setGoogleLoading(true);
-    try {
-      await loginWithGoogle();
-      navigate('/dashboard', { replace: true });
-    } catch (err) {
-      setError(err.message || 'Failed to sign in with Google. Please try again.');
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
+
 
   return (
     <>
@@ -255,44 +228,15 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <button type="submit" disabled={loading || googleLoading}
+                  <button type="submit" disabled={loading}
                     style={{ width: '100%', padding: '13px', borderRadius: '10px', marginTop: '4px', background: loading ? 'var(--surface)' : 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.65 : 1, ...MONO, fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, transition: 'all 0.15s' }}>
                     {loading ? 'Signing In...' : 'Sign In'}
                   </button>
                 </form>
 
-                {/* Divider */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
-                  <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
-                  <span style={{ ...PP, fontSize: 12, color: 'var(--text-dim)' }}>or</span>
-                  <div style={{ flex: 1, height: 1, background: 'var(--divider)' }} />
-                </div>
 
-                {/* Google Sign-In */}
-                <button
-                  type="button"
-                  onClick={handleGoogle}
-                  disabled={loading || googleLoading}
-                  style={{
-                    width: '100%', padding: '12px 14px', borderRadius: '10px',
-                    background: 'var(--surface)', border: '1px solid var(--card-border)',
-                    color: 'var(--text-primary)', cursor: googleLoading ? 'not-allowed' : 'pointer',
-                    opacity: googleLoading ? 0.65 : 1,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                    ...PP, fontSize: '14px', fontWeight: 500, transition: 'all 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!googleLoading) e.currentTarget.style.background = 'var(--surface-hover)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; }}
-                >
-                  <GoogleIcon />
-                  {googleLoading ? 'Signing in...' : 'Continue with Google'}
-                </button>
 
-                {/* Google hint */}
-                <p style={{ ...MONO, fontSize: '10px', color: 'var(--red)', textAlign: 'center', marginTop: '10px', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Existing users: Please use ID and Password.<br/>
-                  <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>Google is currently for new accounts only.</span>
-                </p>
+
 
                 <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--divider)', textAlign: 'center' }}>
                   <p style={{ ...PP, fontSize: '14px', color: 'var(--text-body)' }}>

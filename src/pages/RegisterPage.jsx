@@ -425,7 +425,7 @@ export default function RegisterPage() {
                   onFocus={onFocus} onBlur={onBlur}
                   autoComplete="email"
                 />
-                <Hint>Optional. Use your @neu.edu.ph email to also enable Google Sign-In.</Hint>
+                <Hint>Optional. Enter your @neu.edu.ph email for library records.</Hint>
               </div>
 
               {/* Password */}
