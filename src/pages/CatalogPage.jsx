@@ -194,8 +194,9 @@ export default function CatalogPage() {
           if (b.userId === currentUser.uid && b.status !== 'returned' && b.status !== 'rejected') {
             map[b.bookId] = b.status;
           }
-          if (b.userId === currentUser.uid && b.status === 'active' && b.dueDate?.toDate && b.dueDate.toDate() < now) {
-            overdueFound = true;
+          if (b.userId === currentUser.uid && b.status === 'active') {
+            const due = b.dueDate?.toDate ? b.dueDate.toDate() : (b.dueDate instanceof Date ? b.dueDate : null);
+            if (due && due < now) overdueFound = true;
           }
         });
         setMyBorrowMap(map);

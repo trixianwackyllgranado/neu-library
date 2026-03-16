@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import {
   collection, query, where, onSnapshot, addDoc, updateDoc,
-  doc, serverTimestamp, orderBy, getDoc, getDocs
+  doc, serverTimestamp, orderBy, getDoc, getDocs, Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
@@ -207,7 +207,7 @@ export default function BorrowingPage() {
     setApproveSaving(true);
     try {
       await updateDoc(doc(db, 'borrows', approving.id), {
-        status: 'active', dueDate: new Date(dueDate),
+        status: 'active', dueDate: Timestamp.fromDate(new Date(dueDate)),
         approvedBy: currentUser.uid, approvedAt: serverTimestamp(),
       });
       if (approving.bookId) {
@@ -339,7 +339,7 @@ export default function BorrowingPage() {
       if ((bookSnap.data().availableCopies || 0) <= 0) throw new Error('No available copies.');
       await addDoc(collection(db, 'borrows'), {
         userId: newBorrow.selectedUserId, bookId: newBorrow.selectedBookId,
-        bookTitle: newBorrow.selectedBookTitle, dueDate: new Date(newBorrow.dueDate),
+        bookTitle: newBorrow.selectedBookTitle, dueDate: Timestamp.fromDate(new Date(newBorrow.dueDate)),
         borrowDate: serverTimestamp(), status: 'active', walkUp: true, processedBy: currentUser.uid,
       });
       await updateDoc(doc(db, 'books', newBorrow.selectedBookId), {

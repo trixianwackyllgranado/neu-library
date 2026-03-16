@@ -73,7 +73,10 @@ export default function StudentDashboard() {
 
   const now      = new Date();
   const active   = borrows.filter(b=>b.status==='active');
-  const overdue  = active.filter(b=>b.dueDate?.toDate ? b.dueDate.toDate()<now : false);
+  const overdue  = active.filter(b => {
+    const due = b.dueDate?.toDate ? b.dueDate.toDate() : (b.dueDate instanceof Date ? b.dueDate : null);
+    return due ? due < now : false;
+  });
   const pending  = borrows.filter(b=>b.status==='pending');
 
   const fmtElapsed = (s) => {
@@ -204,7 +207,8 @@ export default function StudentDashboard() {
               </thead>
               <tbody>
                 {borrows.slice(0,6).map(b => {
-                  const od = b.status==='active' && b.dueDate?.toDate ? b.dueDate.toDate()<now : false;
+                  const _due = b.dueDate?.toDate ? b.dueDate.toDate() : (b.dueDate instanceof Date ? b.dueDate : null);
+                  const od = b.status==='active' && _due ? _due < now : false;
                   return (
                     <tr key={b.id} style={{ transition:'background 0.12s' }}
                       onMouseEnter={e=>e.currentTarget.style.background='var(--surface-hover)'}
