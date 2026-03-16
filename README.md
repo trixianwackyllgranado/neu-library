@@ -12,30 +12,29 @@ Granado, Trixian Wackyll C — 2BSIT-5 — Academic Year 2025–2026
 - [Full Documentation (Detailed Manual)](https://docs.google.com/document/d/1itbqZc4-17EsljgMnfr4uOMbAT7ww3SjBoMi5ls2tlc/edit?usp=sharing)
 
 > [!IMPORTANT]
-> **Project Status & Limitations (v2.1 Update)**
-> - **Google Sign-In**: While implemented, "Continue with Google" currently creates a *new* account. Linking existing accounts to Google via institutional email is not yet live. Existing users (Students/Staff) **must** use their ID and Password.
-> - **Special Admin Access**: The role-switching feature is currently restricted to verified administrative emails (e.g., `jcesperanza@neu.edu.ph`).
+> **Evaluation Instructions for Professor**
+> - **Google Sign-In**: "Continue with Google" is currently for new account registration only. **Do not use your institutional email to log in to existing test data.**
+> - **Hybrid Dashboard (Scrapped)**: The feature to switch between Student and Admin roles on a single account has been removed. Due to the project's architecture, users must log in with the specific role accounts provided below.
+> - **Action Required**: Please use the **Test Accounts** table below to evaluate the different roles (Student, Staff, Admin).
 
 ---
 
 ## Core Requirements & Features
 
 ### 1. Unified Authentication
-- **ID & Password**: Primary method for existing users to prevent account duplication.
-- **Google Sign-In**: Supported for new @neu.edu.ph accounts (Registration and auto-naming).
+- **ID & Password**: The primary and only supported method for accessing pre-configured test data.
+- **Google Sign-In**: Functional for new user registration only.
 
 ### 2. Role‑Based Access Control (RBAC)
 - **Regular User (Student)**: 
+  - Login via Student Test Account.
   - Personalized greeting: "Welcome to NEU Library!"
   - Personal library dashboard with QR code and borrow history.
-- **Admin / Professor**:
-  - Secure authorization to switch between Student and Admin views safely.
+- **Admin**:
+  - Login via Admin Test Account.
   - Interactive dashboard with visitor statistics in cards.
-  - **Statistics Filtering**: Stats can be filtered by:
-    - Reason for visit
-    - College
-    - Employee Type (Teacher/Staff vs Student)
-  - Time-range filtering: View stats by Day, Week, or custom Date Range.
+  - **Statistics Filtering**: Stats can be filtered by Reason, College, and Employee Type.
+  - **Time Range**: Filter by Day, Week, or custom Date Range.
 
 ---
 
