@@ -31,8 +31,6 @@ function StatusBadge({ status, isOverdue }) {
   return <span style={{...PP,fontSize:11,fontWeight:600,padding:'3px 10px',borderRadius:20,background:t.bg,border:`1px solid ${t.border}`,color:t.color}}>{t.label}</span>;
 }
 
-
-
 function getGreeting(firstName) {
   const hour = new Date().getHours();
   const name = firstName || 'there';
@@ -47,7 +45,8 @@ function getGreeting(firstName) {
 }
 
 export default function StudentDashboard() {
-  const { userProfile, currentUser, needsPasswordReset, clearPasswordResetFlag } = useAuth();
+  // 👉 ADDED switchRole HERE
+  const { userProfile, currentUser, needsPasswordReset, clearPasswordResetFlag, switchRole } = useAuth();
   const { session, elapsed } = useLibrarySession();
   const navigate = useNavigate();
   const [showChangePw,    setShowChangePw]    = useState(false);
@@ -57,7 +56,6 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [showQR,  setShowQR]  = useState(false);
 
-  // Auto-open password change if admin has reset the flag
   useEffect(() => {
     if (needsPasswordReset) setShowChangePw(true);
   }, [needsPasswordReset]);
@@ -111,9 +109,9 @@ export default function StudentDashboard() {
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:12,marginBottom:24}}>
         {[
           { label:'Active Borrows', value:active.length,  color:'var(--blue)'  },
-          { label:'Overdue',        value:overdue.length,  color:overdue.length>0?'var(--red)':'var(--blue)' },
-          { label:'Pending',        value:pending.length,  color:'var(--gold)'  },
-          { label:'Total Borrows',  value:borrows.length,  color:'var(--blue)'  },
+          { label:'Overdue',        value:overdue.length, color:overdue.length>0?'var(--red)':'var(--blue)' },
+          { label:'Pending',        value:pending.length, color:'var(--gold)'  },
+          { label:'Total Borrows',  value:borrows.length, color:'var(--blue)'  },
         ].map(({ label, value, color }) => (
           <div key={label} style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderLeft:`3px solid ${color}`, borderRadius:12, padding:'16px 18px', boxShadow:'var(--shadow-card)' }}>
             <p style={{...PP,fontSize:11,fontWeight:600,color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:8}}>{label}</p>
@@ -137,6 +135,8 @@ export default function StudentDashboard() {
             <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-muted)',marginBottom:4}}>Your Library QR Code</p>
             <p style={{...SR,fontSize:18,fontWeight:700,color:'var(--text-primary)',marginBottom:4}}>{userProfile?.idNumber||'—'}</p>
             <p style={{...PP,fontSize:13,color:'var(--text-muted)',marginBottom:12}}>Show this to library staff to check in or out.</p>
+            
+            {/* Action Buttons */}
             <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
               <button onClick={() => setShowQR(true)}
                 style={{...PP,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',cursor:'pointer',transition:'all 0.15s'}}>
@@ -146,10 +146,22 @@ export default function StudentDashboard() {
                 style={{...PP,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',transition:'all 0.15s'}}>
                 Change Password
               </button>
+              
+              {/* FIXED: Closing tag is back! */}
               <button onClick={() => setShowEditProfile(true)}
                 style={{...PP,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',transition:'all 0.15s'}}>
                 Edit College/Course
               </button>
+              
+              {/* --- NEW: SWITCH TO ADMIN BUTTON (Properly separated) --- */}
+              {currentUser?.email && ['jcesperanza@neu.edu.ph', 'trixianwackyll.granado@neu.edu.ph'].includes(currentUser.email) && (
+                <button onClick={switchRole}
+                  style={{...PP,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--gold)',color:'var(--gold)',cursor:'pointer',transition:'all 0.15s',display:'inline-flex',alignItems:'center',gap:6}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                  Switch to Admin View
+                </button>
+              )}
+
             </div>
           </div>
         </div>
@@ -182,7 +194,7 @@ export default function StudentDashboard() {
 
       {/* Recent Borrows */}
       <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:14, overflow:'hidden', boxShadow:'var(--shadow-card)' }}>
-        <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--divider)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--divider)', display:'flex', alignItems:'center', justify-content:'space-between' }}>
           <p style={{...PP,fontSize:16,fontWeight:600,color:'var(--text-primary)'}}>Recent Borrows</p>
           <button onClick={() => navigate('/borrows')}
             style={{...PP,fontSize:13,fontWeight:600,background:'none',border:'none',color:'var(--gold)',cursor:'pointer'}}>
