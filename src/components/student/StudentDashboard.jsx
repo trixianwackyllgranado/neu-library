@@ -46,7 +46,7 @@ function getGreeting(firstName) {
 
 export default function StudentDashboard() {
   // 👉 ADDED switchRole HERE
-  const { userProfile, currentUser, needsPasswordReset, clearPasswordResetFlag, switchRole } = useAuth();
+  const { userProfile, currentUser, needsPasswordReset, clearPasswordResetFlag } = useAuth();
   const { session, elapsed } = useLibrarySession();
   const navigate = useNavigate();
   const [showChangePw,    setShowChangePw]    = useState(false);
@@ -153,14 +153,7 @@ export default function StudentDashboard() {
                 Edit College/Course
               </button>
               
-              {/* --- NEW: SWITCH TO ADMIN BUTTON (Properly separated) --- */}
-              {currentUser?.email && ['jcesperanza@neu.edu.ph', 'trixianwackyll.granado@neu.edu.ph'].includes(currentUser.email) && (
-                <button onClick={switchRole}
-                  style={{...PP,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--gold)',color:'var(--gold)',cursor:'pointer',transition:'all 0.15s',display:'inline-flex',alignItems:'center',gap:6}}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                  Switch to Admin View
-                </button>
-              )}
+
 
             </div>
           </div>

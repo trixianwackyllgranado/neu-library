@@ -82,7 +82,7 @@ function NavItem({ to, label, icon, collapsed, badgeCount, onClick }) {
 }
 
 export default function AppLayout({ children }) {
-  const { userProfile, currentUser, effectiveUid, logout } = useAuth();
+  const { userProfile, currentUser, effectiveId, logout } = useAuth();
   const { session, markWebSignedOut } = useLibrarySession();
   const { dark, toggle: toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -213,8 +213,8 @@ export default function AppLayout({ children }) {
           </div>
         </div>
 
-        {role==='student' && (userProfile?.uid||effectiveUid) && (
-          <NotificationBanner userId={effectiveUid||userProfile?.uid} />
+        {role==='student' && (userProfile?.uid||effectiveId) && (
+          <NotificationBanner userId={effectiveId||userProfile?.uid} />
         )}
 
         <main style={{flex:1,padding:'clamp(16px,4vw,28px) clamp(14px,4vw,24px)',maxWidth:1280,width:'100%',margin:'0 auto'}}>

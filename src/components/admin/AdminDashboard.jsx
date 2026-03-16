@@ -50,7 +50,7 @@ function getGreeting(firstName) {
 }
 
 export default function AdminDashboard() {
-  const { userProfile, currentUser, switchRole } = useAuth();
+  const { userProfile, currentUser } = useAuth();
   const navigate = useNavigate();
   const [showChangePw,    setShowChangePw]    = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -78,9 +78,7 @@ export default function AdminDashboard() {
 
   const greeting = userProfile ? getGreeting(userProfile.firstName) : 'System Overview';
 
-  // Check if current user is allowed to switch roles
-  const ALLOWED_EMAILS = ['jcesperanza@neu.edu.ph', 'trixianwackyll.granado@neu.edu.ph'];
-  const canSwitch = currentUser?.email && ALLOWED_EMAILS.includes(currentUser.email);
+
 
   return (
     <div style={{ animation:'fadeUp 0.3s ease both' }}>
@@ -103,14 +101,7 @@ export default function AdminDashboard() {
           Edit College/Course
         </button>
 
-        {/* --- NEW: SWITCH TO STUDENT BUTTON --- */}
-        {canSwitch && (
-          <button onClick={switchRole}
-            style={{...PP,marginTop:12,marginLeft:8,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--gold)',color:'var(--gold)',cursor:'pointer',transition:'all 0.15s',display:'inline-flex',alignItems:'center',gap:6}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-            Switch to Student View
-          </button>
-        )}
+
       </div>
 
       <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Users</p>
