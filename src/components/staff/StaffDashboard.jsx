@@ -24,6 +24,21 @@ function StatCard({ label, value, color, sub, onClick }) {
   );
 }
 
+
+
+function getGreeting(firstName) {
+  const hour = new Date().getHours();
+  const name = firstName || 'there';
+  const morning   = ['Good morning', 'Morning'];
+  const afternoon = ['Good afternoon', 'Afternoon'];
+  const evening   = ['Good evening', 'Evening'];
+  const anytime   = ['Hello', 'Hey', 'Hi', 'Greetings', 'Welcome back', 'Howdy', 'Salutations'];
+  const timePool  = hour < 12 ? morning : hour < 18 ? afternoon : evening;
+  const pool      = [...timePool, ...anytime];
+  const word      = pool[Math.floor(Math.random() * pool.length)];
+  return `${word}, ${name}!`;
+}
+
 export default function StaffDashboard() {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
@@ -49,7 +64,7 @@ export default function StaffDashboard() {
     return () => { u1(); u2(); u3(); };
   }, []);
 
-  const greeting = userProfile ? `Welcome, ${userProfile.firstName}` : 'Staff Dashboard';
+  const greeting = userProfile ? getGreeting(userProfile.firstName) : 'Staff Dashboard';
 
   return (
     <div style={{ animation:'fadeUp 0.3s ease both' }}>

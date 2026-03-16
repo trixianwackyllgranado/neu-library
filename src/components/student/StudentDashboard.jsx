@@ -31,6 +31,21 @@ function StatusBadge({ status, isOverdue }) {
   return <span style={{...PP,fontSize:11,fontWeight:600,padding:'3px 10px',borderRadius:20,background:t.bg,border:`1px solid ${t.border}`,color:t.color}}>{t.label}</span>;
 }
 
+
+
+function getGreeting(firstName) {
+  const hour = new Date().getHours();
+  const name = firstName || 'there';
+  const morning   = ['Good morning', 'Morning'];
+  const afternoon = ['Good afternoon', 'Afternoon'];
+  const evening   = ['Good evening', 'Evening'];
+  const anytime   = ['Hello', 'Hey', 'Hi', 'Greetings', 'Welcome back', 'Howdy', 'Salutations'];
+  const timePool  = hour < 12 ? morning : hour < 18 ? afternoon : evening;
+  const pool      = [...timePool, ...anytime];
+  const word      = pool[Math.floor(Math.random() * pool.length)];
+  return `${word}, ${name}!`;
+}
+
 export default function StudentDashboard() {
   const { userProfile, currentUser, needsPasswordReset, clearPasswordResetFlag } = useAuth();
   const { session, elapsed } = useLibrarySession();
@@ -75,7 +90,7 @@ export default function StudentDashboard() {
       <div style={{ marginBottom:28 }}>
         <p style={{...PP,fontSize:13,fontWeight:600,color:'var(--gold)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Student Portal</p>
         <h1 style={{...SR,fontSize:'clamp(24px,4vw,32px)',fontWeight:700,color:'var(--text-primary)',marginBottom:4}}>
-          {userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'Dashboard'}
+          {userProfile ? getGreeting(userProfile.firstName) : 'Welcome to NEU Library'}
         </h1>
         {userProfile && (
           <p style={{...MN,fontSize:12,color:'var(--text-muted)'}}>
