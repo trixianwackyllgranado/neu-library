@@ -290,17 +290,22 @@ export default function CatalogPage() {
     }
     try {
       // Layer 2: Firestore-level authoritative check (catches stale local state)
-      const dupSnap = await getDocs(query(
-        collection(db, 'borrows'),
-        where('userId', '==', currentUser.uid),
-        where('bookId', '==', requestBook.id),
-        where('status', 'in', ['pending', 'active'])
-      ));
-      if (!dupSnap.empty) {
-        setMyBorrowMap(prev => ({ ...prev, [requestBook.id]: dupSnap.docs[0].data().status }));
-        setRequestError('You already have an active or pending request for this book.');
-        setRequesting(false);
-        return;
+      // Wrapped in try/catch — silently skips if index is still building
+      try {
+        const dupSnap = await getDocs(query(
+          collection(db, 'borrows'),
+          where('userId', '==', currentUser.uid),
+          where('bookId', '==', requestBook.id),
+          where('status', 'in', ['pending', 'active'])
+        ));
+        if (!dupSnap.empty) {
+          setMyBorrowMap(prev => ({ ...prev, [requestBook.id]: dupSnap.docs[0].data().status }));
+          setRequestError('You already have an active or pending request for this book.');
+          setRequesting(false);
+          return;
+        }
+      } catch (_indexErr) {
+        // Index not ready yet — Layer 1 local check already ran above, continue
       }
       if ((requestBook.availableCopies ?? 0) <= 0) { setRequestError('No copies available at this time.'); setRequesting(false); return; }
       await addDoc(collection(db, 'borrows'), {
