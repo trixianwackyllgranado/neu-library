@@ -538,7 +538,6 @@ export default function UserManagementPage() {
             <button key={t.key} onClick={() => setRoleFilter(t.key)}
               className="px-5 py-2.5 text-xs font-mono font-semibold tracking-widest uppercase flex items-center gap-2 transition-colors"
               style={{
-                borderBottom: roleFilter === t.key ? '2px solid var(--gold)' : '2px solid transparent',
                 color: roleFilter === t.key ? 'var(--gold)' : 'var(--text-muted)',
                 background: 'transparent', border: 'none',
                 borderBottom: roleFilter === t.key ? '2px solid var(--gold)' : '2px solid transparent',

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import AdminDashboard      from '../components/admin/AdminDashboard';
 import StaffDashboard      from '../components/staff/StaffDashboard';
 import StudentDashboard    from '../components/student/StudentDashboard';
-import ProfessorDashboard  from '../components/professor/ProfessorDashboard';
+
 
 export default function DashboardPage() {
   const { userProfile } = useAuth();
