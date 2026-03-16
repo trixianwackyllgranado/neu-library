@@ -12,10 +12,10 @@ Granado, Trixian Wackyll C — 2BSIT-5 — Academic Year 2025–2026
 - [Full Documentation (Detailed Manual)](https://docs.google.com/document/d/1itbqZc4-17EsljgMnfr4uOMbAT7ww3SjBoMi5ls2tlc/edit?usp=sharing)
 
 > [!IMPORTANT]
-> **Evaluation Instructions for Professor**
-> - **Google Sign-In**: "Continue with Google" is currently for new account registration only. **Do not use your institutional email to log in to existing test data.**
-> - **Hybrid Dashboard (Scrapped)**: The feature to switch between Student and Admin roles on a single account has been removed. Due to the project's architecture, users must log in with the specific role accounts provided below.
-> - **Action Required**: Please use the **Test Accounts** table below to evaluate the different roles (Student, Staff, Admin).
+> **Final Evaluation Instructions for Professor**
+> - **Login Method**: The system is strictly **Student ID Number & Password**. Merging or adding Email/Google login at this stage is not possible as the database is already fully populated with ID-based accounts and custom internal synthetic emails.
+> - **Forgot Password**: If you use the "Forgot Password" feature, it will inform you that your password is your **ID Number**. This is a deliberate "Zero-Friction Recovery" design to prevent lockouts during the migration to this stable v2 system.
+> - **Hybrid Dashboard (Scrapped)**: Role-switching (Admin <-> Student on one account) has been removed to ensure stable role-based access control. Please use the **Test Accounts** below to evaluate different roles.
 
 ---
 
@@ -237,6 +237,17 @@ On successful registration, the form transitions to a success screen showing:
 - A "Proceed to Sign In" button.
 
 Every account — including staff and admin — receives a `qrToken` at registration. If a staff account is ever demoted to Student, the QR code is already there and works immediately.
+
+### 3.5 Password Recovery (Forgot Password)
+
+The "Forgot Password" feature (`/forgot-password`) uses a specific **Zero-Friction Recovery Model** designed for this system transition:
+
+- **Constraint**: The system does not collect or verify external recovery emails for users to maintain a lightweight, internal-only profile.
+- **Solution**: During the v2 migration, all passwords were set to the user's **Student ID Number** (including dashes).
+- **Behavior**: The recovery page reminds users of this policy. Once they provide their ID Number, the system confirms that their current password is that same ID Number.
+- **Next Step**: Users are instructed to sign in and immediately use the **"Change Password"** modal on their dashboard to set a unique, private password.
+
+This ensures that no student or faculty member is ever permanently locked out of the library system due to a forgotten password, while still allowing for individual security via the post-login reset.
 
 ---
 
