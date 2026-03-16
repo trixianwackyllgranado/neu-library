@@ -15,8 +15,15 @@ const fmt = (ts) => {
   return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-const isOverdue = (b) =>
-  b.status === 'active' && b.dueDate?.toDate && b.dueDate.toDate() < new Date();
+const isOverdue = (b) => {
+  if (b.status !== 'active' || !b.dueDate) return false;
+  const due = b.dueDate?.toDate ? b.dueDate.toDate()
+    : b.dueDate instanceof Date ? b.dueDate
+    : typeof b.dueDate === 'string' ? new Date(b.dueDate)
+    : b.dueDate?.seconds ? new Date(b.dueDate.seconds * 1000)
+    : null;
+  return due ? due < new Date() : false;
+};
 
 // ── Approve Modal ─────────────────────────────────────────────────────────────
 function ApproveModal({ borrow, onConfirm, onCancel, saving }) {

@@ -195,7 +195,11 @@ export default function CatalogPage() {
             map[b.bookId] = b.status;
           }
           if (b.userId === currentUser.uid && b.status === 'active') {
-            const due = b.dueDate?.toDate ? b.dueDate.toDate() : (b.dueDate instanceof Date ? b.dueDate : null);
+            const due = b.dueDate?.toDate ? b.dueDate.toDate()
+              : b.dueDate instanceof Date ? b.dueDate
+              : typeof b.dueDate === 'string' ? new Date(b.dueDate)
+              : b.dueDate?.seconds ? new Date(b.dueDate.seconds * 1000)
+              : null;
             if (due && due < now) overdueFound = true;
           }
         });

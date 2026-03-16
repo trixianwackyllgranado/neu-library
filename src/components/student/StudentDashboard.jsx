@@ -74,7 +74,11 @@ export default function StudentDashboard() {
   const now      = new Date();
   const active   = borrows.filter(b=>b.status==='active');
   const overdue  = active.filter(b => {
-    const due = b.dueDate?.toDate ? b.dueDate.toDate() : (b.dueDate instanceof Date ? b.dueDate : null);
+    const due = b.dueDate?.toDate ? b.dueDate.toDate()
+      : b.dueDate instanceof Date ? b.dueDate
+      : typeof b.dueDate === 'string' ? new Date(b.dueDate)
+      : b.dueDate?.seconds ? new Date(b.dueDate.seconds * 1000)
+      : null;
     return due ? due < now : false;
   });
   const pending  = borrows.filter(b=>b.status==='pending');
@@ -207,8 +211,12 @@ export default function StudentDashboard() {
               </thead>
               <tbody>
                 {borrows.slice(0,6).map(b => {
-                  const _due = b.dueDate?.toDate ? b.dueDate.toDate() : (b.dueDate instanceof Date ? b.dueDate : null);
-                  const od = b.status==='active' && _due ? _due < now : false;
+                  const _due = b.dueDate?.toDate ? b.dueDate.toDate()
+                    : b.dueDate instanceof Date ? b.dueDate
+                    : typeof b.dueDate === 'string' ? new Date(b.dueDate)
+                    : b.dueDate?.seconds ? new Date(b.dueDate.seconds * 1000)
+                    : null;
+                  const od = b.status === 'active' && _due ? _due < now : false;
                   return (
                     <tr key={b.id} style={{ transition:'background 0.12s' }}
                       onMouseEnter={e=>e.currentTarget.style.background='var(--surface-hover)'}
