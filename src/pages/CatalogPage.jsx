@@ -74,7 +74,7 @@ async function logBookActivity(action, book, user) {
 }
 
 export default function CatalogPage() {
-  const { userProfile, currentUser, studentBorrowMap, setStudentBorrowMap, studentHasOverdue, borrowMapReady } = useAuth();
+  const { userProfile, currentUser, effectiveId, studentBorrowMap, setStudentBorrowMap, studentHasOverdue, borrowMapReady } = useAuth();
   const role      = userProfile?.role;
   const canEdit   = role === 'admin' || role === 'staff';
   const isAdmin   = role === 'admin';
