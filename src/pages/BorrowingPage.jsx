@@ -586,7 +586,7 @@ export default function BorrowingPage() {
                     if (!canManage) return;
                     if (b.userDeleted) { setDeletedUserModal(true); return; }
                     if (b.userId && userMap[b.userId]) {
-                      navigate('/staff/students', { state: { openUserId: b.userId } });
+                      navigate('/staff/students', { state: { openStudentId: b.userId } });
                     } else if (b.userDeleted) {
                       setDeletedUserModal(true);
                     }
