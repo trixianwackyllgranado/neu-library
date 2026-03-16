@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc,
-  doc, serverTimestamp, writeBatch
+  doc, serverTimestamp, writeBatch, query, where
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
@@ -175,26 +175,29 @@ export default function CatalogPage() {
 
   // Live borrows → recompute course data + student borrow map + active-per-book count
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'borrows'), snap => {
-      borrowsRefC.current = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      recomputeCourseData();
-      // Track active/overdue borrows per book for staff/admin safeguard
-      const abMap = {};
-      borrowsRefC.current.forEach(b => {
-        if (b.bookId && (b.status === 'active' || b.status === 'pending')) {
-          abMap[b.bookId] = (abMap[b.bookId] || 0) + 1;
-        }
-      });
-      setActiveBookBorrowMap(abMap);
+    // Use full collection for staff/admin (need all borrows), filtered query for students (efficiency + correctness)
+    const borrowQuery = (currentUser && isStudent)
+      ? query(collection(db, 'borrows'), where('userId', '==', currentUser.uid))
+      : collection(db, 'borrows');
+    const unsub = onSnapshot(borrowQuery, snap => {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       if (currentUser && isStudent) {
+        // Student: only their own borrows — no need to store in ref or recompute courses
+        const STATUS_PRIORITY = { active: 3, overdue: 2, pending: 1 };
         const map = {};
         const now = new Date();
         let overdueFound = false;
-        borrowsRefC.current.forEach(b => {
-          if (b.userId === currentUser.uid && b.status !== 'returned' && b.status !== 'rejected') {
-            map[b.bookId] = b.status;
+        docs.forEach(b => {
+          if (b.status !== 'returned' && b.status !== 'rejected' && b.status !== 'cancelled') {
+            // Keep highest-priority status per book (active > pending)
+            const current = map[b.bookId];
+            const newPriority = STATUS_PRIORITY[b.status] || 0;
+            const oldPriority = STATUS_PRIORITY[current] || 0;
+            if (!current || newPriority > oldPriority) {
+              map[b.bookId] = b.status;
+            }
           }
-          if (b.userId === currentUser.uid && b.status === 'active') {
+          if (b.status === 'active') {
             const due = b.dueDate?.toDate ? b.dueDate.toDate()
               : b.dueDate instanceof Date ? b.dueDate
               : typeof b.dueDate === 'string' ? new Date(b.dueDate)
@@ -205,6 +208,17 @@ export default function CatalogPage() {
         });
         setMyBorrowMap(map);
         setHasOverdueBooks(overdueFound);
+      } else {
+        // Staff/admin: store all borrows for course data and active-per-book count
+        borrowsRefC.current = docs;
+        recomputeCourseData();
+        const abMap = {};
+        docs.forEach(b => {
+          if (b.bookId && (b.status === 'active' || b.status === 'pending')) {
+            abMap[b.bookId] = (abMap[b.bookId] || 0) + 1;
+          }
+        });
+        setActiveBookBorrowMap(abMap);
       }
     }, () => {});
     return unsub;
@@ -278,13 +292,6 @@ export default function CatalogPage() {
     setRequestError(''); setRequesting(true);
     if (hasOverdueBooks) {
       setRequestError('Borrowing disabled: You have overdue books. Please return them before borrowing new ones.');
-      setRequesting(false);
-      return;
-    }
-    // Prevent duplicate requests — block if already active or pending for this book
-    const existingStatus = myBorrowMap[requestBook.id];
-    if (existingStatus === 'pending' || existingStatus === 'active') {
-      setRequestError('You already have an active or pending request for this book.');
       setRequesting(false);
       return;
     }
