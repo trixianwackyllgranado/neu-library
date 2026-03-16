@@ -210,7 +210,11 @@ export function AuthProvider({ children }) {
   };
 
   // ── Fetch / refresh profile ──────────────────────────────────────────────────
-  const fetchProfile = async (uid) => {
+  // userObj is the Firebase Auth user — passed by onAuthStateChanged so we can
+  // do an email-based fallback for Google users if their Firestore doc hasn't
+  // been written yet (race condition between signInWithPopup resolving and our
+  // loginWithGoogle setDoc completing).
+  const fetchProfile = async (uid, userObj = null) => {
     setProfileLoading(true);
     try {
       const snap = await getDoc(doc(db, 'users', uid));
@@ -218,9 +222,31 @@ export function AuthProvider({ children }) {
         const data = snap.data();
         setUserProfile(data);
         if (data.adminPasswordReset) setNeedsPasswordReset(true);
-      } else {
-        setUserProfile(null);
+        return;
       }
+
+      // ── Fallback: Google user whose Firestore doc hasn't been written yet ──
+      const email = userObj?.email;
+      if (email?.endsWith('@neu.edu.ph')) {
+        const emailSnap = await getDocs(
+          query(collection(db, 'users'), where('email', '==', email))
+        );
+        if (!emailSnap.empty) {
+          const existingData = emailSnap.docs[0].data();
+          const directRef   = doc(db, 'users', uid);
+          // Write the merged doc so future lookups are instant
+          await setDoc(directRef, {
+            ...existingData,
+            uid,
+            authProvider:   'google',
+            googleLinkedAt: serverTimestamp(),
+          });
+          setUserProfile({ ...existingData, uid, authProvider: 'google' });
+          return;
+        }
+      }
+
+      setUserProfile(null);
     } finally {
       setProfileLoading(false);
     }
@@ -284,7 +310,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user) await fetchProfile(user.uid);
+      if (user) await fetchProfile(user.uid, user); // pass user for Google email fallback
       else setUserProfile(null);
       setLoadingAuth(false);
     });
