@@ -43,7 +43,6 @@ function ApproveModal({ borrow, onConfirm, onCancel, saving }) {
           <div>
             <label className="label">Due Date <span className="text-red-500">*</span></label>
             <input type="date" className="input" value={dueDate}
-              min={new Date().toISOString().split('T')[0]}
               onChange={e => setDueDate(e.target.value)} />
           </div>
           <div style={{background:"var(--gold-soft)",border:"1px solid var(--gold-border)",borderRadius:8,padding:"12px 16px"}}>
