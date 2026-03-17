@@ -10,6 +10,7 @@ import {
   updatePassword,
   sendPasswordResetEmail,
   fetchSignInMethodsForEmail,
+  deleteUser,
 } from 'firebase/auth';
 import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
@@ -111,6 +112,42 @@ export function AuthProvider({ children }) {
       });
       return cred;
     } catch (err) {
+      // ── Orphan account recovery ──────────────────────────────────────────
+      // If auth/email-already-in-use fires AND the current signed-in user has
+      // this email but NO Firestore document, it is an orphan account left
+      // behind by a failed Google Sign-In attempt. Delete it and retry once.
+      if (err.code === 'auth/email-already-in-use') {
+        const currentUser = auth.currentUser;
+        if (currentUser && currentUser.email === authEmail) {
+          // Check if there is a Firestore profile for this orphan
+          const snap = await getDoc(doc(db, 'users', currentUser.uid));
+          if (!snap.exists()) {
+            // Orphan confirmed — delete it and retry registration
+            try {
+              await deleteUser(currentUser);
+              const cred = await createUserWithEmailAndPassword(auth, authEmail, password);
+              await setDoc(doc(db, 'users', cred.user.uid), {
+                uid:           cred.user.uid,
+                idNumber:      idNumber.trim(),
+                qrToken,
+                lastName:      lastName.trim().toUpperCase(),
+                firstName:     firstName.trim().toUpperCase(),
+                middleInitial: middleInitial ? middleInitial.trim().toUpperCase().replace(/\.+$/, '') : '',
+                course:        course.trim().toUpperCase(),
+                college:       college.trim().toUpperCase(),
+                role,
+                email:         authEmail,
+                createdAt:     serverTimestamp(),
+              });
+              return cred;
+            } catch (retryErr) {
+              const friendly = new Error(parseFirebaseError(retryErr));
+              friendly.code = retryErr.code;
+              throw friendly;
+            }
+          }
+        }
+      }
       const friendly = new Error(parseFirebaseError(err));
       friendly.code = err.code;
       throw friendly;
@@ -159,9 +196,11 @@ export function AuthProvider({ children }) {
         return result;
       }
 
-      // No Firestore doc for this UID — means they signed in with a Google
-      // account that isn't linked to any library account.
-      // Sign them out and show a friendly error.
+      // No Firestore doc for this UID — this Google account has no library profile.
+      // CRITICAL: We must delete the Firebase Auth account that was just auto-created
+      // by signInWithPopup, otherwise the user can never register with this email
+      // (Firebase would throw auth/email-already-in-use on their next attempt).
+      try { await deleteUser(googleUser); } catch (_) { /* best effort */ }
       await signOut(auth);
       const err = new Error(parseFirebaseError({ code: 'no-profile' }));
       err.code = 'no-profile';
@@ -196,18 +235,40 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Send password reset email (email-based — no Firestore lookup needed) ───
-  const sendResetEmail = async (email) => {
+  // ── Send password reset email ─────────────────────────────────────────────
+  const sendResetEmail = async (idNumber) => {
+    // Step 1: look up real email from Firestore (errors now surface, not swallowed)
+    let realEmail;
+    try {
+      realEmail = await getRealEmailByIdNumber(idNumber);
+    } catch (fsErr) {
+      const err = new Error('Could not look up account. Check your connection or contact the library administrator.');
+      err.code = 'firestore-lookup-failed';
+      throw err;
+    }
+
+    if (!realEmail) {
+      const err = new Error('No account found with that Student ID. Please check the ID and try again.');
+      err.code = 'no-account';
+      throw err;
+    }
+
+    // Step 2: send reset email to the real @neu.edu.ph address
     const actionCodeSettings = {
       url: `${window.location.origin}/auth/action`,
       handleCodeInApp: false,
     };
     try {
-      await sendPasswordResetEmail(auth, email.trim().toLowerCase(), actionCodeSettings);
+      await sendPasswordResetEmail(auth, realEmail, actionCodeSettings);
     } catch (err) {
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
-        // Don't leak whether the email exists — show generic success instead
-        return;
+      if (err.code === 'auth/user-not-found') {
+        // Firebase Auth doesn\'t recognise this email — migration may have missed this account
+        const friendly = new Error(
+          'Account found in records but not in the authentication system. ' +
+          'Please contact the library administrator to fix this account.'
+        );
+        friendly.code = 'auth-user-not-found';
+        throw friendly;
       }
       const friendly = new Error(parseFirebaseError(err));
       friendly.code = err.code;
