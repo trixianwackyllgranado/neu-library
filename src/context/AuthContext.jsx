@@ -56,17 +56,14 @@ export function parseFirebaseError(error) {
 
 const idToEmail = (idNumber) => `${idNumber.trim().replace(/\s/g, '')}@neu-lib.internal`;
 
-// Look up a user's real email from Firestore by their ID number
+// Look up a user's real email from Firestore by their ID number.
+// Does NOT swallow errors — callers handle them.
 async function getRealEmailByIdNumber(idNumber) {
-  try {
-    const snap = await getDocs(
-      query(collection(db, 'users'), where('idNumber', '==', idNumber.trim()))
-    );
-    if (snap.empty) return null;
-    return snap.docs[0].data().email || null;
-  } catch {
-    return null;
-  }
+  const snap = await getDocs(
+    query(collection(db, 'users'), where('idNumber', '==', idNumber.trim()))
+  );
+  if (snap.empty) return null;
+  return snap.docs[0].data().email || null;
 }
 
 // Look up a Firestore user doc by their real email
@@ -201,35 +198,38 @@ export function AuthProvider({ children }) {
 
   // ── Send password reset email ─────────────────────────────────────────────
   const sendResetEmail = async (idNumber) => {
-    const realEmail = await getRealEmailByIdNumber(idNumber);
-    if (!realEmail) {
-      const err = new Error('No email address is linked to this account. Please contact the library administrator.');
-      err.code = 'no-email';
+    // Step 1: look up real email from Firestore (errors now surface, not swallowed)
+    let realEmail;
+    try {
+      realEmail = await getRealEmailByIdNumber(idNumber);
+    } catch (fsErr) {
+      const err = new Error('Could not look up account. Check your connection or contact the library administrator.');
+      err.code = 'firestore-lookup-failed';
       throw err;
     }
 
-    // Determine the correct base URL:
-    // In production this will be https://neu-library-v2.web.app
-    // In dev it will be http://localhost:5173 (or whatever port)
-    const baseUrl = import.meta.env.VITE_APP_URL?.trim()
-      || (window.location.hostname === 'localhost'
-          ? window.location.origin
-          : 'https://neu-library-v2.web.app');
+    if (!realEmail) {
+      const err = new Error('No account found with that Student ID. Please check the ID and try again.');
+      err.code = 'no-account';
+      throw err;
+    }
 
+    // Step 2: send reset email to the real @neu.edu.ph address
     const actionCodeSettings = {
-      url: `${baseUrl}/auth/action`,
+      url: `${window.location.origin}/auth/action`,
       handleCodeInApp: false,
     };
-
     try {
       await sendPasswordResetEmail(auth, realEmail, actionCodeSettings);
     } catch (err) {
-      // auth/user-not-found means the account exists in Firestore but not
-      // in Firebase Auth — surface a clear message instead of crashing
       if (err.code === 'auth/user-not-found') {
-        const notFound = new Error('No sign-in account found for this ID. Please contact the library administrator.');
-        notFound.code = 'no-auth-account';
-        throw notFound;
+        // Firebase Auth doesn\'t recognise this email — migration may have missed this account
+        const friendly = new Error(
+          'Account found in records but not in the authentication system. ' +
+          'Please contact the library administrator to fix this account.'
+        );
+        friendly.code = 'auth-user-not-found';
+        throw friendly;
       }
       const friendly = new Error(parseFirebaseError(err));
       friendly.code = err.code;

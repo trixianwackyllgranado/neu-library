@@ -42,14 +42,8 @@ export default function ForgotPasswordPage() {
       await sendResetEmail(idFormat);
       setStatus('sent');
     } catch (err) {
-      if (err.code === 'no-email') {
-        setErrorMsg(err.message);
-      } else {
-        // For any other error (including user not found) show generic success
-        // to avoid leaking whether an ID exists
-        setStatus('sent');
-        return;
-      }
+      // Show the real error message for all error types so the issue is visible
+      setErrorMsg(err.message || 'An unexpected error occurred. Please try again.');
       setStatus('error');
     }
   };
