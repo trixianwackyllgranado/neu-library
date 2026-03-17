@@ -196,40 +196,18 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Send password reset email ─────────────────────────────────────────────
-  const sendResetEmail = async (idNumber) => {
-    // Step 1: look up real email from Firestore (errors now surface, not swallowed)
-    let realEmail;
-    try {
-      realEmail = await getRealEmailByIdNumber(idNumber);
-    } catch (fsErr) {
-      const err = new Error('Could not look up account. Check your connection or contact the library administrator.');
-      err.code = 'firestore-lookup-failed';
-      throw err;
-    }
-
-    if (!realEmail) {
-      const err = new Error('No account found with that Student ID. Please check the ID and try again.');
-      err.code = 'no-account';
-      throw err;
-    }
-
-    // Step 2: send reset email to the real @neu.edu.ph address
+  // ── Send password reset email (email-based — no Firestore lookup needed) ───
+  const sendResetEmail = async (email) => {
     const actionCodeSettings = {
       url: `${window.location.origin}/auth/action`,
       handleCodeInApp: false,
     };
     try {
-      await sendPasswordResetEmail(auth, realEmail, actionCodeSettings);
+      await sendPasswordResetEmail(auth, email.trim().toLowerCase(), actionCodeSettings);
     } catch (err) {
-      if (err.code === 'auth/user-not-found') {
-        // Firebase Auth doesn\'t recognise this email — migration may have missed this account
-        const friendly = new Error(
-          'Account found in records but not in the authentication system. ' +
-          'Please contact the library administrator to fix this account.'
-        );
-        friendly.code = 'auth-user-not-found';
-        throw friendly;
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-email') {
+        // Don't leak whether the email exists — show generic success instead
+        return;
       }
       const friendly = new Error(parseFirebaseError(err));
       friendly.code = err.code;

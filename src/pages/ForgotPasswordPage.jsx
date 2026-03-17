@@ -8,21 +8,14 @@ const MONO  = { fontFamily: "'IBM Plex Mono', monospace" };
 const SERIF = { fontFamily: "'Playfair Display', serif" };
 const PP    = { fontFamily: "'Poppins', sans-serif" };
 
-const ID_REGEX = /^\d{2}-\d{5}-\d{3}$/;
-
-function formatId(raw) {
-  const d = raw.replace(/\D/g, '').slice(0, 10);
-  if (d.length <= 2) return d;
-  if (d.length <= 7) return `${d.slice(0, 2)}-${d.slice(2)}`;
-  return `${d.slice(0, 2)}-${d.slice(2, 7)}-${d.slice(7)}`;
-}
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ForgotPasswordPage() {
   const { sendResetEmail } = useAuth();
   const { dark, toggle }   = useTheme();
 
-  const [idFormat, setIdFormat] = useState('');
-  const [status,   setStatus]   = useState('idle'); // idle | loading | sent | error
+  const [email,    setEmail]    = useState('');
+  const [status,   setStatus]   = useState('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
   const inputBase = {
@@ -33,16 +26,17 @@ export default function ForgotPasswordPage() {
   const onFocus = e => { e.currentTarget.style.borderColor = 'var(--gold)'; };
   const onBlur  = e => { e.currentTarget.style.borderColor = 'var(--input-border)'; };
 
+  const isValid = EMAIL_REGEX.test(email.trim());
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!ID_REGEX.test(idFormat)) return;
+    if (!isValid) return;
     setStatus('loading');
     setErrorMsg('');
     try {
-      await sendResetEmail(idFormat);
+      await sendResetEmail(email);
       setStatus('sent');
     } catch (err) {
-      // Show the real error message for all error types so the issue is visible
       setErrorMsg(err.message || 'An unexpected error occurred. Please try again.');
       setStatus('error');
     }
@@ -54,10 +48,8 @@ export default function ForgotPasswordPage() {
       background: 'linear-gradient(160deg, var(--bg-base) 0%, var(--bg-mid) 55%, var(--bg-top) 100%)',
       display: 'flex', flexDirection: 'column', transition: 'background 0.25s',
     }}>
-      {/* NEU colour bar */}
       <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', flexShrink: 0 }} />
 
-      {/* Header */}
       <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '14px', borderBottom: '1px solid var(--divider)', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <img src="/liblogo.png" alt="NEU" style={{ width: 38, height: 38, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
@@ -75,7 +67,6 @@ export default function ForgotPasswordPage() {
         </button>
       </div>
 
-      {/* Main */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
         <div style={{ width: '100%', maxWidth: '420px', animation: 'fadeUp 0.35s ease both' }}>
           <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: '20px', overflow: 'hidden', boxShadow: 'var(--shadow-modal)' }}>
@@ -83,7 +74,6 @@ export default function ForgotPasswordPage() {
 
             <div style={{ padding: '32px 32px 38px' }}>
 
-              {/* ── SENT STATE ── */}
               {status === 'sent' ? (
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
@@ -95,27 +85,29 @@ export default function ForgotPasswordPage() {
                   <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '8px' }}>Check Your Email</p>
                   <h2 style={{ ...SERIF, fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>Reset Link Sent</h2>
                   <p style={{ ...PP, fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '8px' }}>
-                    If that Student ID is registered, a password reset link has been sent to the email address on file.
+                    If <strong style={{ color: 'var(--text-primary)' }}>{email}</strong> is registered, a reset link has been sent to that address.
                   </p>
                   <p style={{ ...PP, fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.65, marginBottom: '24px' }}>
-                    Click the link in the email to set a new password. Check your spam folder if you don't see it within a few minutes.
+                    Check your spam folder if you don't see it within a few minutes.
                   </p>
                   <button
-                    onClick={() => { setStatus('idle'); setIdFormat(''); setErrorMsg(''); }}
+                    onClick={() => { setStatus('idle'); setEmail(''); setErrorMsg(''); }}
                     style={{ ...MONO, fontSize: '11px', letterSpacing: '0.14em', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', textTransform: 'uppercase' }}
                   >
-                    Try a different ID
+                    Try a different email
                   </button>
                 </div>
 
               ) : (
-                /* ── FORM STATE ── */
                 <>
                   <div style={{ marginBottom: '28px' }}>
                     <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '8px' }}>Account Recovery</p>
                     <h1 style={{ ...SERIF, fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '10px' }}>Forgot Password?</h1>
                     <p style={{ ...PP, fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-                      Enter your Student ID Number and we'll send a reset link to the email address linked to your account.
+                      Enter your NEU institutional email and we'll send a password reset link to that address.
+                    </p>
+                    <p style={{ ...MONO, fontSize: '11px', color: 'var(--text-dim)', marginTop: '8px' }}>
+                      e.g. firstname.lastname@neu.edu.ph
                     </p>
                   </div>
 
@@ -128,30 +120,31 @@ export default function ForgotPasswordPage() {
                   <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div>
                       <label style={{ ...MONO, fontSize: '10px', letterSpacing: '0.16em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px', fontWeight: 600 }}>
-                        Student ID Number
+                        Institutional Email
                       </label>
                       <input
-                        type="text"
-                        inputMode="numeric"
-                        style={{ ...inputBase, ...MONO, letterSpacing: '0.16em' }}
-                        placeholder="22-12345-123"
-                        value={idFormat}
-                        onChange={e => { setIdFormat(formatId(e.target.value)); setErrorMsg(''); if (status === 'error') setStatus('idle'); }}
+                        type="email"
+                        inputMode="email"
+                        style={inputBase}
+                        placeholder="firstname.lastname@neu.edu.ph"
+                        value={email}
+                        onChange={e => { setEmail(e.target.value); setErrorMsg(''); if (status === 'error') setStatus('idle'); }}
                         onFocus={onFocus}
                         onBlur={onBlur}
                         autoFocus
+                        autoComplete="email"
                       />
                     </div>
 
                     <button
                       type="submit"
-                      disabled={!ID_REGEX.test(idFormat) || status === 'loading'}
+                      disabled={!isValid || status === 'loading'}
                       style={{
                         width: '100%', padding: '13px', borderRadius: '10px',
-                        background: (ID_REGEX.test(idFormat) && status !== 'loading') ? 'var(--gold-soft)' : 'var(--surface)',
+                        background: (isValid && status !== 'loading') ? 'var(--gold-soft)' : 'var(--surface)',
                         border: '1px solid var(--gold-border)', color: 'var(--gold)',
-                        cursor: (ID_REGEX.test(idFormat) && status !== 'loading') ? 'pointer' : 'not-allowed',
-                        opacity: (ID_REGEX.test(idFormat) && status !== 'loading') ? 1 : 0.5,
+                        cursor: (isValid && status !== 'loading') ? 'pointer' : 'not-allowed',
+                        opacity: (isValid && status !== 'loading') ? 1 : 0.5,
                         ...MONO, fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, transition: 'all 0.15s',
                       }}
                     >
