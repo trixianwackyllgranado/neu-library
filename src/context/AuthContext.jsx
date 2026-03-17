@@ -1,17 +1,15 @@
 // src/context/AuthContext.jsx
-// ─── MIGRATION NOTE ────────────────────────────────────────────────────────
-// After running migrate-emails.js, Firebase Auth accounts use real @neu.edu.ph
-// emails. The login() function now looks up the real email from Firestore by
-// idNumber, then signs in with that. Everything else is unchanged.
-// ───────────────────────────────────────────────────────────────────────────
 import { createContext, useContext, useEffect, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
   updatePassword,
   sendPasswordResetEmail,
+  fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
@@ -29,23 +27,25 @@ const ALLOWED_ADMIN_EMAILS = [
 export function parseFirebaseError(error) {
   const code = error?.code || '';
   const map = {
-    'auth/invalid-email':          'The email address format is invalid.',
-    'auth/user-disabled':          'This account has been disabled. Contact the library administrator.',
-    'auth/user-not-found':         'No account found with this ID number.',
-    'auth/wrong-password':         'Incorrect password. Please try again.',
-    'auth/invalid-credential':     'Incorrect ID number or password.',
-    'auth/email-already-in-use':   'An account with this ID number already exists.',
-    'auth/weak-password':          'Password must be at least 8 characters.',
-    'auth/too-many-requests':      'Too many failed attempts. Account temporarily locked.',
-    'auth/network-request-failed': 'Network error. Check your connection and try again.',
-    'auth/operation-not-allowed':  'Authentication not enabled. Contact the administrator.',
-    'auth/missing-email':          'Please enter your ID number.',
-    'auth/internal-error':         'An internal error occurred. Please try again.',
-    'permission-denied':           'You do not have permission to perform this action.',
-    'auth/popup-closed-by-user':   'Sign-in popup was closed. Please try again.',
-    'auth/cancelled-popup-request':'Sign-in was cancelled. Please try again.',
-    'auth/popup-blocked':          'Sign-in popup was blocked by your browser. Please allow popups for this site.',
-    'auth/unauthorized-domain':    'This domain is not authorized. Check your Firebase Console settings.',
+    'auth/invalid-email':            'The email address format is invalid.',
+    'auth/user-disabled':            'This account has been disabled. Contact the library administrator.',
+    'auth/user-not-found':           'No account found with this ID number.',
+    'auth/wrong-password':           'Incorrect password. Please try again.',
+    'auth/invalid-credential':       'Incorrect ID number or password.',
+    'auth/email-already-in-use':     'An account with this ID number already exists.',
+    'auth/weak-password':            'Password must be at least 8 characters.',
+    'auth/too-many-requests':        'Too many failed attempts. Account temporarily locked.',
+    'auth/network-request-failed':   'Network error. Check your connection and try again.',
+    'auth/operation-not-allowed':    'Authentication not enabled. Contact the administrator.',
+    'auth/missing-email':            'Please enter your ID number.',
+    'auth/internal-error':           'An internal error occurred. Please try again.',
+    'auth/account-exists-with-different-credential': 'An account already exists with this email. Please sign in with your ID and password instead.',
+    'permission-denied':             'You do not have permission to perform this action.',
+    'auth/popup-closed-by-user':     'Sign-in popup was closed. Please try again.',
+    'auth/cancelled-popup-request':  'Sign-in was cancelled. Please try again.',
+    'auth/popup-blocked':            'Sign-in popup was blocked by your browser. Please allow popups for this site.',
+    'auth/unauthorized-domain':      'This domain is not authorized. Check your Firebase Console settings.',
+    'no-profile':                    'No library account found for this Google account. Please register first or sign in with your Student ID.',
   };
   if (map[code]) return map[code];
   if (error?.message) {
@@ -54,12 +54,9 @@ export function parseFirebaseError(error) {
   return 'An unexpected error occurred. Please try again.';
 }
 
-// ── Kept for new registrations only (still creates Auth account with real email) ──
-// After migration, this is also how login works — via the real email.
 const idToEmail = (idNumber) => `${idNumber.trim().replace(/\s/g, '')}@neu-lib.internal`;
 
-// ── Look up a user's real email from Firestore by their ID number ──
-// Returns the real email string, or null if not found / no email stored.
+// Look up a user's real email from Firestore by their ID number
 async function getRealEmailByIdNumber(idNumber) {
   try {
     const snap = await getDocs(
@@ -67,6 +64,19 @@ async function getRealEmailByIdNumber(idNumber) {
     );
     if (snap.empty) return null;
     return snap.docs[0].data().email || null;
+  } catch {
+    return null;
+  }
+}
+
+// Look up a Firestore user doc by their real email
+async function getUserDocByEmail(email) {
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'users'), where('email', '==', email.toLowerCase().trim()))
+    );
+    if (snap.empty) return null;
+    return { id: snap.docs[0].id, ...snap.docs[0].data() };
   } catch {
     return null;
   }
@@ -84,10 +94,7 @@ export function AuthProvider({ children }) {
   const [borrowMapReady,    setBorrowMapReady]    = useState(false);
 
   // ── Register ─────────────────────────────────────────────────────────────────
-  // Now registers with the REAL email as the primary Firebase Auth email.
-  // This means new accounts are migration-ready from day one.
   const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, role = 'student', password, email }) => {
-    // Use real email if provided, otherwise fall back to fake (for accounts without one)
     const authEmail = email?.trim() ? email.trim().toLowerCase() : idToEmail(idNumber);
     const qrToken   = crypto.randomUUID().replace(/-/g, '');
     try {
@@ -102,7 +109,7 @@ export function AuthProvider({ children }) {
         course:        course.trim().toUpperCase(),
         college:       college.trim().toUpperCase(),
         role,
-        email:         authEmail, // always store the email used for Auth
+        email:         authEmail,
         createdAt:     serverTimestamp(),
       });
       return cred;
@@ -113,14 +120,10 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Login ────────────────────────────────────────────────────────────────────
-  // All accounts are migrated to real emails. Login flow:
-  //   1. Try Firestore lookup for real email (unauthenticated — rules allow limit:1)
-  //   2. Sign in with real email
-  //   3. If Firestore lookup failed/blocked, fall back to @neu-lib.internal
+  // ── Login with ID + password ──────────────────────────────────────────────
   const login = async (idNumber, password) => {
     try {
-      let authEmail = idToEmail(idNumber); // default fallback
+      let authEmail = idToEmail(idNumber); // fallback
       try {
         const realEmail = await getRealEmailByIdNumber(idNumber);
         if (realEmail) authEmail = realEmail;
@@ -134,10 +137,57 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Logout ───────────────────────────────────────────────────────────────────
+  // ── Google Sign-In ────────────────────────────────────────────────────────
+  // Flow:
+  //   1. Sign in with Google popup → get googleUser
+  //   2. Look up Firestore for a user doc with matching email
+  //   3. If found → that IS their account (same UID after migration) → success
+  //   4. If NOT found → no library account for this Google email → show error
+  //
+  // After migration all accounts use real emails, so Google sign-in with
+  // their @neu.edu.ph email lands on the exact same Firebase Auth account
+  // (same UID) and the same Firestore document. No linking needed.
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ hd: 'neu.edu.ph' }); // hint: NEU accounts only
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const googleUser = result.user;
+
+      // Check if there's a Firestore profile for this UID
+      const profileSnap = await getDoc(doc(db, 'users', googleUser.uid));
+
+      if (profileSnap.exists()) {
+        // Perfect — their Google email matches the migrated Auth account
+        return result;
+      }
+
+      // No Firestore doc for this UID — means they signed in with a Google
+      // account that isn't linked to any library account.
+      // Sign them out and show a friendly error.
+      await signOut(auth);
+      const err = new Error(parseFirebaseError({ code: 'no-profile' }));
+      err.code = 'no-profile';
+      throw err;
+
+    } catch (err) {
+      if (err.code === 'no-profile') throw err;
+      if (err.code === 'auth/popup-closed-by-user' ||
+          err.code === 'auth/cancelled-popup-request') {
+        const friendly = new Error(parseFirebaseError(err));
+        friendly.code = err.code;
+        throw friendly;
+      }
+      const friendly = new Error(parseFirebaseError(err));
+      friendly.code = err.code;
+      throw friendly;
+    }
+  };
+
+  // ── Logout ────────────────────────────────────────────────────────────────
   const logout = () => signOut(auth);
 
-  // ── Password update ──────────────────────────────────────────────────────────
+  // ── Password update ───────────────────────────────────────────────────────
   const updateUserPassword = async (newPassword) => {
     if (!auth.currentUser) throw new Error('Not authenticated.');
     try {
@@ -149,12 +199,10 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Send password reset email ────────────────────────────────────────────────
-  // Used by ForgotPasswordPage. Looks up real email by ID number, then sends.
+  // ── Send password reset email ─────────────────────────────────────────────
   const sendResetEmail = async (idNumber) => {
     const realEmail = await getRealEmailByIdNumber(idNumber);
     if (!realEmail) {
-      // Return a specific code so ForgotPasswordPage can show the right message
       const err = new Error('No email address is linked to this account. Please contact the library administrator.');
       err.code = 'no-email';
       throw err;
@@ -172,7 +220,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Fetch / refresh profile ──────────────────────────────────────────────────
+  // ── Fetch / refresh profile ───────────────────────────────────────────────
   const fetchProfile = async (uid) => {
     setProfileLoading(true);
     try {
@@ -201,7 +249,7 @@ export function AuthProvider({ children }) {
 
   const refreshProfile = () => { if (currentUser) return fetchProfile(currentUser.uid); };
 
-  // ── Live borrow snapshot for students ───────────────────────────────────────
+  // ── Live borrow snapshot for students ────────────────────────────────────
   useEffect(() => {
     if (!userProfile?.uid || userProfile.role !== 'student') {
       setStudentBorrowMap({});
@@ -243,7 +291,7 @@ export function AuthProvider({ children }) {
     return unsub;
   }, [currentUser, userProfile]);
 
-  // ── Auth state listener ──────────────────────────────────────────────────────
+  // ── Auth state listener ───────────────────────────────────────────────────
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
@@ -264,7 +312,7 @@ export function AuthProvider({ children }) {
       currentUser, userProfile, loadingAuth, profileLoading,
       needsPasswordReset, clearPasswordResetFlag,
       studentBorrowMap, setStudentBorrowMap, studentHasOverdue, borrowMapReady,
-      register, login, logout, refreshProfile,
+      register, login, loginWithGoogle, logout, refreshProfile,
       updateUserPassword, sendResetEmail, idToEmail,
       effectiveId: userProfile?.uid || currentUser?.uid,
     }}>
