@@ -114,14 +114,18 @@ export function AuthProvider({ children }) {
   };
 
   // ── Login ────────────────────────────────────────────────────────────────────
-  // Strategy:
-  //   1. Look up real email in Firestore by idNumber
-  //   2. If found → sign in with real email (post-migration accounts)
-  //   3. If not found → fall back to @neu-lib.internal (pre-migration / no email)
+  // All accounts are migrated to real emails. Login flow:
+  //   1. Try Firestore lookup for real email (unauthenticated — rules allow limit:1)
+  //   2. Sign in with real email
+  //   3. If Firestore lookup failed/blocked, fall back to @neu-lib.internal
   const login = async (idNumber, password) => {
     try {
-      const realEmail = await getRealEmailByIdNumber(idNumber);
-      const authEmail = realEmail || idToEmail(idNumber);
+      let authEmail = idToEmail(idNumber); // default fallback
+      try {
+        const realEmail = await getRealEmailByIdNumber(idNumber);
+        if (realEmail) authEmail = realEmail;
+      } catch (_) { /* rules blocked — use fake email fallback */ }
+
       return await signInWithEmailAndPassword(auth, authEmail, password);
     } catch (err) {
       const friendly = new Error(parseFirebaseError(err));

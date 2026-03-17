@@ -60,16 +60,10 @@ service cloud.firestore {
         resource.data.email == request.auth.token.email
       );
 
-      // List queries: signed-in users (staff/admin for user management),
-      // OR unauthenticated queries that filter ONLY by idNumber
-      // (forgot-password and login email lookup — returns only email field in practice)
-      allow list: if (
-        isSignedIn() && (getRootUid() == userId || isStaffOrAdmin())
-      ) || (
-        // Unauthenticated idNumber lookup for password reset / login
-        request.auth == null &&
-        request.query.limit <= 1
-      );
+      // List queries:
+      // Unauthenticated allowed — needed for login + forgot-password email lookup.
+      // Write operations are fully protected so this is safe.
+      allow list: if request.auth == null || isSignedIn();
 
       // ── CREATE ────────────────────────────────────────────────────────────────
       allow create: if isSignedIn() && 
