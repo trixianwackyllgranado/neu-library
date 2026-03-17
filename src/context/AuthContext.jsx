@@ -207,13 +207,30 @@ export function AuthProvider({ children }) {
       err.code = 'no-email';
       throw err;
     }
+
+    // Determine the correct base URL:
+    // In production this will be https://neu-library-v2.web.app
+    // In dev it will be http://localhost:5173 (or whatever port)
+    const baseUrl = import.meta.env.VITE_APP_URL?.trim()
+      || (window.location.hostname === 'localhost'
+          ? window.location.origin
+          : 'https://neu-library-v2.web.app');
+
     const actionCodeSettings = {
-      url: `${window.location.origin}/auth/action`,
+      url: `${baseUrl}/auth/action`,
       handleCodeInApp: false,
     };
+
     try {
       await sendPasswordResetEmail(auth, realEmail, actionCodeSettings);
     } catch (err) {
+      // auth/user-not-found means the account exists in Firestore but not
+      // in Firebase Auth — surface a clear message instead of crashing
+      if (err.code === 'auth/user-not-found') {
+        const notFound = new Error('No sign-in account found for this ID. Please contact the library administrator.');
+        notFound.code = 'no-auth-account';
+        throw notFound;
+      }
       const friendly = new Error(parseFirebaseError(err));
       friendly.code = err.code;
       throw friendly;

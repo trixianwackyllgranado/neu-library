@@ -1,5 +1,5 @@
 // src/context/LibrarySessionContext.jsx
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import {
   collection, query, where, onSnapshot,
   addDoc, updateDoc, doc, serverTimestamp,
@@ -13,6 +13,9 @@ export function LibrarySessionProvider({ children }) {
   const { currentUser, userProfile } = useAuth();
   const [session, setSession] = useState(undefined); // undefined = loading
   const [elapsed, setElapsed] = useState(0);
+
+  // Ref to prevent concurrent checkIn calls (spam protection)
+  const checkInFlight = useRef(false);
 
   // Real-time listener for the current user's active session
   useEffect(() => {
@@ -34,7 +37,7 @@ export function LibrarySessionProvider({ children }) {
     });
 
     return unsub;
-  }, [currentUser]);
+  }, [userProfile?.uid]);
 
   // Tick every second
   useEffect(() => {
@@ -51,13 +54,24 @@ export function LibrarySessionProvider({ children }) {
   }, [session]);
 
   const checkIn = async (purpose) => {
-    if (!userProfile?.uid || session) return;
-    await addDoc(collection(db, 'logger'), {
-      uid:       userProfile.uid,
-      purpose,
-      entryTime: serverTimestamp(),
-      active:    true,
-    });
+    // Block if: no user, already have a session, or a checkIn is already in flight
+    if (!userProfile?.uid) return;
+    if (session !== null && session !== undefined) return; // session exists or still loading
+    if (checkInFlight.current) return; // debounce rapid clicks
+
+    checkInFlight.current = true;
+    try {
+      await addDoc(collection(db, 'logger'), {
+        uid:       userProfile.uid,
+        purpose,
+        entryTime: serverTimestamp(),
+        active:    true,
+      });
+    } finally {
+      // Keep the lock for a moment so the snapshot has time to update
+      // before any subsequent call could slip through
+      setTimeout(() => { checkInFlight.current = false; }, 2000);
+    }
   };
 
   const checkOut = async () => {
