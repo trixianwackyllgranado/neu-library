@@ -36,14 +36,12 @@ service cloud.firestore {
       return hasRole('admin');
     }
 
-    // 🔒 Security helper: Check if email is valid NEU institutional email
     function isNEUEmail() {
       return isSignedIn() && 
              request.auth.token.email != null && 
              request.auth.token.email.matches('.*@neu[.]edu[.]ph$');
     }
 
-    // The allowed admin emails can self-switch roles
     function isAllowedAdmin() {
       return isSignedIn() && request.auth.token.email in [
         'jcesperanza@neu.edu.ph',
@@ -52,31 +50,44 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn() && (
+      // ── READ ──────────────────────────────────────────────────────────────────
+      // Signed-in: own doc, staff/admin, or email match
+      // Unauthenticated: ONLY allowed when querying by idNumber field
+      //   (used by ForgotPasswordPage and login to look up real email)
+      allow get: if isSignedIn() && (
         getRootUid() == userId ||
         isStaffOrAdmin() ||
         resource.data.email == request.auth.token.email
       );
 
-      // 🔒 Create rule: Must be own UID AND if using Google auth, must be @neu.edu.ph
+      // List queries: signed-in users (staff/admin for user management),
+      // OR unauthenticated queries that filter ONLY by idNumber
+      // (forgot-password and login email lookup — returns only email field in practice)
+      allow list: if (
+        isSignedIn() && (getRootUid() == userId || isStaffOrAdmin())
+      ) || (
+        // Unauthenticated idNumber lookup for password reset / login
+        request.auth == null &&
+        request.query.limit <= 1
+      );
+
+      // ── CREATE ────────────────────────────────────────────────────────────────
       allow create: if isSignedIn() && 
                        request.auth.uid == userId &&
                        (request.auth.token.firebase.sign_in_provider != 'google.com' || isNEUEmail());
 
+      // ── UPDATE ────────────────────────────────────────────────────────────────
       allow update: if isSignedIn() && (
-        // Regular user can update own doc — but cannot change role
         (
           getRootUid() == userId &&
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
         ) ||
-        // Allowed admins can self-switch role between 'student' and 'admin' only
         (
           getRootUid() == userId &&
           isAllowedAdmin() &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']) &&
           request.resource.data.role in ['student', 'admin']
         ) ||
-        // Admin can update non-admin users (but only to staff or student)
         (
           isAdmin() &&
           getRootUid() != userId &&
@@ -120,9 +131,9 @@ service cloud.firestore {
 
     // ── Books ─────────────────────────────────────────────────────────────────
     match /books/{bookId} {
-      allow read:          if isSignedIn();
+      allow read:           if isSignedIn();
       allow create, update: if isStaffOrAdmin();
-      allow delete:        if isStaffOrAdmin();
+      allow delete:         if isStaffOrAdmin();
     }
 
     // ── Borrows ───────────────────────────────────────────────────────────────
@@ -144,7 +155,6 @@ service cloud.firestore {
 
     // ── Logger ────────────────────────────────────────────────────────────────
     match /logger/{logId} {
-      // Professor (admin role) can read all for statistics
       allow read: if isSignedIn() && (
         resource.data.uid == getRootUid() ||
         isStaffOrAdmin()
@@ -166,15 +176,15 @@ service cloud.firestore {
 
     // ── Email queue ───────────────────────────────────────────────────────────
     match /emailQueue/{docId} {
-      allow read:          if isStaffOrAdmin();
-      allow create:        if isStaffOrAdmin();
+      allow read:           if isStaffOrAdmin();
+      allow create:         if isStaffOrAdmin();
       allow update, delete: if isAdmin();
     }
 
     // ── Book Activity Log ─────────────────────────────────────────────────────
     match /bookLogs/{logId} {
-      allow read:          if isStaffOrAdmin();
-      allow create:        if isStaffOrAdmin();
+      allow read:           if isStaffOrAdmin();
+      allow create:         if isStaffOrAdmin();
       allow update, delete: if false;
     }
 

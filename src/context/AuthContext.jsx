@@ -1,4 +1,9 @@
 // src/context/AuthContext.jsx
+// ─── MIGRATION NOTE ────────────────────────────────────────────────────────
+// After running migrate-emails.js, Firebase Auth accounts use real @neu.edu.ph
+// emails. The login() function now looks up the real email from Firestore by
+// idNumber, then signs in with that. Everything else is unchanged.
+// ───────────────────────────────────────────────────────────────────────────
 import { createContext, useContext, useEffect, useState } from 'react';
 import {
   createUserWithEmailAndPassword,
@@ -6,6 +11,7 @@ import {
   signOut,
   onAuthStateChanged,
   updatePassword,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
@@ -15,7 +21,6 @@ import { auth, db } from '../firebase/config';
 
 const AuthContext = createContext(null);
 
-// ── The professor's Google email — only these accounts can self-switch roles ──
 const ALLOWED_ADMIN_EMAILS = [
   'jcesperanza@neu.edu.ph',
   'trixianwackyll.granado@neu.edu.ph'
@@ -40,7 +45,7 @@ export function parseFirebaseError(error) {
     'auth/popup-closed-by-user':   'Sign-in popup was closed. Please try again.',
     'auth/cancelled-popup-request':'Sign-in was cancelled. Please try again.',
     'auth/popup-blocked':          'Sign-in popup was blocked by your browser. Please allow popups for this site.',
-    'auth/unauthorized-domain':    'This domain is not authorized for Google Sign-In. Check your Firebase Console settings.',
+    'auth/unauthorized-domain':    'This domain is not authorized. Check your Firebase Console settings.',
   };
   if (map[code]) return map[code];
   if (error?.message) {
@@ -49,7 +54,23 @@ export function parseFirebaseError(error) {
   return 'An unexpected error occurred. Please try again.';
 }
 
+// ── Kept for new registrations only (still creates Auth account with real email) ──
+// After migration, this is also how login works — via the real email.
 const idToEmail = (idNumber) => `${idNumber.trim().replace(/\s/g, '')}@neu-lib.internal`;
+
+// ── Look up a user's real email from Firestore by their ID number ──
+// Returns the real email string, or null if not found / no email stored.
+async function getRealEmailByIdNumber(idNumber) {
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'users'), where('idNumber', '==', idNumber.trim()))
+    );
+    if (snap.empty) return null;
+    return snap.docs[0].data().email || null;
+  } catch {
+    return null;
+  }
+}
 
 export function AuthProvider({ children }) {
   const [currentUser,    setCurrentUser]    = useState(null);
@@ -62,9 +83,12 @@ export function AuthProvider({ children }) {
   const [studentHasOverdue, setStudentHasOverdue] = useState(false);
   const [borrowMapReady,    setBorrowMapReady]    = useState(false);
 
-  // ── Register (ID-number flow) ───────────────────────────────────────────────
+  // ── Register ─────────────────────────────────────────────────────────────────
+  // Now registers with the REAL email as the primary Firebase Auth email.
+  // This means new accounts are migration-ready from day one.
   const register = async ({ idNumber, lastName, firstName, middleInitial, course, college, role = 'student', password, email }) => {
-    const authEmail = idToEmail(idNumber);
+    // Use real email if provided, otherwise fall back to fake (for accounts without one)
+    const authEmail = email?.trim() ? email.trim().toLowerCase() : idToEmail(idNumber);
     const qrToken   = crypto.randomUUID().replace(/-/g, '');
     try {
       const cred = await createUserWithEmailAndPassword(auth, authEmail, password);
@@ -78,8 +102,7 @@ export function AuthProvider({ children }) {
         course:        course.trim().toUpperCase(),
         college:       college.trim().toUpperCase(),
         role,
-        // If they provided an institutional email, save it so Google Sign-in can merge later
-        ...(email ? { email: email.trim().toLowerCase() } : {}),
+        email:         authEmail, // always store the email used for Auth
         createdAt:     serverTimestamp(),
       });
       return cred;
@@ -90,20 +113,22 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Login with ID + password ────────────────────────────────────────────────
+  // ── Login ────────────────────────────────────────────────────────────────────
+  // Strategy:
+  //   1. Look up real email in Firestore by idNumber
+  //   2. If found → sign in with real email (post-migration accounts)
+  //   3. If not found → fall back to @neu-lib.internal (pre-migration / no email)
   const login = async (idNumber, password) => {
     try {
-      return await signInWithEmailAndPassword(auth, idToEmail(idNumber), password);
+      const realEmail = await getRealEmailByIdNumber(idNumber);
+      const authEmail = realEmail || idToEmail(idNumber);
+      return await signInWithEmailAndPassword(auth, authEmail, password);
     } catch (err) {
       const friendly = new Error(parseFirebaseError(err));
       friendly.code = err.code;
       throw friendly;
     }
   };
-
-
-
-
 
   // ── Logout ───────────────────────────────────────────────────────────────────
   const logout = () => signOut(auth);
@@ -120,11 +145,30 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // ── Send password reset email ────────────────────────────────────────────────
+  // Used by ForgotPasswordPage. Looks up real email by ID number, then sends.
+  const sendResetEmail = async (idNumber) => {
+    const realEmail = await getRealEmailByIdNumber(idNumber);
+    if (!realEmail) {
+      // Return a specific code so ForgotPasswordPage can show the right message
+      const err = new Error('No email address is linked to this account. Please contact the library administrator.');
+      err.code = 'no-email';
+      throw err;
+    }
+    const actionCodeSettings = {
+      url: `${window.location.origin}/auth/action`,
+      handleCodeInApp: false,
+    };
+    try {
+      await sendPasswordResetEmail(auth, realEmail, actionCodeSettings);
+    } catch (err) {
+      const friendly = new Error(parseFirebaseError(err));
+      friendly.code = err.code;
+      throw friendly;
+    }
+  };
+
   // ── Fetch / refresh profile ──────────────────────────────────────────────────
-  // userObj is the Firebase Auth user — passed by onAuthStateChanged so we can
-  // do an email-based fallback for Google users if their Firestore doc hasn't
-  // been written yet (race condition between signInWithPopup resolving and our
-  // loginWithGoogle setDoc completing).
   const fetchProfile = async (uid) => {
     setProfileLoading(true);
     try {
@@ -203,7 +247,7 @@ export function AuthProvider({ children }) {
         if (user) await fetchProfile(user.uid);
         else setUserProfile(null);
       } catch (err) {
-        console.error("[AuthContext] Auth state error:", err);
+        console.error('[AuthContext] Auth state error:', err);
       } finally {
         setLoadingAuth(false);
       }
@@ -217,7 +261,7 @@ export function AuthProvider({ children }) {
       needsPasswordReset, clearPasswordResetFlag,
       studentBorrowMap, setStudentBorrowMap, studentHasOverdue, borrowMapReady,
       register, login, logout, refreshProfile,
-      updateUserPassword, idToEmail,
+      updateUserPassword, sendResetEmail, idToEmail,
       effectiveId: userProfile?.uid || currentUser?.uid,
     }}>
       {children}

@@ -1,6 +1,7 @@
 // src/pages/ForgotPasswordPage.jsx
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 const MONO  = { fontFamily: "'IBM Plex Mono', monospace" };
@@ -12,14 +13,17 @@ const ID_REGEX = /^\d{2}-\d{5}-\d{3}$/;
 function formatId(raw) {
   const d = raw.replace(/\D/g, '').slice(0, 10);
   if (d.length <= 2) return d;
-  if (d.length <= 7) return `${d.slice(0,2)}-${d.slice(2)}`;
-  return `${d.slice(0,2)}-${d.slice(2,7)}-${d.slice(7)}`;
+  if (d.length <= 7) return `${d.slice(0, 2)}-${d.slice(2)}`;
+  return `${d.slice(0, 2)}-${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
 export default function ForgotPasswordPage() {
-  const { dark, toggle } = useTheme();
+  const { sendResetEmail } = useAuth();
+  const { dark, toggle }   = useTheme();
+
   const [idFormat, setIdFormat] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [status,   setStatus]   = useState('idle'); // idle | loading | sent | error
+  const [errorMsg, setErrorMsg] = useState('');
 
   const inputBase = {
     width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)',
@@ -28,6 +32,27 @@ export default function ForgotPasswordPage() {
   };
   const onFocus = e => { e.currentTarget.style.borderColor = 'var(--gold)'; };
   const onBlur  = e => { e.currentTarget.style.borderColor = 'var(--input-border)'; };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!ID_REGEX.test(idFormat)) return;
+    setStatus('loading');
+    setErrorMsg('');
+    try {
+      await sendResetEmail(idFormat);
+      setStatus('sent');
+    } catch (err) {
+      if (err.code === 'no-email') {
+        setErrorMsg(err.message);
+      } else {
+        // For any other error (including user not found) show generic success
+        // to avoid leaking whether an ID exists
+        setStatus('sent');
+        return;
+      }
+      setStatus('error');
+    }
+  };
 
   return (
     <div style={{
@@ -64,72 +89,85 @@ export default function ForgotPasswordPage() {
 
             <div style={{ padding: '32px 32px 38px' }}>
 
-              {!submitted ? (<>
-                <div style={{ marginBottom: '28px' }}>
-                  <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '8px' }}>Account Recovery</p>
-                  <h1 style={{ ...SERIF, fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '10px' }}>Forgot Password?</h1>
-                  <p style={{ ...PP, fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
-                    Enter your Student ID Number below. Due to a recent system update, all passwords have been reset to each user's ID number.
-                  </p>
-                </div>
-
-                {/* Info box */}
-                <div style={{ background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', borderRadius: '10px', padding: '14px 16px', marginBottom: '20px' }}>
-                  <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.12em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '6px', fontWeight: 700 }}>Recent Password Reset</p>
-                  <p style={{ ...PP, fontSize: '13px', color: 'var(--text-body)', lineHeight: 1.65 }}>
-                    As of March 2025, all account passwords were reset. Your new password is <strong>your Student ID Number</strong> (with dashes). Example: <span style={{ ...MONO, color: 'var(--gold)', fontSize: '12px' }}>24-12345-678</span>
-                  </p>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ ...MONO, fontSize: '10px', letterSpacing: '0.16em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px', fontWeight: 600 }}>Student ID Number</label>
-                  <input
-                    type="text" inputMode="numeric"
-                    style={{ ...inputBase, ...MONO, letterSpacing: '0.16em' }}
-                    placeholder="22-12345-123"
-                    value={idFormat}
-                    onChange={e => { const f = formatId(e.target.value); setIdFormat(f); }}
-                    onFocus={onFocus} onBlur={onBlur}
-                  />
-                </div>
-
-                <button
-                  onClick={() => { if (idFormat) setSubmitted(true); }}
-                  disabled={!ID_REGEX.test(idFormat)}
-                  style={{
-                    width: '100%', padding: '13px', borderRadius: '10px',
-                    background: ID_REGEX.test(idFormat) ? 'var(--gold-soft)' : 'var(--surface)',
-                    border: '1px solid var(--gold-border)', color: 'var(--gold)',
-                    cursor: ID_REGEX.test(idFormat) ? 'pointer' : 'not-allowed',
-                    opacity: ID_REGEX.test(idFormat) ? 1 : 0.5,
-                    ...MONO, fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, transition: 'all 0.15s',
-                  }}
-                >
-                  Show My Recovery Info
-                </button>
-              </>) : (<>
-
-                {/* Success / recovery info screen */}
-                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              {/* ── SENT STATE ── */}
+              {status === 'sent' ? (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
                     </svg>
                   </div>
-                  <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '8px' }}>Recovery Info</p>
-                  <h2 style={{ ...SERIF, fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>Here's your password</h2>
-                  <p style={{ ...PP, fontSize: '14px', color: 'var(--text-muted)', marginBottom: '20px' }}>Your password was reset to your Student ID Number:</p>
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '12px', padding: '18px 24px', marginBottom: '20px' }}>
-                    <p style={{ ...MONO, fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Your ID Number / Password</p>
-                    <p style={{ ...MONO, fontSize: '22px', fontWeight: 700, color: 'var(--gold)', letterSpacing: '0.08em' }}>{idFormat}</p>
-                  </div>
-                  <p style={{ ...PP, fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '20px' }}>
-                    After signing in, go to your dashboard and click <strong>"Change Password"</strong> to set a new, secure password.
+                  <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '8px' }}>Check Your Email</p>
+                  <h2 style={{ ...SERIF, fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '12px' }}>Reset Link Sent</h2>
+                  <p style={{ ...PP, fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '8px' }}>
+                    If that Student ID is registered, a password reset link has been sent to the email address on file.
                   </p>
+                  <p style={{ ...PP, fontSize: '13px', color: 'var(--text-dim)', lineHeight: 1.65, marginBottom: '24px' }}>
+                    Click the link in the email to set a new password. Check your spam folder if you don't see it within a few minutes.
+                  </p>
+                  <button
+                    onClick={() => { setStatus('idle'); setIdFormat(''); setErrorMsg(''); }}
+                    style={{ ...MONO, fontSize: '11px', letterSpacing: '0.14em', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', textTransform: 'uppercase' }}
+                  >
+                    Try a different ID
+                  </button>
                 </div>
-              </>)}
 
-              <div style={{ marginTop: '20px', paddingTop: '18px', borderTop: '1px solid var(--divider)', textAlign: 'center' }}>
+              ) : (
+                /* ── FORM STATE ── */
+                <>
+                  <div style={{ marginBottom: '28px' }}>
+                    <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '8px' }}>Account Recovery</p>
+                    <h1 style={{ ...SERIF, fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '10px' }}>Forgot Password?</h1>
+                    <p style={{ ...PP, fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                      Enter your Student ID Number and we'll send a reset link to the email address linked to your account.
+                    </p>
+                  </div>
+
+                  {status === 'error' && (
+                    <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', padding: '12px 14px', marginBottom: '18px' }}>
+                      <p style={{ ...MONO, fontSize: '11px', color: '#f87171' }}>{errorMsg}</p>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div>
+                      <label style={{ ...MONO, fontSize: '10px', letterSpacing: '0.16em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px', fontWeight: 600 }}>
+                        Student ID Number
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        style={{ ...inputBase, ...MONO, letterSpacing: '0.16em' }}
+                        placeholder="22-12345-123"
+                        value={idFormat}
+                        onChange={e => { setIdFormat(formatId(e.target.value)); setErrorMsg(''); if (status === 'error') setStatus('idle'); }}
+                        onFocus={onFocus}
+                        onBlur={onBlur}
+                        autoFocus
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={!ID_REGEX.test(idFormat) || status === 'loading'}
+                      style={{
+                        width: '100%', padding: '13px', borderRadius: '10px',
+                        background: (ID_REGEX.test(idFormat) && status !== 'loading') ? 'var(--gold-soft)' : 'var(--surface)',
+                        border: '1px solid var(--gold-border)', color: 'var(--gold)',
+                        cursor: (ID_REGEX.test(idFormat) && status !== 'loading') ? 'pointer' : 'not-allowed',
+                        opacity: (ID_REGEX.test(idFormat) && status !== 'loading') ? 1 : 0.5,
+                        ...MONO, fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, transition: 'all 0.15s',
+                      }}
+                    >
+                      {status === 'loading' ? 'Sending…' : 'Send Reset Link'}
+                    </button>
+                  </form>
+                </>
+              )}
+
+              <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid var(--divider)', textAlign: 'center' }}>
                 <Link to="/login" style={{ ...MONO, fontSize: '12px', color: 'var(--gold)', textDecoration: 'none', letterSpacing: '0.1em' }}>
                   ← Back to Sign In
                 </Link>
