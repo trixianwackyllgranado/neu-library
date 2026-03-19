@@ -270,14 +270,11 @@ function StaffInviteModal({ invites, myProfile, onClose, showToast }) {
     setSaving(true);
     try {
       // ── Check if a registered user already exists with this email ──────────
-      // Catches existing visitors, staff, admins — anyone already registered.
       const existingSnap = await getDocs(query(
         collection(db, 'users'),
         where('email', '==', cleanEmail)
       ));
-
       if (!existingSnap.empty) {
-        // Filter out placeholder pre-created docs (they start with invite_)
         const realDocs = existingSnap.docs.filter(d => !d.id.startsWith('invite_'));
         if (realDocs.length > 0) {
           const existing = realDocs[0].data();
@@ -293,13 +290,10 @@ function StaffInviteModal({ invites, myProfile, onClose, showToast }) {
           return;
         }
       }
-    try {
-      // Create a placeholder UID for the pre-created profile.
-      // Format: invite_<sanitised_email> — unique and identifiable.
+
+      // ── Create placeholder profile + invite record ─────────────────────────
       const placeholderUid = `invite_${cleanEmail.replace(/[@.]/g, '_')}`;
 
-      // Write the full users doc under the placeholder UID.
-      // AuthContext will migrate it to the real UID on first sign-in.
       await setDoc(doc(db, 'users', placeholderUid), {
         uid:           placeholderUid,
         email:         cleanEmail,
@@ -316,15 +310,14 @@ function StaffInviteModal({ invites, myProfile, onClose, showToast }) {
         createdBy:     myProfile?.uid,
       });
 
-      // Write the staffInvites record so AuthContext can find the placeholder UID on sign-in.
       await addDoc(collection(db, 'staffInvites'), {
-        email:          cleanEmail,
+        email:         cleanEmail,
         role,
-        preCreatedUid:  placeholderUid,
-        invitedBy:      myProfile?.uid,
-        invitedByName:  `${myProfile?.lastName}, ${myProfile?.firstName}`,
-        invitedAt:      serverTimestamp(),
-        status:         'pending',
+        preCreatedUid: placeholderUid,
+        invitedBy:     myProfile?.uid,
+        invitedByName: `${myProfile?.lastName}, ${myProfile?.firstName}`,
+        invitedAt:     serverTimestamp(),
+        status:        'pending',
       });
 
       showToast(`${role === 'admin' ? 'Admin' : 'Staff'} account created for ${cleanEmail}. They can sign in immediately.`, true);
