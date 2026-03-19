@@ -124,25 +124,16 @@ service cloud.firestore {
     }
 
     // ── Tutorial Preferences ──────────────────────────────────────────────────
-    // Each user reads/writes their own tutorial prefs. Admins can read all.
+    // Simple own-doc rules — NO getUserData() calls, so zero extra reads.
     match /tutorialPrefs/{userId} {
-      allow read: if isSignedIn() && (
-        request.auth.uid == userId || isAdmin()
-      );
-      allow create, update: if isSignedIn() && request.auth.uid == userId;
-      allow delete: if isSignedIn() && (
-        request.auth.uid == userId || isAdmin()
-      );
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
     // ── Online Presence ───────────────────────────────────────────────────────
-    // Users write their own presence doc. Anyone signed in can read (for kiosk display).
+    // Simple own-doc write, any signed-in user can read. NO getUserData() calls.
     match /onlinePresence/{userId} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && request.auth.uid == userId;
-      allow delete: if isSignedIn() && (
-        request.auth.uid == userId || isAdmin()
-      );
+      allow write: if isSignedIn() && request.auth.uid == userId;
     }
   }
 }

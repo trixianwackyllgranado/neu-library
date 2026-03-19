@@ -139,8 +139,8 @@ export function AuthProvider({ children }) {
 
     goOnline();
 
-    // Heartbeat every 60s
-    const heartbeat = setInterval(goOnline, 60_000);
+    // Heartbeat every 5 minutes (reduced from 60s to minimize Firestore writes)
+    const heartbeat = setInterval(goOnline, 300_000);
 
     // Offline on tab close / navigation away
     window.addEventListener('beforeunload', goOffline);
