@@ -58,8 +58,10 @@ async function lookupVisitor(rawInput) {
   const input = rawInput.trim();
   if (!input) return null;
 
-  // Try QR token first (32-char hex)
-  if (/^[a-f0-9]{32}$/i.test(input)) {
+  // Try QR token — UUID format (36 chars with dashes) or legacy 32-char hex
+  const isUUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(input);
+  const isHex32 = /^[a-f0-9]{32}$/i.test(input);
+  if (isUUID || isHex32) {
     const snap = await getDocs(query(collection(db,'users'), where('qrToken','==',input), limit(1)));
     if (!snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
   }

@@ -357,14 +357,14 @@ export default function VisitorKioskPage() {
       .catch(console.error);
   }, [userProfile?.uid, userProfile?.qrToken, userProfile?.role]);
 
-  // Show welcome toast once on first load (session transitions from undefined → null)
-  const prevSessionRef = useRef(undefined);
+  // Show welcome toast when the page first loads for a logged-in visitor (not after check-in)
+  const hasShownWelcome = useRef(false);
   useEffect(() => {
-    if (prevSessionRef.current === undefined && session === null) {
+    if (!hasShownWelcome.current && userProfile?.uid) {
+      hasShownWelcome.current = true;
       setShowWelcome(true);
     }
-    prevSessionRef.current = session;
-  }, [session]);
+  }, [userProfile?.uid]);
 
   // Live edit request status for this user
   const [editRequest, setEditRequest] = useState(null); // null = loading, false = none, obj = exists
@@ -573,52 +573,79 @@ export default function VisitorKioskPage() {
             </div>
           )}
 
-          {/* Edit request status / button — shown below main card */}
+          {/* ── Bottom action row: QR + Edit Request ── */}
           {session !== undefined && userProfile?.role === 'visitor' && (
-            <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' }}>
-              {hasPending ? (
-                <>
-                  <button style={editBtnStyle} disabled>{editBtnLabel}</button>
-                  <button onClick={handleCancelRequest}
-                    style={{ ...MONO, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '6px 12px', borderRadius: 7, cursor: 'pointer', background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)' }}>
-                    Cancel Request
-                  </button>
-                </>
-              ) : (
-                <button
-                  style={editBtnStyle}
-                  onClick={() => { if (!hasPending) setShowEditModal(true); }}>
-                  {editBtnLabel}
-                </button>
-              )}
-              {hasRejected && editRequest?.rejectionReason && (
-                <p style={{ ...MONO, fontSize: 10, color: 'var(--red)', width: '100%', textAlign: 'center' }}>
-                  Rejected: {editRequest.rejectionReason}
-                </p>
-              )}
-            </div>
-          )}
+            <div style={{ marginTop: 16, background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+              <div style={{ height: 2, background: 'linear-gradient(90deg, var(--gold-border), transparent)' }} />
+              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-          {/* QR Code — shown only when not checked in */}
-          {session === null && userProfile?.qrToken && (
-            <div style={{ marginTop: 20 }}>
-              {!showQR ? (
-                <div style={{ textAlign: 'center' }}>
-                  <button onClick={() => setShowQR(true)}
-                    style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '8px 18px', borderRadius: 9, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                    Show My QR Code
-                  </button>
+                {/* QR Code row — only when not checked in and token exists */}
+                {session === null && userProfile?.qrToken && (
+                  <div>
+                    <button onClick={() => setShowQR(v => !v)}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', background: showQR ? 'var(--gold-soft)' : 'var(--surface)', border: `1px solid ${showQR ? 'var(--gold-border)' : 'var(--card-border)'}`, transition: 'all 0.15s' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showQR ? 'var(--gold)' : 'var(--text-muted)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                          <path d="M14 14h3v3m0 4h4m-4 0v-4m4 0v4"/>
+                        </svg>
+                        <span style={{ ...MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: showQR ? 'var(--gold)' : 'var(--text-muted)', fontWeight: 700 }}>
+                          {showQR ? 'Hide QR Code' : 'Show My QR Code'}
+                        </span>
+                      </div>
+                      <span style={{ ...MONO, fontSize: 12, color: showQR ? 'var(--gold)' : 'var(--text-dim)' }}>{showQR ? '▲' : '▼'}</span>
+                    </button>
+
+                    {showQR && (
+                      <div style={{ marginTop: 12, padding: '20px', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, animation: 'fadeUp 0.2s ease both' }}>
+                        <p style={{ ...MONO, fontSize: 9, letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 8 }}>My Library QR Code</p>
+                        <QRCodeDisplay value={userProfile.qrToken} size={180} />
+                        <p style={{ ...MONO, fontSize: 9, color: 'var(--text-dim)', textAlign: 'center', marginTop: 4 }}>
+                          Show this to staff at the counter for quick check-in
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Divider between QR and Edit Request — only show both sections */}
+                {session === null && userProfile?.qrToken && (
+                  <div style={{ height: 1, background: 'var(--divider)' }} />
+                )}
+
+                {/* Edit Request row */}
+                <div>
+                  {hasPending ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ flex: 1, padding: '10px 14px', borderRadius: 10, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', display: 'inline-block', flexShrink: 0 }} />
+                        <span style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 700 }}>Edit Request Pending</span>
+                      </div>
+                      <button onClick={handleCancelRequest}
+                        style={{ padding: '10px 14px', borderRadius: 10, cursor: 'pointer', background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', ...MONO, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowEditModal(true)}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--card-border)', transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--gold-soft)'; e.currentTarget.style.borderColor = 'var(--gold-border)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                      <span style={{ ...MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Request Info Update</span>
+                    </button>
+                  )}
+                  {hasRejected && editRequest?.rejectionReason && (
+                    <p style={{ ...MONO, fontSize: 10, color: 'var(--red)', marginTop: 6, paddingLeft: 4 }}>
+                      ✕ Rejected: {editRequest.rejectionReason}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '20px 24px', textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
-                  <p style={{ ...MONO, fontSize: 9, letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 12 }}>My Library QR Code</p>
-                  <QRCodeDisplay value={userProfile.qrToken} size={180} />
-                  <button onClick={() => setShowQR(false)}
-                    style={{ marginTop: 12, ...MONO, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '6px 14px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                    Hide
-                  </button>
-                </div>
-              )}
+
+              </div>
             </div>
           )}
         </div>
