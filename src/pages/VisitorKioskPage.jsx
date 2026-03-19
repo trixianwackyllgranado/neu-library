@@ -486,7 +486,10 @@ export default function VisitorKioskPage() {
 
       {/* Main content — fills remaining height, no scroll */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflow: 'hidden' }}>
-        <div style={{ width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 10, animation: 'fadeUp 0.3s ease both' }}>
+        <div style={{ width: '100%', maxWidth: 860, display: 'grid', gridTemplateColumns: session !== undefined && userProfile?.role === 'visitor' && session === null && userProfile?.qrToken ? 'minmax(0,1.4fr) minmax(0,1fr)' : '1fr', gap: 12, alignItems: 'start', animation: 'fadeUp 0.3s ease both' }}>
+
+          {/* ── LEFT COLUMN: main check-in card ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
           {/* Loading */}
           {session === undefined && (
@@ -564,29 +567,34 @@ export default function VisitorKioskPage() {
             </div>
           )}
 
-          {/* Bottom row: QR + Edit Request */}
-          {session !== undefined && userProfile?.role === 'visitor' && (
-            <div style={{ display: 'grid', gridTemplateColumns: userProfile?.qrToken && session === null ? '1fr 1fr' : '1fr', gap: 10 }}>
+          </div>{/* end left column */}
 
-              {/* QR Card */}
+          {/* ── RIGHT COLUMN: QR + Edit Request — only when not checked in ── */}
+          {session !== undefined && userProfile?.role === 'visitor' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+              {/* QR Card — right column, shown when not checked in */}
               {session === null && userProfile?.qrToken && (
-                <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 12, overflow: 'hidden' }}>
-                  <div style={{ height: 2, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
-                  <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                    <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--gold)', textTransform: 'uppercase', fontWeight: 700 }}>My QR Code</p>
-                    {/* Small inline QR preview */}
-                    <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setShowQRLightbox(true)}>
-                      <QRCodeDisplay value={userProfile.qrToken} size={80} />
-                      {/* Enlarge hint overlay */}
-                      <div style={{ position: 'absolute', inset: 0, borderRadius: 6, background: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.35)'; e.currentTarget.querySelector('span').style.opacity = '1'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0)'; e.currentTarget.querySelector('span').style.opacity = '0'; }}>
-                        <span style={{ opacity: 0, transition: 'opacity 0.15s', color: '#fff', fontSize: 20 }}>⛶</span>
+                <div style={{ background: 'var(--card)', border: '1px solid var(--gold-border)', borderRadius: 14, overflow: 'hidden' }}>
+                  <div style={{ height: 3, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
+                  <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                    <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.18em', color: 'var(--gold)', textTransform: 'uppercase', fontWeight: 700 }}>My QR Code</p>
+                    {/* QR preview — click to enlarge */}
+                    <div style={{ position: 'relative', cursor: 'pointer', borderRadius: 10, overflow: 'hidden' }}
+                      onClick={() => setShowQRLightbox(true)}
+                      onMouseEnter={e => e.currentTarget.querySelector('.qr-overlay').style.opacity = '1'}
+                      onMouseLeave={e => e.currentTarget.querySelector('.qr-overlay').style.opacity = '0'}>
+                      <QRCodeDisplay value={userProfile.qrToken} size={150} />
+                      <div className="qr-overlay" style={{ position: 'absolute', inset: 0, borderRadius: 10, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.15s' }}>
+                        <span style={{ color: '#fff', fontSize: 28 }}>⛶</span>
                       </div>
                     </div>
+                    <p style={{ ...PP, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.4 }}>
+                      Show to staff at the counter for quick check-in
+                    </p>
                     <div style={{ display: 'flex', gap: 6, width: '100%' }}>
                       <button onClick={() => setShowQRLightbox(true)}
-                        style={{ flex: 1, padding: '6px 0', borderRadius: 7, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: 'pointer', ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: 'pointer', ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                         Enlarge
                       </button>
                       <button onClick={() => {
@@ -596,7 +604,7 @@ export default function VisitorKioskPage() {
                             });
                           });
                         }}
-                        style={{ flex: 1, padding: '6px 0', borderRadius: 7, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer', ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        style={{ flex: 1, padding: '8px 0', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer', ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                         Save
                       </button>
                     </div>
@@ -605,31 +613,44 @@ export default function VisitorKioskPage() {
               )}
 
               {/* Edit Request Card */}
-              <div style={{ background: 'var(--card)', border: `1px solid ${hasPending ? 'var(--gold-border)' : 'var(--card-border)'}`, borderRadius: 12, overflow: 'hidden' }}>
-                <div style={{ height: 2, background: hasPending ? 'linear-gradient(90deg, var(--gold), transparent)' : 'linear-gradient(90deg, var(--card-border), transparent)' }} />
-                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <div style={{ background: 'var(--card)', border: `1px solid ${hasPending ? 'var(--gold-border)' : 'var(--card-border)'}`, borderRadius: 14, overflow: 'hidden' }}>
+                <div style={{ height: 3, background: hasPending ? 'linear-gradient(90deg, var(--gold), transparent)' : hasApproved ? 'linear-gradient(90deg, var(--green), transparent)' : 'linear-gradient(90deg, var(--card-border), transparent)' }} />
+                <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {hasPending ? (
                     <>
-                      <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--gold)', textTransform: 'uppercase', fontWeight: 700 }}>Edit Pending ⏳</p>
-                      <p style={{ ...PP, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>Your request is under review by admin.</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>⏳</span>
+                        <div>
+                          <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--gold)', textTransform: 'uppercase', fontWeight: 700 }}>Edit Pending</p>
+                          <p style={{ ...PP, fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Under admin review</p>
+                        </div>
+                      </div>
                       <button onClick={handleCancelRequest}
-                        style={{ width: '100%', padding: '6px 0', borderRadius: 7, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: 'pointer', ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        style={{ width: '100%', padding: '9px 0', borderRadius: 8, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: 'pointer', ...MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                         Cancel Request
                       </button>
                     </>
                   ) : hasApproved ? (
-                    <>
-                      <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--green)', textTransform: 'uppercase', fontWeight: 700 }}>Edit Approved ✓</p>
-                      <p style={{ ...PP, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>Your info has been updated.</p>
-                    </>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>✅</span>
+                      <div>
+                        <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--green)', textTransform: 'uppercase', fontWeight: 700 }}>Edit Approved</p>
+                        <p style={{ ...PP, fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Your info has been updated.</p>
+                      </div>
+                    </div>
                   ) : (
                     <>
-                      <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 700 }}>Info Update</p>
-                      {hasRejected && editRequest?.rejectionReason && (
-                        <p style={{ ...MONO, fontSize: 9, color: 'var(--red)', textAlign: 'center' }}>✕ {editRequest.rejectionReason}</p>
-                      )}
+                      <div>
+                        <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>Info Update</p>
+                        <p style={{ ...PP, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                          Wrong name or ID? Request a correction and admin will review it.
+                        </p>
+                        {hasRejected && editRequest?.rejectionReason && (
+                          <p style={{ ...MONO, fontSize: 9, color: 'var(--red)', marginTop: 6 }}>✕ {editRequest.rejectionReason}</p>
+                        )}
+                      </div>
                       <button onClick={() => setShowEditModal(true)}
-                        style={{ width: '100%', padding: '6px 0', borderRadius: 7, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer', ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}
+                        style={{ width: '100%', padding: '9px 0', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer', ...MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', transition: 'all 0.15s' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--gold-soft)'; e.currentTarget.style.borderColor = 'var(--gold-border)'; e.currentTarget.style.color = 'var(--gold)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--card-border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}>
                         Request Info Update
