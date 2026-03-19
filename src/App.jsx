@@ -2,6 +2,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { LibrarySessionProvider } from './context/LibrarySessionContext';
+import { TutorialProvider } from './context/TutorialContext';
 import { RequireAuth, RequireRole, RequireGuest } from './components/shared/RouteGuard';
 import AppLayout from './components/shared/AppLayout';
 
@@ -21,8 +22,9 @@ function Layout({ children }) {
 }
 
 function DashboardRouter() {
-  const { userProfile } = useAuth();
-  const role = userProfile?.role;
+  const { userProfile, effectiveRole } = useAuth();
+  const role = effectiveRole || userProfile?.role;
+  // If prime admin is viewing as visitor, show the visitor kiosk
   if (role === 'visitor') return <VisitorKioskPage />;
   return <Layout><DashboardPage /></Layout>;
 }
@@ -32,54 +34,56 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <LibrarySessionProvider>
-          <Routes>
-            <Route path="/login"    element={<RequireGuest><LoginPage /></RequireGuest>} />
-            <Route path="/register" element={<RequireGuest><RegisterPage /></RequireGuest>} />
+          <TutorialProvider>
+            <Routes>
+              <Route path="/login"    element={<RequireGuest><LoginPage /></RequireGuest>} />
+              <Route path="/register" element={<RequireGuest><RegisterPage /></RequireGuest>} />
 
-            <Route path="/dashboard" element={
-              <RequireAuth><DashboardRouter /></RequireAuth>
-            } />
+              <Route path="/dashboard" element={
+                <RequireAuth><DashboardRouter /></RequireAuth>
+              } />
 
-            <Route path="/logger" element={
-              <RequireAuth>
-                <RequireRole roles={['staff','admin']}>
-                  <Layout><LoggerPage /></Layout>
-                </RequireRole>
-              </RequireAuth>
-            } />
+              <Route path="/logger" element={
+                <RequireAuth>
+                  <RequireRole roles={['staff','admin']}>
+                    <Layout><LoggerPage /></Layout>
+                  </RequireRole>
+                </RequireAuth>
+              } />
 
-            <Route path="/staff/kiosk" element={
-              <RequireAuth>
-                <RequireRole roles={['staff','admin']}>
-                  <Layout><StaffKioskPage /></Layout>
-                </RequireRole>
-              </RequireAuth>
-            } />
+              <Route path="/staff/kiosk" element={
+                <RequireAuth>
+                  <RequireRole roles={['staff','admin']}>
+                    <Layout><StaffKioskPage /></Layout>
+                  </RequireRole>
+                </RequireAuth>
+              } />
 
-            <Route path="/admin/users" element={
-              <RequireAuth>
-                <RequireRole roles={['admin']}>
-                  <Layout><UserManagementPage /></Layout>
-                </RequireRole>
-              </RequireAuth>
-            } />
-            <Route path="/admin/reports" element={
-              <RequireAuth>
-                <RequireRole roles={['admin']}>
-                  <Layout><ReportsPage /></Layout>
-                </RequireRole>
-              </RequireAuth>
-            } />
-            <Route path="/admin/edit-requests" element={
-              <RequireAuth>
-                <RequireRole roles={['admin']}>
-                  <Layout><EditRequestsPage /></Layout>
-                </RequireRole>
-              </RequireAuth>
-            } />
+              <Route path="/admin/users" element={
+                <RequireAuth>
+                  <RequireRole roles={['admin']}>
+                    <Layout><UserManagementPage /></Layout>
+                  </RequireRole>
+                </RequireAuth>
+              } />
+              <Route path="/admin/reports" element={
+                <RequireAuth>
+                  <RequireRole roles={['admin']}>
+                    <Layout><ReportsPage /></Layout>
+                  </RequireRole>
+                </RequireAuth>
+              } />
+              <Route path="/admin/edit-requests" element={
+                <RequireAuth>
+                  <RequireRole roles={['admin']}>
+                    <Layout><EditRequestsPage /></Layout>
+                  </RequireRole>
+                </RequireAuth>
+              } />
 
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </TutorialProvider>
         </LibrarySessionProvider>
       </AuthProvider>
     </BrowserRouter>

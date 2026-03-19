@@ -1,5 +1,5 @@
 // src/context/AuthContext.jsx
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import {
   signInWithPopup,
   GoogleAuthProvider,
@@ -16,14 +16,29 @@ import { auth, db } from '../firebase/config';
 const AuthContext = createContext(null);
 const NEU_DOMAIN = '@neu.edu.ph';
 
-// ── IT Support / Prime Admin ──────────────────────────────────────────────────
+// ── Prime Admin — can switch roles via the navbar toggle ──────────────────────
+// Prof. Esperanza is the prime admin. Only prime admins get the role switcher.
+export const PRIME_ADMIN_EMAILS = [
+  'jcesperanza@neu.edu.ph',
+];
+
+// ── IT Support — auto-provisioned admin accounts ──────────────────────────────
 export const IT_SUPPORT_EMAILS = [
   'wackylltrixian@gmail.com',
   'dianacastro1115@gmail.com',
 ];
 
+export function isPrimeAdminEmail(email) {
+  return PRIME_ADMIN_EMAILS.includes((email || '').toLowerCase().trim());
+}
+
 export function isITSupportEmail(email) {
   return IT_SUPPORT_EMAILS.includes((email || '').toLowerCase().trim());
+}
+
+// Combined: any email that gets admin bypass
+export function isAdminBypassEmail(email) {
+  return isPrimeAdminEmail(email) || isITSupportEmail(email);
 }
 
 export function parseFirebaseError(error) {
@@ -63,7 +78,82 @@ export function AuthProvider({ children }) {
   const [profileLoading,    setProfileLoading]    = useState(false);
   const [pendingGoogleUser, setPendingGoogleUser] = useState(null);
 
+  // ── Role switching (Prime Admin only) ───────────────────────────────────────
+  // effectiveRole overrides userProfile.role for UI routing/rendering.
+  // null = use the real role from Firestore (no override).
+  const [roleOverride, setRoleOverride] = useState(null);
+
   const loginInProgressRef = useRef(false);
+
+  // Determine if current user is a prime admin who can switch roles
+  const canSwitchRole = userProfile && isPrimeAdminEmail(userProfile.email);
+  const realRole = userProfile?.role || null;
+  const effectiveRole = canSwitchRole && roleOverride ? roleOverride : realRole;
+
+  // Toggle between admin ↔ visitor view
+  const switchRole = useCallback((newRole) => {
+    if (!canSwitchRole) return;
+    if (newRole === realRole) {
+      setRoleOverride(null); // back to real role
+    } else {
+      setRoleOverride(newRole);
+    }
+  }, [canSwitchRole, realRole]);
+
+  const resetRoleOverride = useCallback(() => setRoleOverride(null), []);
+
+  // ── Online Presence ─────────────────────────────────────────────────────────
+  // Track when a user is "online" inside the web app (regardless of kiosk check-in).
+  // We write a heartbeat to Firestore every 60s and mark offline on unload.
+  const presenceRef = useRef(null);
+
+  useEffect(() => {
+    if (!userProfile?.uid) return;
+
+    const uid = userProfile.uid;
+    const presenceDoc = doc(db, 'onlinePresence', uid);
+    presenceRef.current = presenceDoc;
+
+    // Mark online
+    const goOnline = async () => {
+      try {
+        await setDoc(presenceDoc, {
+          uid,
+          online: true,
+          lastSeen: serverTimestamp(),
+          email: userProfile.email || '',
+          displayName: `${userProfile.lastName}, ${userProfile.firstName}`,
+        }, { merge: true });
+      } catch (_) {}
+    };
+
+    // Mark offline
+    const goOffline = () => {
+      try {
+        // Use navigator.sendBeacon for reliability on page unload
+        // But since Firestore doesn't support sendBeacon, we use updateDoc
+        updateDoc(presenceDoc, { online: false, lastSeen: serverTimestamp() }).catch(() => {});
+      } catch (_) {}
+    };
+
+    goOnline();
+
+    // Heartbeat every 60s
+    const heartbeat = setInterval(goOnline, 60_000);
+
+    // Offline on tab close / navigation away
+    window.addEventListener('beforeunload', goOffline);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') goOffline();
+      else goOnline();
+    });
+
+    return () => {
+      clearInterval(heartbeat);
+      window.removeEventListener('beforeunload', goOffline);
+      goOffline();
+    };
+  }, [userProfile?.uid]);
 
   // ── Register (visitor self-registration only) ─────────────────────────────
   const register = async ({ uid, email, firstName, lastName, middleInitial, idNumber, role, visitorType, college, course }) => {
@@ -88,6 +178,8 @@ export function AuthProvider({ children }) {
   // ── Google Sign-In ─────────────────────────────────────────────────────────
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
+    // Don't restrict hd for prime admin / IT support Gmail accounts
+    // The popup will show all Google accounts; domain check happens below.
     provider.setCustomParameters({ hd: 'neu.edu.ph' });
 
     loginInProgressRef.current = true;
@@ -106,7 +198,36 @@ export function AuthProvider({ children }) {
     const email      = googleUser.email || '';
     const emailLower = email.toLowerCase();
 
-    // ── IT Support Prime Admin bypass ──────────────────────────────────────
+    // ── Prime Admin bypass (jcesperanza@neu.edu.ph) ────────────────────────
+    if (isPrimeAdminEmail(emailLower)) {
+      let snap = null;
+      try { snap = await getDoc(doc(db, 'users', googleUser.uid)); } catch (_) {}
+
+      if (!snap?.exists()) {
+        const parsed = parseNameFromEmail(emailLower);
+        await setDoc(doc(db, 'users', googleUser.uid), {
+          uid: googleUser.uid, email: emailLower,
+          firstName: parsed.firstName.toUpperCase(),
+          lastName: parsed.lastName.toUpperCase(),
+          middleInitial: '',
+          idNumber: 'PRIME-ADMIN', role: 'admin', visitorType: null,
+          college: null, course: null,
+          isPrimeAdmin: true,
+          createdAt: serverTimestamp(),
+        });
+      } else if (!snap.data().isPrimeAdmin) {
+        // Ensure isPrimeAdmin flag is set
+        try { await updateDoc(doc(db, 'users', googleUser.uid), { isPrimeAdmin: true, role: 'admin' }); } catch (_) {}
+      }
+
+      const base = snap?.exists() ? snap.data() : {};
+      setUserProfile({ ...base, role: 'admin', isPrimeAdmin: true, uid: googleUser.uid, email: emailLower });
+      setCurrentUser(googleUser);
+      loginInProgressRef.current = false;
+      return result;
+    }
+
+    // ── IT Support bypass ──────────────────────────────────────────────────
     if (isITSupportEmail(emailLower)) {
       let snap = null;
       try { snap = await getDoc(doc(db, 'users', googleUser.uid)); } catch (_) {}
@@ -139,9 +260,6 @@ export function AuthProvider({ children }) {
     }
 
     // ── Check for pre-created profile (admin-invited staff/admin) ──────────
-    // Admin may have written a full users doc for this email already.
-    // The doc key is the email (placeholder) — once the real Google UID is
-    // known we stamp it in and use it.
     let profileSnap;
     try {
       profileSnap = await getDoc(doc(db, 'users', googleUser.uid));
@@ -151,9 +269,7 @@ export function AuthProvider({ children }) {
     }
 
     if (profileSnap.exists()) {
-      // Normal case — profile exists by UID
       const data = profileSnap.data();
-      // If this was a pre-created profile missing the real UID, stamp it in
       if (!data.uid || data.uid !== googleUser.uid) {
         try { await updateDoc(doc(db, 'users', googleUser.uid), { uid: googleUser.uid }); } catch (_) {}
       }
@@ -164,8 +280,6 @@ export function AuthProvider({ children }) {
     }
 
     // ── Check staffInvites for a pre-created profile keyed by placeholder ────
-    // When admin pre-creates a profile, the doc is stored under the UID
-    // placeholder `invite_<email>`. Look it up and migrate it to the real UID.
     try {
       const inviteSnap = await getDocs(query(
         collection(db, 'staffInvites'),
@@ -175,17 +289,14 @@ export function AuthProvider({ children }) {
       if (!inviteSnap.empty) {
         const inviteDoc = inviteSnap.docs[0].data();
         if (inviteDoc.preCreatedUid) {
-          // Read the placeholder users doc
           const preSnap = await getDoc(doc(db, 'users', inviteDoc.preCreatedUid));
           if (preSnap.exists()) {
             const preData = preSnap.data();
-            // Write profile under the real Google UID
             await setDoc(doc(db, 'users', googleUser.uid), {
               ...preData,
               uid:       googleUser.uid,
               createdAt: preData.createdAt || serverTimestamp(),
             });
-            // Mark invite claimed
             await updateDoc(doc(db, 'staffInvites', inviteSnap.docs[0].id), {
               status:    'claimed',
               claimedBy: googleUser.uid,
@@ -195,13 +306,10 @@ export function AuthProvider({ children }) {
             setCurrentUser(googleUser);
             loginInProgressRef.current = false;
             return result;
-          } else {
-            console.error('[AuthContext] Placeholder users doc not found for', inviteDoc.preCreatedUid);
           }
         }
       }
     } catch (inviteErr) {
-      // Log the real error — do NOT silently swallow so we can diagnose issues
       console.error('[AuthContext] Invite migration failed:', inviteErr);
       loginInProgressRef.current = false;
       throw inviteErr;
@@ -216,8 +324,13 @@ export function AuthProvider({ children }) {
   };
 
   // ── Logout ─────────────────────────────────────────────────────────────────
-  const logout = () => {
+  const logout = async () => {
+    // Mark offline on logout
+    if (presenceRef.current) {
+      try { await updateDoc(presenceRef.current, { online: false, lastSeen: serverTimestamp() }); } catch (_) {}
+    }
     setPendingGoogleUser(null);
+    setRoleOverride(null);
     loginInProgressRef.current = false;
     return signOut(auth);
   };
@@ -229,11 +342,13 @@ export function AuthProvider({ children }) {
       const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
         const data = snap.data();
-        setUserProfile(
-          isITSupportEmail(data.email)
-            ? { ...data, role: 'admin', isITSupport: true, uid }
-            : { ...data, uid }
-        );
+        if (isPrimeAdminEmail(data.email)) {
+          setUserProfile({ ...data, role: 'admin', isPrimeAdmin: true, uid });
+        } else if (isITSupportEmail(data.email)) {
+          setUserProfile({ ...data, role: 'admin', isITSupport: true, uid });
+        } else {
+          setUserProfile({ ...data, uid });
+        }
       } else {
         setUserProfile(null);
       }
@@ -256,7 +371,7 @@ export function AuthProvider({ children }) {
       setCurrentUser(user);
       try {
         if (user) await fetchProfile(user.uid);
-        else setUserProfile(null);
+        else { setUserProfile(null); setRoleOverride(null); }
       } catch (err) {
         console.error('[AuthContext] Auth state error:', err);
       } finally {
@@ -272,6 +387,12 @@ export function AuthProvider({ children }) {
       pendingGoogleUser, setPendingGoogleUser,
       loginWithGoogle, logout, register, refreshProfile,
       effectiveId: userProfile?.uid || currentUser?.uid,
+      // Role switching
+      effectiveRole,
+      canSwitchRole,
+      switchRole,
+      resetRoleOverride,
+      roleOverride,
     }}>
       {children}
     </AuthContext.Provider>

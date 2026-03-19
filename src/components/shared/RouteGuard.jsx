@@ -14,52 +14,36 @@ function Splash({ text = 'Loading...' }) {
   );
 }
 
-// RequireGuest: redirects logged-in registered users away from /login and /register.
-// If pendingGoogleUser exists, the user just signed in with Google but hasn't
-// registered yet — allow /register through unconditionally. This is the
-// second line of defence after the loginInProgressRef lock in AuthContext.
 export function RequireGuest({ children }) {
   const { currentUser, loadingAuth, userProfile, profileLoading, pendingGoogleUser } = useAuth();
 
-  // Always wait for auth to finish initialising
   if (loadingAuth || profileLoading) return <Splash />;
-
-  // Unregistered Google user waiting to fill the form — never block /register
   if (pendingGoogleUser) return children;
-
-  // Fully registered and logged in — send them to the kiosk
   if (currentUser && userProfile) return <Navigate to="/dashboard" replace />;
-
-  // Not logged in — show login/register pages normally
   return children;
 }
 
-// RequireAuth: protects pages that need a fully registered, logged-in user.
-// If pendingGoogleUser exists, the user IS authenticated at the Firebase Auth
-// level but hasn't created a Firestore profile yet — send them to /register,
-// not /login (which would be confusing since they just signed in).
 export function RequireAuth({ children }) {
   const { currentUser, loadingAuth, userProfile, profileLoading, pendingGoogleUser } = useAuth();
   const location = useLocation();
 
   if (loadingAuth || profileLoading) return <Splash />;
-
-  // Authenticated but no Firestore profile yet → needs to register first
   if (currentUser && !userProfile && pendingGoogleUser) {
     return <Navigate to="/register" replace />;
   }
-
-  // Not authenticated at all → send to login
   if (!currentUser || !userProfile) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
   return children;
 }
 
+// RequireRole now uses effectiveRole so prime admin can switch views.
+// When viewing as 'visitor', admin-only routes will redirect to /dashboard.
 export function RequireRole({ roles, children }) {
-  const { userProfile, profileLoading } = useAuth();
+  const { userProfile, profileLoading, effectiveRole } = useAuth();
   if (profileLoading) return <Splash text="Checking permissions..." />;
-  if (!userProfile || !roles.includes(userProfile.role)) return <Navigate to="/dashboard" replace />;
+
+  const role = effectiveRole || userProfile?.role;
+  if (!userProfile || !roles.includes(role)) return <Navigate to="/dashboard" replace />;
   return children;
 }

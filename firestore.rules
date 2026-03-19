@@ -24,45 +24,35 @@ service cloud.firestore {
     }
 
     // Users collection
-    // Note: create is open to any signed-in user (their own doc) because IT support
-    // Gmail accounts and staff-invited Gmail accounts bypass the NEU email domain.
-    // Domain enforcement is handled in application code (AuthContext).
     match /users/{userId} {
       allow get: if isSignedIn() && (
         request.auth.uid == userId ||
         isStaffOrAdmin() ||
-        // Allow reading placeholder pre-created docs during sign-in migration
         userId.matches('invite_.*')
       );
       allow list: if isSignedIn();
 
-      // Own registration OR admin pre-creating a placeholder profile (invite_* UID)
       allow create: if isSignedIn() && (
         request.auth.uid == userId ||
         (isAdmin() && userId.matches('invite_.*'))
       );
 
       allow update: if isSignedIn() && (
-        // Own doc — no role changes allowed by self
         (request.auth.uid == userId &&
          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
-        // Admin can change roles (not to admin, not own doc)
         (isAdmin() &&
          request.auth.uid != userId &&
          resource.data.role != 'admin' &&
          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
           request.resource.data.role in ['staff', 'visitor'])) ||
-        // Admin can update placeholder docs (invite_* migration)
         (isAdmin() && userId.matches('invite_.*')) ||
-        // Any signed-in user can update a placeholder invite_* doc to their real UID
-        // (AuthContext migration: copies placeholder → real UID doc)
         (userId.matches('invite_.*') && isSignedIn())
       );
 
       allow delete: if isAdmin();
     }
 
-    // Logger — visitors and staff/admin
+    // Logger
     match /logger/{logId} {
       allow read: if isSignedIn() && (
         resource.data.uid == request.auth.uid ||
@@ -77,7 +67,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Admin Audit Log — immutable
+    // Admin Audit Log
     match /adminAuditLogs/{logId} {
       allow read:           if isAdmin();
       allow create:         if isAdmin();
@@ -105,15 +95,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Edit Requests — visitors submit requests to change their info;
-    // only the owner can cancel their own pending request; admin approves/rejects.
+    // Edit Requests
     match /editRequests/{reqId} {
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
       allow read: if isSignedIn() && (
         resource.data.uid == request.auth.uid ||
         isAdmin()
       );
-      // Visitor can only cancel their own pending request
       allow update: if isAdmin() || (
         isSignedIn() &&
         resource.data.uid == request.auth.uid &&
@@ -123,7 +111,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Staff Invites — admin creates, any signed-in user can read (to check their own invite)
+    // Staff Invites
     match /staffInvites/{inviteId} {
       allow create: if isAdmin();
       allow read:   if isSignedIn();
@@ -133,6 +121,28 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'claimedAt', 'claimedBy'])
       );
       allow delete: if isAdmin();
+    }
+
+    // ── Tutorial Preferences ──────────────────────────────────────────────────
+    // Each user reads/writes their own tutorial prefs. Admins can read all.
+    match /tutorialPrefs/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId || isAdmin()
+      );
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isSignedIn() && (
+        request.auth.uid == userId || isAdmin()
+      );
+    }
+
+    // ── Online Presence ───────────────────────────────────────────────────────
+    // Users write their own presence doc. Anyone signed in can read (for kiosk display).
+    match /onlinePresence/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == userId;
+      allow delete: if isSignedIn() && (
+        request.auth.uid == userId || isAdmin()
+      );
     }
   }
 }

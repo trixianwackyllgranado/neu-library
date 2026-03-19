@@ -6,6 +6,7 @@ import { useLibrarySession } from '../../context/LibrarySessionContext';
 import { useTheme } from '../../context/ThemeContext';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import FloatingTutorial from './FloatingTutorial';
 
 const PP = { fontFamily: "'Poppins', sans-serif" };
 const SR = { fontFamily: "'Playfair Display', serif" };
@@ -25,7 +26,60 @@ const Ico = {
   chRight:      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
   sun:          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
   moon:         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+  swap:         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
 };
+
+// ── Role Switcher (Prime Admin only) ─────────────────────────────────────────
+function RoleSwitcher({ collapsed, mob }) {
+  const { canSwitchRole, effectiveRole, switchRole, userProfile } = useAuth();
+  if (!canSwitchRole) return null;
+
+  const isViewingAsUser = effectiveRole === 'visitor';
+
+  return (
+    <div style={{
+      padding: collapsed && !mob ? '4px 4px' : '6px 8px',
+      marginBottom: 4,
+    }}>
+      <button
+        onClick={() => switchRole(isViewingAsUser ? 'admin' : 'visitor')}
+        title={isViewingAsUser ? 'Switch back to Admin view' : 'Switch to User view'}
+        style={{
+          width: '100%',
+          padding: collapsed && !mob ? '8px 0' : '8px 12px',
+          borderRadius: 8,
+          background: isViewingAsUser ? 'rgba(59,130,246,0.12)' : 'var(--gold-soft)',
+          border: `1px solid ${isViewingAsUser ? 'rgba(59,130,246,0.3)' : 'var(--gold-border)'}`,
+          color: isViewingAsUser ? '#60a5fa' : 'var(--gold)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: collapsed && !mob ? 'center' : 'flex-start',
+          gap: 8,
+          transition: 'all 0.2s',
+          ...MN,
+          fontSize: 10,
+          letterSpacing: '0.08em',
+          fontWeight: 600,
+          textTransform: 'uppercase',
+        }}
+      >
+        {Ico.swap}
+        {(!collapsed || mob) && (
+          <span>{isViewingAsUser ? 'Back to Admin' : 'View as User'}</span>
+        )}
+      </button>
+      {isViewingAsUser && (!collapsed || mob) && (
+        <p style={{
+          ...MN, fontSize: 9, color: '#60a5fa', textAlign: 'center',
+          marginTop: 4, letterSpacing: '0.06em', opacity: 0.8,
+        }}>
+          Viewing as regular user
+        </p>
+      )}
+    </div>
+  );
+}
 
 function NavItem({ to, label, icon, collapsed, onClick, badge }) {
   return (
@@ -42,13 +96,11 @@ function NavItem({ to, label, icon, collapsed, onClick, badge }) {
       })}>
       <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', position: 'relative' }}>
         {icon}
-        {/* Collapsed badge dot */}
         {badge > 0 && collapsed && (
           <span style={{ position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: '50%', background: 'var(--red)', border: '1.5px solid var(--card)' }} />
         )}
       </span>
       {!collapsed && <span style={{ ...PP, fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', flex: 1 }}>{label}</span>}
-      {/* Expanded badge count */}
       {!collapsed && badge > 0 && (
         <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 20, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', ...MN }}>
           {badge}
@@ -58,8 +110,25 @@ function NavItem({ to, label, icon, collapsed, onClick, badge }) {
   );
 }
 
+// ── Map pathname to tutorial page key ────────────────────────────────────────
+function getPageKey(pathname) {
+  const map = {
+    '/dashboard':            'dashboard',
+    '/logger':               'logger',
+    '/staff/kiosk':          'staff/kiosk',
+    '/admin/users':          'admin/users',
+    '/admin/edit-requests':  'admin/edit-requests',
+    '/admin/reports':        'admin/reports',
+    '/catalog':              'catalog',
+    '/borrowing':            'borrowing',
+    '/staff/qr-logger':     'qr-logger',
+    '/staff/records':        'student-records',
+  };
+  return map[pathname] || null;
+}
+
 export default function AppLayout({ children }) {
-  const { userProfile, logout } = useAuth();
+  const { userProfile, logout, effectiveRole, canSwitchRole } = useAuth();
   const { session, markWebSignedOut } = useLibrarySession();
   const { dark, toggle: toggleTheme } = useTheme();
   const navigate  = useNavigate();
@@ -71,21 +140,23 @@ export default function AppLayout({ children }) {
   const [signingOut,         setSigningOut]         = useState(false);
   const [pendingEditCount,   setPendingEditCount]   = useState(0);
 
-  const role      = userProfile?.role || 'visitor';
+  // Use effectiveRole for nav rendering (supports prime admin role switching)
+  const role      = effectiveRole || userProfile?.role || 'visitor';
+  const realRole  = userProfile?.role || 'visitor';
   const roleLabel = role === 'admin' ? 'Administrator' : role === 'staff' ? 'Library Staff'
     : userProfile?.visitorType === 'faculty' ? 'Faculty' : 'Student';
   const displayName = userProfile ? `${userProfile.lastName}, ${userProfile.firstName}` : '—';
 
   // Live pending edit requests count — admin only
   useEffect(() => {
-    if (role !== 'admin') return;
+    if (realRole !== 'admin') return;
     const unsub = onSnapshot(
       query(collection(db, 'editRequests'), where('status', '==', 'pending')),
       s => setPendingEditCount(s.size),
       () => {}
     );
     return unsub;
-  }, [role]);
+  }, [realRole]);
 
   useEffect(() => { setMobileOpen(false); }, [location.pathname]);
 
@@ -124,6 +195,9 @@ export default function AppLayout({ children }) {
   const navItems = NAV[role] || [];
   const SIDEBAR_W = collapsed ? 60 : 224;
 
+  // Determine tutorial page key
+  const tutorialPageKey = getPageKey(location.pathname);
+
   const sidebar = (mob = false) => (
     <div style={{ width: mob ? 256 : SIDEBAR_W, height: '100%', background: 'var(--card)', borderRight: '1px solid var(--divider)', display: 'flex', flexDirection: 'column', transition: 'width 0.2s ease', overflow: 'hidden', flexShrink: 0 }}>
       {/* Header */}
@@ -158,6 +232,9 @@ export default function AppLayout({ children }) {
         )}
       </div>
 
+      {/* Role Switcher — Prime Admin only */}
+      <RoleSwitcher collapsed={collapsed} mob={mob} />
+
       {/* Nav */}
       <nav style={{ flex: 1, padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }}>
         {navItems.length > 0 && (!collapsed || mob) && (
@@ -175,7 +252,16 @@ export default function AppLayout({ children }) {
       <div style={{ padding: '8px 8px', borderTop: '1px solid var(--divider)' }}>
         {(!collapsed || mob) && (
           <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
-            <p style={{ ...PP, fontSize: 10, fontWeight: 600, color: 'var(--gold)', marginBottom: 2 }}>{roleLabel}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <p style={{ ...PP, fontSize: 10, fontWeight: 600, color: 'var(--gold)', flex: 1 }}>{roleLabel}</p>
+              {canSwitchRole && effectiveRole !== realRole && (
+                <span style={{
+                  ...MN, fontSize: 8, padding: '1px 6px', borderRadius: 6,
+                  background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)',
+                  color: '#60a5fa', letterSpacing: '0.06em',
+                }}>VIEWING AS</span>
+              )}
+            </div>
             <p style={{ ...PP, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</p>
             {userProfile?.idNumber && <p style={{ ...MN, fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{userProfile.idNumber}</p>}
           </div>
@@ -233,6 +319,9 @@ export default function AppLayout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* Floating Tutorial */}
+      {tutorialPageKey && <FloatingTutorial pageKey={tutorialPageKey} />}
 
       {/* Sign-out confirmation */}
       {showSignOut && (
