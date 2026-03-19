@@ -573,79 +573,78 @@ export default function VisitorKioskPage() {
             </div>
           )}
 
-          {/* ── Bottom action row: QR + Edit Request ── */}
+          {/* ── Bottom row: QR card + Edit Request card side by side ── */}
           {session !== undefined && userProfile?.role === 'visitor' && (
-            <div style={{ marginTop: 16, background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
-              <div style={{ height: 2, background: 'linear-gradient(90deg, var(--gold-border), transparent)' }} />
-              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: userProfile?.qrToken && session === null ? '1fr 1fr' : '1fr', gap: 12 }}>
 
-                {/* QR Code row — only when not checked in and token exists */}
-                {session === null && userProfile?.qrToken && (
-                  <div>
+              {/* QR Card — only when not checked in and token exists */}
+              {session === null && userProfile?.qrToken && (
+                <div style={{ background: 'var(--card)', border: `1px solid ${showQR ? 'var(--gold-border)' : 'var(--card-border)'}`, borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)', transition: 'border-color 0.15s' }}>
+                  <div style={{ height: 2, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
+                  <div style={{ padding: '14px 16px' }}>
                     <button onClick={() => setShowQR(v => !v)}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, cursor: 'pointer', background: showQR ? 'var(--gold-soft)' : 'var(--surface)', border: `1px solid ${showQR ? 'var(--gold-border)' : 'var(--card-border)'}`, transition: 'all 0.15s' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={showQR ? 'var(--gold)' : 'var(--text-muted)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      {/* QR icon */}
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: showQR ? 'var(--gold-soft)' : 'var(--surface)', border: `1px solid ${showQR ? 'var(--gold-border)' : 'var(--card-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={showQR ? 'var(--gold)' : 'var(--text-muted)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
                           <path d="M14 14h3v3m0 4h4m-4 0v-4m4 0v4"/>
                         </svg>
-                        <span style={{ ...MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: showQR ? 'var(--gold)' : 'var(--text-muted)', fontWeight: 700 }}>
-                          {showQR ? 'Hide QR Code' : 'Show My QR Code'}
-                        </span>
                       </div>
-                      <span style={{ ...MONO, fontSize: 12, color: showQR ? 'var(--gold)' : 'var(--text-dim)' }}>{showQR ? '▲' : '▼'}</span>
+                      <span style={{ ...MONO, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: showQR ? 'var(--gold)' : 'var(--text-muted)', fontWeight: 700 }}>
+                        {showQR ? 'Hide QR' : 'My QR Code'}
+                      </span>
                     </button>
 
                     {showQR && (
-                      <div style={{ marginTop: 12, padding: '20px', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--card-border)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, animation: 'fadeUp 0.2s ease both' }}>
-                        <p style={{ ...MONO, fontSize: 9, letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 8 }}>My Library QR Code</p>
-                        <QRCodeDisplay value={userProfile.qrToken} size={180} />
-                        <p style={{ ...MONO, fontSize: 9, color: 'var(--text-dim)', textAlign: 'center', marginTop: 4 }}>
-                          Show this to staff at the counter for quick check-in
+                      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, animation: 'fadeUp 0.2s ease both' }}>
+                        <QRCodeDisplay value={userProfile.qrToken} size={140} />
+                        <p style={{ ...MONO, fontSize: 9, color: 'var(--text-dim)', textAlign: 'center' }}>
+                          Show to staff at counter
                         </p>
                       </div>
                     )}
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Divider between QR and Edit Request — only show both sections */}
-                {session === null && userProfile?.qrToken && (
-                  <div style={{ height: 1, background: 'var(--divider)' }} />
-                )}
-
-                {/* Edit Request row */}
-                <div>
+              {/* Edit Request Card */}
+              <div style={{ background: 'var(--card)', border: `1px solid ${hasPending ? 'var(--gold-border)' : 'var(--card-border)'}`, borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)', transition: 'border-color 0.15s' }}>
+                <div style={{ height: 2, background: hasPending ? 'linear-gradient(90deg, var(--gold), transparent)' : 'linear-gradient(90deg, var(--card-border), transparent)' }} />
+                <div style={{ padding: '14px 16px' }}>
                   {hasPending ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ flex: 1, padding: '10px 14px', borderRadius: 10, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', display: 'inline-block', flexShrink: 0 }} />
-                        <span style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 700 }}>Edit Request Pending</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: 16 }}>⏳</span>
                       </div>
+                      <span style={{ ...MONO, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 700, textAlign: 'center' }}>Edit Pending</span>
                       <button onClick={handleCancelRequest}
-                        style={{ padding: '10px 14px', borderRadius: 10, cursor: 'pointer', background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', ...MONO, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        style={{ width: '100%', padding: '7px 10px', borderRadius: 8, cursor: 'pointer', background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', ...MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700 }}>
                         Cancel
                       </button>
+                      {hasRejected && editRequest?.rejectionReason && (
+                        <p style={{ ...MONO, fontSize: 9, color: 'var(--red)', textAlign: 'center' }}>
+                          ✕ {editRequest.rejectionReason}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <button onClick={() => setShowEditModal(true)}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, cursor: 'pointer', background: 'var(--surface)', border: '1px solid var(--card-border)', transition: 'all 0.15s' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--gold-soft)'; e.currentTarget.style.borderColor = 'var(--gold-border)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                      <span style={{ ...MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Request Info Update</span>
+                      style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      onMouseEnter={e => { e.currentTarget.querySelector('div').style.background = 'var(--gold-soft)'; e.currentTarget.querySelector('div').style.borderColor = 'var(--gold-border)'; }}
+                      onMouseLeave={e => { e.currentTarget.querySelector('div').style.background = 'var(--surface)'; e.currentTarget.querySelector('div').style.borderColor = 'var(--card-border)'; }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--card-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                      </div>
+                      <span style={{ ...MONO, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, textAlign: 'center' }}>Request Info Update</span>
                     </button>
                   )}
-                  {hasRejected && editRequest?.rejectionReason && (
-                    <p style={{ ...MONO, fontSize: 10, color: 'var(--red)', marginTop: 6, paddingLeft: 4 }}>
-                      ✕ Rejected: {editRequest.rejectionReason}
-                    </p>
-                  )}
                 </div>
-
               </div>
+
             </div>
           )}
         </div>

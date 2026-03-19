@@ -336,16 +336,13 @@ export default function StaffKioskPage() {
           active:false, exitTime:serverTimestamp(),
         });
         if (!unmountedRef.current) { setResult({ action:'out', visitor, input:raw }); setError(''); }
-        processingRef.current = false;
       } else {
         if (!unmountedRef.current) { setPurposeFor({ visitor }); setError(''); }
-        processingRef.current = false;
       }
     } catch (err) {
       if (!unmountedRef.current) setError('Scan error: ' + err.message);
-      processingRef.current = false;
     }
-    // cooldown
+    // Always hold the lock for 3s — prevents double-scan on the same QR frame
     setTimeout(() => { processingRef.current = false; }, 3000);
   }, []);
 
