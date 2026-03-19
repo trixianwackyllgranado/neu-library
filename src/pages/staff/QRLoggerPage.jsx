@@ -282,9 +282,10 @@ export default function QRLoggerPage() {
     return () => {
       unmountedRef.current = true;
       const sc = scannerRef.current;
+      scannerRef.current = null;
       if (sc) {
-        try { if (sc.isRunning()) sc.stop().catch(() => {}).finally(() => { try { sc.clear(); } catch {} }); else { try { sc.clear(); } catch {} } } catch {}
-        scannerRef.current = null;
+        try { if (sc.isRunning()) sc.stop().catch(() => {}); } catch {}
+        setTimeout(() => { try { sc.clear(); } catch {} }, 150);
       }
     };
   }, []);
@@ -330,13 +331,27 @@ export default function QRLoggerPage() {
   const startScanner = useCallback(async () => {
     if (unmountedRef.current) return;
     setScanError(''); setScannerState('starting');
-    await new Promise(r => setTimeout(r, 150));
+    // Clean up any lingering scanner first
+    const old = scannerRef.current;
+    scannerRef.current = null;
+    if (old) {
+      try { if (old.isRunning()) await old.stop(); } catch (_) {}
+      await new Promise(r => setTimeout(r, 100));
+      try { old.clear(); } catch (_) {}
+    }
+    // Wipe the DOM node so Html5Qrcode gets a clean slate
+    try { const el = document.getElementById('qr-staff-reader'); if (el) el.innerHTML = ''; } catch (_) {}
     if (unmountedRef.current) return;
-    if (scannerRef.current) { try { if (scannerRef.current.isRunning()) await scannerRef.current.stop().catch(() => {}); scannerRef.current.clear(); } catch {} scannerRef.current = null; }
+    await new Promise(r => setTimeout(r, 100));
     const scanner = new Html5Qrcode('qr-staff-reader', { verbose: false });
     scannerRef.current = scanner;
     try {
-      await scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: { width: 220, height: 220 }, disableFlip: false }, (text) => { try { handleQrScan(text); } catch {} }, () => {});
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 220, height: 220 }, disableFlip: false },
+        (text) => { try { handleQrScan(text); } catch {} },
+        () => {}
+      );
       if (!unmountedRef.current) setScannerState('active');
     } catch {
       if (!unmountedRef.current) { setScanError('Camera access denied. Allow camera permission and try again.'); setScannerState('idle'); }
@@ -348,7 +363,13 @@ export default function QRLoggerPage() {
   const stopScanner = useCallback(async () => {
     setScannerState('stopping');
     const sc = scannerRef.current;
-    if (sc) { try { if (sc.isRunning()) await sc.stop().catch(() => {}); sc.clear(); } catch {} scannerRef.current = null; }
+    scannerRef.current = null;
+    if (sc) {
+      try { if (sc.isRunning()) await sc.stop(); } catch (_) {}
+      await new Promise(r => setTimeout(r, 100));
+      try { sc.clear(); } catch (_) {}
+    }
+    try { const el = document.getElementById('qr-staff-reader'); if (el) el.innerHTML = ''; } catch (_) {}
     if (!unmountedRef.current) setScannerState('idle');
   }, []);
 
