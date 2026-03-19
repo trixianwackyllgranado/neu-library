@@ -163,7 +163,7 @@ export function AuthProvider({ children }) {
       return result;
     }
 
-    // ── Check staffInvites for a pre-created profile keyed by email ────────
+    // ── Check staffInvites for a pre-created profile keyed by placeholder ────
     // When admin pre-creates a profile, the doc is stored under the UID
     // placeholder `invite_<email>`. Look it up and migrate it to the real UID.
     try {
@@ -175,11 +175,11 @@ export function AuthProvider({ children }) {
       if (!inviteSnap.empty) {
         const inviteDoc = inviteSnap.docs[0].data();
         if (inviteDoc.preCreatedUid) {
-          // Admin pre-created a users doc under a placeholder UID — copy to real UID
+          // Read the placeholder users doc
           const preSnap = await getDoc(doc(db, 'users', inviteDoc.preCreatedUid));
           if (preSnap.exists()) {
             const preData = preSnap.data();
-            // Write under real UID
+            // Write profile under the real Google UID
             await setDoc(doc(db, 'users', googleUser.uid), {
               ...preData,
               uid:       googleUser.uid,
@@ -195,10 +195,17 @@ export function AuthProvider({ children }) {
             setCurrentUser(googleUser);
             loginInProgressRef.current = false;
             return result;
+          } else {
+            console.error('[AuthContext] Placeholder users doc not found for', inviteDoc.preCreatedUid);
           }
         }
       }
-    } catch (_) {}
+    } catch (inviteErr) {
+      // Log the real error — do NOT silently swallow so we can diagnose issues
+      console.error('[AuthContext] Invite migration failed:', inviteErr);
+      loginInProgressRef.current = false;
+      throw inviteErr;
+    }
 
     // ── Not yet registered — show registration form ────────────────────────
     setCurrentUser(googleUser);

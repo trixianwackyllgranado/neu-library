@@ -30,11 +30,17 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isSignedIn() && (
         request.auth.uid == userId ||
-        isStaffOrAdmin()
+        isStaffOrAdmin() ||
+        // Allow reading placeholder pre-created docs during sign-in migration
+        userId.matches('invite_.*')
       );
       allow list: if isSignedIn();
 
-      allow create: if isSignedIn() && request.auth.uid == userId;
+      // Own registration OR admin pre-creating a placeholder profile (invite_* UID)
+      allow create: if isSignedIn() && (
+        request.auth.uid == userId ||
+        (isAdmin() && userId.matches('invite_.*'))
+      );
 
       allow update: if isSignedIn() && (
         // Own doc — no role changes allowed by self
@@ -45,7 +51,9 @@ service cloud.firestore {
          request.auth.uid != userId &&
          resource.data.role != 'admin' &&
          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
-          request.resource.data.role in ['staff', 'visitor']))
+          request.resource.data.role in ['staff', 'visitor'])) ||
+        // Admin can update placeholder docs (invite_* migration)
+        (isAdmin() && userId.matches('invite_.*'))
       );
 
       allow delete: if isAdmin();

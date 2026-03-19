@@ -269,29 +269,47 @@ function StaffInviteModal({ invites, myProfile, onClose, showToast }) {
 
     setSaving(true);
     try {
-      // ── Check if a registered user already exists with this email ──────────
+      // ── Check if a real user doc already exists for this email ────────────
       const existingSnap = await getDocs(query(
         collection(db, 'users'),
         where('email', '==', cleanEmail)
       ));
-      if (!existingSnap.empty) {
-        const realDocs = existingSnap.docs.filter(d => !d.id.startsWith('invite_'));
-        if (realDocs.length > 0) {
-          const existing = realDocs[0].data();
-          const name = existing.lastName
-            ? `${existing.firstName} ${existing.lastName}`
-            : cleanEmail;
-          const existingRole = existing.role || 'visitor';
-          setFormError(
-            `"${cleanEmail}" is already registered as ${existingRole} (${name}). ` +
-            `Use the User Management table to change their role instead.`
-          );
-          setSaving(false);
-          return;
-        }
+      const realDocs = existingSnap.docs.filter(d => !d.id.startsWith('invite_'));
+
+      if (realDocs.length > 0) {
+        // User already registered — update their profile + role directly.
+        // No placeholder needed, no registration form. They're already in the system.
+        const existingDocRef = realDocs[0].ref;
+        await updateDoc(existingDocRef, {
+          role,
+          firstName:     firstName.trim().toUpperCase(),
+          lastName:      lastName.trim().toUpperCase(),
+          middleInitial: middleInitial.trim().toUpperCase().replace(/\.+$/, ''),
+          idNumber:      idNumber.trim(),
+          college:       college.trim().toUpperCase() || null,
+          course:        course.trim().toUpperCase() || null,
+        });
+        // Audit log
+        await addDoc(collection(db, 'adminAuditLogs'), {
+          activityType:  'role_change',
+          targetId:      realDocs[0].id,
+          targetName:    `${lastName.trim().toUpperCase()}, ${firstName.trim().toUpperCase()}`,
+          fromRole:      realDocs[0].data().role || 'visitor',
+          toRole:        role,
+          changedBy:     myProfile?.uid,
+          changedByName: `${myProfile?.lastName}, ${myProfile?.firstName}`,
+          reason:        `Admin pre-registration — profile updated and role set to ${role}`,
+          timestamp:     serverTimestamp(),
+        });
+        showToast(`${cleanEmail} already existed — profile updated and role set to ${role}.`, true);
+        resetForm();
+        setStep('list');
+        setSaving(false);
+        return;
       }
 
-      // ── Create placeholder profile + invite record ─────────────────────────
+      // ── New user — create placeholder profile + invite record ──────────────
+      // AuthContext will migrate this to their real UID on first sign-in.
       const placeholderUid = `invite_${cleanEmail.replace(/[@.]/g, '_')}`;
 
       await setDoc(doc(db, 'users', placeholderUid), {
@@ -324,7 +342,7 @@ function StaffInviteModal({ invites, myProfile, onClose, showToast }) {
       resetForm();
       setStep('list');
     } catch(e) {
-      setFormError('Failed to create account: ' + e.message);
+      setFormError('Failed: ' + e.message);
     }
     setSaving(false);
   };
