@@ -352,12 +352,35 @@ export default function VisitorKioskPage() {
   const [showWelcome,   setShowWelcome]   = useState(false);
   const [showQR,        setShowQR]        = useState(false);
 
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
   useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768);
+    const handler = () => setIsMobile(window.innerWidth < 640);
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);
   }, []);
+
+  // Block admins and staff from opening the visitor kiosk on mobile
+  // They should only access it on a proper desktop/tablet kiosk station
+  const isAdminOrStaff = userProfile?.role === 'admin' || userProfile?.role === 'staff';
+  if (isAdminOrStaff && isMobile && !isAdminPreview) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
+        <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', position: 'absolute', top: 0, left: 0, right: 0 }} />
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--red-soft)', border: '1px solid var(--red-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, color: 'var(--red)' }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </div>
+        <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.2em', color: 'var(--red)', textTransform: 'uppercase', marginBottom: 8 }}>Mobile Access Restricted</p>
+        <h2 style={{ ...SERIF, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Desktop Only</h2>
+        <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.7, maxWidth: 300, marginBottom: 28 }}>
+          The Visitor Kiosk is designed for use on a library counter station. Please open it on a desktop or tablet computer.
+        </p>
+        <button onClick={() => navigate('/dashboard')}
+          style={{ padding: '12px 28px', borderRadius: 10, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: 'pointer', ...MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          ← Back to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   // Auto-generate qrToken for visitors who registered before this feature existed
   useEffect(() => {
@@ -464,42 +487,47 @@ export default function VisitorKioskPage() {
       <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', flexShrink: 0 }} />
 
       {/* Top bar */}
-      <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--divider)', background: 'var(--card)', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ padding: isMobile ? '8px 10px' : '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--divider)', background: 'var(--card)', flexShrink: 0, gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flexShrink: 0 }}>
+          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
             <img src="/liblogo.png" alt="NEU" style={{ width: 26, height: 26, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
           </div>
-          <div>
-            <p style={{ ...MONO, fontSize: '7px', letterSpacing: '0.22em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 1 }}>New Era University</p>
-            <p style={{ ...SERIF, fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Library Visitor Log</p>
-          </div>
+          {!isMobile && (
+            <div>
+              <p style={{ ...MONO, fontSize: '7px', letterSpacing: '0.22em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 1 }}>New Era University</p>
+              <p style={{ ...SERIF, fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Library Visitor Log</p>
+            </div>
+          )}
+          {isMobile && (
+            <p style={{ ...SERIF, fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>NEU Library</p>
+          )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 6, flexShrink: 0 }}>
           {/* Status + name chip */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '5px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: 20, padding: isMobile ? '5px 8px' : '5px 12px', minWidth: 0, maxWidth: isMobile ? 130 : 'none', overflow: 'hidden' }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: session ? 'var(--green)' : 'var(--text-dim)', flexShrink: 0, animation: session ? 'pulseDot 2s ease infinite' : 'none' }} />
-            <span style={{ ...PP, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{displayName}</span>
-            <span style={{ ...MONO, fontSize: 9, color: 'var(--text-dim)' }}>·</span>
-            <span style={{ ...MONO, fontSize: 9, color: isAdminPreview ? '#60a5fa' : 'var(--text-muted)' }}>{isAdminPreview ? 'Admin Preview' : roleLabel}</span>
+            <span style={{ ...PP, fontSize: isMobile ? 11 : 12, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userProfile?.firstName || displayName}</span>
+            {!isMobile && <span style={{ ...MONO, fontSize: 9, color: 'var(--text-dim)' }}>·</span>}
+            {!isMobile && <span style={{ ...MONO, fontSize: 9, color: isAdminPreview ? '#60a5fa' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>{isAdminPreview ? 'Admin Preview' : roleLabel}</span>}
           </div>
           {/* Theme */}
-          <button onClick={toggle} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--card-border)', background: 'var(--surface)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={toggle} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--card-border)', background: 'var(--surface)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {dark
               ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
               : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             }
           </button>
           {/* Sign out */}
-          <button onClick={() => setShowExit(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 8, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: 'pointer', ...PP, fontSize: 12, fontWeight: 600 }}>
+          <button onClick={() => setShowExit(true)} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0 : 5, padding: isMobile ? '7px 10px' : '7px 12px', borderRadius: 8, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: 'pointer', ...PP, fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Sign Out
+            {!isMobile && 'Sign Out'}
           </button>
         </div>
       </div>
 
       {/* Main content — fills remaining height, no scroll */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflow: 'hidden', position: 'relative' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'center', padding: isMobile ? '12px 10px' : '16px', overflow: isMobile ? 'auto' : 'hidden', position: 'relative' }}>
 
         {/* ── Admin Preview Banner + Back to Admin ── */}
         {isAdminPreview && (
@@ -507,44 +535,46 @@ export default function VisitorKioskPage() {
             position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20,
             background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.08) 100%)',
             borderBottom: '1px solid rgba(59,130,246,0.3)',
-            padding: '10px 20px',
+            padding: isMobile ? '8px 12px' : '10px 20px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 12,
+            gap: 8,
             animation: 'fadeUp 0.25s ease both',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
-              <span style={{ ...PP, fontSize: 12, fontWeight: 600, color: '#60a5fa' }}>
-                Admin Preview Mode
+              <span style={{ ...PP, fontSize: isMobile ? 11 : 12, fontWeight: 600, color: '#60a5fa', whiteSpace: 'nowrap' }}>
+                Admin Preview
               </span>
-              <span style={{ ...PP, fontSize: 11, color: 'rgba(96,165,250,0.7)' }}>
-                — This is what visitors see. Check-in is disabled.
-              </span>
+              {!isMobile && (
+                <span style={{ ...PP, fontSize: 11, color: 'rgba(96,165,250,0.7)' }}>
+                  — Visitor view only. Check-in disabled.
+                </span>
+              )}
             </div>
             <button
               onClick={() => { switchRole('admin'); navigate('/dashboard'); }}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 16px', borderRadius: 8,
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: isMobile ? '6px 10px' : '7px 16px', borderRadius: 8, flexShrink: 0,
                 background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.4)',
                 color: '#60a5fa', cursor: 'pointer',
-                ...MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                ...MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
                 transition: 'all 0.15s',
               }}
               onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.3)'; }}
               onMouseLeave={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.2)'; }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
                 <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
               </svg>
-              Back to Admin
+              {isMobile ? 'Exit' : 'Back to Admin'}
             </button>
           </div>
         )}
-        <div style={{ width: '100%', maxWidth: 860, display: 'grid', gridTemplateColumns: session !== undefined && userProfile?.role === 'visitor' && session === null && userProfile?.qrToken ? 'minmax(0,1.4fr) minmax(0,1fr)' : '1fr', gap: 12, alignItems: 'start', animation: 'fadeUp 0.3s ease both' }}>
+        <div style={{ width: '100%', maxWidth: 860, display: 'grid', gridTemplateColumns: (!isMobile && session !== undefined && userProfile?.role === 'visitor' && session === null && userProfile?.qrToken) ? 'minmax(0,1.4fr) minmax(0,1fr)' : '1fr', gap: 12, alignItems: 'start', animation: 'fadeUp 0.3s ease both' }}>
 
           {/* ── LEFT COLUMN: main check-in card ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -608,7 +638,7 @@ export default function VisitorKioskPage() {
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 6, marginBottom: 14 }}>
                   {PURPOSES.map(p => (
                     <button key={p} type="button" onClick={() => { setPurpose(p); setError(''); }}
                       style={{ padding: '10px 8px', borderRadius: 10, textAlign: 'center', cursor: 'pointer', border: `2px solid ${purpose === p ? 'var(--gold)' : 'var(--card-border)'}`, background: purpose === p ? 'var(--gold-soft)' : 'var(--surface)', color: purpose === p ? 'var(--gold)' : 'var(--text-muted)', ...PP, fontSize: 12, fontWeight: purpose === p ? 600 : 500, transition: 'all 0.15s' }}>
@@ -642,7 +672,7 @@ export default function VisitorKioskPage() {
                       onClick={() => setShowQRLightbox(true)}
                       onMouseEnter={e => e.currentTarget.querySelector('.qr-overlay').style.opacity = '1'}
                       onMouseLeave={e => e.currentTarget.querySelector('.qr-overlay').style.opacity = '0'}>
-                      <QRCodeDisplay value={userProfile.qrToken} size={150} />
+                      <QRCodeDisplay value={userProfile.qrToken} size={isMobile ? 120 : 150} />
                       <div className="qr-overlay" style={{ position: 'absolute', inset: 0, borderRadius: 10, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.15s' }}>
                         <span style={{ color: '#fff', fontSize: 28 }}>⛶</span>
                       </div>
