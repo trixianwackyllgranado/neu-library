@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, parseNameFromEmail } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { COLLEGES } from '../data/colleges';
 
 const MONO  = { fontFamily: "'IBM Plex Mono', monospace" };
 const SERIF = { fontFamily: "'Playfair Display', serif" };
@@ -39,6 +40,8 @@ export default function RegisterPage() {
   const [idFormat,      setIdFormat]      = useState('');
   const [role,          setRole]          = useState('visitor');
   const [visitorType,   setVisitorType]   = useState('student');
+  const [college,       setCollege]       = useState('');
+  const [course,        setCourse]        = useState('');
   const [inviteCode,    setInviteCode]    = useState('');
   const [codeVerified,  setCodeVerified]  = useState(false);
   const [codeError,     setCodError]      = useState('');
@@ -49,6 +52,8 @@ export default function RegisterPage() {
   if (!pendingGoogleUser) return null;
 
   const needsCode = role === 'staff' || role === 'admin';
+  const selectedCollege = COLLEGES.find(c => c.name === college);
+  const courses = selectedCollege?.courses || [];
 
   const inputSt = {
     width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)',
@@ -90,6 +95,8 @@ export default function RegisterPage() {
         idNumber,
         role,
         visitorType:   role === 'visitor' ? visitorType : null,
+        college:       college.trim() || null,
+        course:        course.trim() || null,
       });
       setDone(true);
       setTimeout(() => navigate('/dashboard', { replace: true }), 2000);
@@ -264,6 +271,34 @@ export default function RegisterPage() {
                         onFocus={onFocus} onBlur={onBlur} required />
                       <p style={{ ...MONO, fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>Format: YY-NNNNN-NNN</p>
                     </div>
+
+                    {/* College — visitors only */}
+                    {role === 'visitor' && (
+                      <div>
+                        <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>College</label>
+                        <select
+                          style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', appearance: 'none', cursor: 'pointer' }}
+                          value={college}
+                          onChange={e => { setCollege(e.target.value); setCourse(''); setError(''); }}>
+                          <option value="">— Select College —</option>
+                          {COLLEGES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Course — only when college is selected and has courses */}
+                    {role === 'visitor' && college && courses.length > 0 && (
+                      <div>
+                        <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>Course</label>
+                        <select
+                          style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', appearance: 'none', cursor: 'pointer' }}
+                          value={course}
+                          onChange={e => { setCourse(e.target.value); setError(''); }}>
+                          <option value="">— Select Course —</option>
+                          {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    )}
                   </>
                 )}
 

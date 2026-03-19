@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
   const [pendingGoogleUser,setPendingGoogleUser] = useState(null);
 
   // ── Register ─────────────────────────────────────────────────────────────
-  const register = async ({ uid, email, firstName, lastName, middleInitial, idNumber, role, visitorType }) => {
+  const register = async ({ uid, email, firstName, lastName, middleInitial, idNumber, role, visitorType, college, course }) => {
     const qrToken = crypto.randomUUID().replace(/-/g, '');
     await setDoc(doc(db, 'users', uid), {
       uid,
@@ -66,6 +66,8 @@ export function AuthProvider({ children }) {
       idNumber:      idNumber.trim(),
       role,
       visitorType:   role === 'visitor' ? (visitorType || 'student') : null,
+      college:       college?.trim().toUpperCase() || null,
+      course:        course?.trim().toUpperCase() || null,
       qrToken,
       createdAt:     serverTimestamp(),
     });
