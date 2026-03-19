@@ -43,6 +43,7 @@ export default function RegisterPage() {
   const [visitorType,   setVisitorType]   = useState('student');
   const [college,       setCollege]       = useState('');
   const [course,        setCourse]        = useState('');
+  const [department,    setDepartment]    = useState('');
   const [error,         setError]         = useState('');
   const [loading,       setLoading]       = useState(false);
   const [done,          setDone]          = useState(false);
@@ -106,8 +107,9 @@ export default function RegisterPage() {
         idNumber,
         role,
         visitorType:  role === 'visitor' ? visitorType : null,
-        college:      college.trim() || null,
-        course:       course.trim() || null,
+        college:      (role === 'visitor' && visitorType === 'student') ? (college.trim() || null) : null,
+        course:       (role === 'visitor' && visitorType === 'student') ? (course.trim() || null) : null,
+        department:   (role === 'visitor' && visitorType === 'faculty') ? (department.trim() || null) : null,
       });
       // Mark invite as claimed
       if (isInvited && inviteId) {
@@ -224,8 +226,11 @@ export default function RegisterPage() {
                     <div>
                       <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 8, fontWeight: 600 }}>I am a…</label>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        {[{ key: 'student', label: 'Student' }, { key: 'faculty', label: 'Faculty' }].map(({ key, label }) => (
-                          <button key={key} type="button" onClick={() => setVisitorType(key)}
+                        {[{ key: 'student', label: 'Student' }, { key: 'faculty', label: 'Faculty / Professor' }].map(({ key, label }) => (
+                          <button key={key} type="button" onClick={() => {
+                            setVisitorType(key);
+                            setCollege(''); setCourse(''); setDepartment('');
+                          }}
                             style={{ flex: 1, padding: '9px 8px', borderRadius: 9, cursor: 'pointer', transition: 'all 0.15s', fontSize: 13, fontWeight: 600, fontFamily: "'Poppins', sans-serif",
                               background: visitorType === key ? 'var(--blue-soft)' : 'var(--surface)',
                               border:     `1px solid ${visitorType === key ? 'var(--blue-border)' : 'var(--card-border)'}`,
@@ -273,27 +278,47 @@ export default function RegisterPage() {
                     <p style={{ ...MONO, fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>Format: YY-NNNNN-NNN</p>
                   </div>
 
-                  {/* College — visitors only */}
-                  {!isInvited && (
-                    <div>
-                      <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>College</label>
-                      <select style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', appearance: 'none', cursor: 'pointer' }}
-                        value={college} onChange={e => { setCollege(e.target.value); setCourse(''); }}>
-                        <option value="">— Select College —</option>
-                        {COLLEGES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                      </select>
-                    </div>
+                  {/* College + Course — students only */}
+                  {!isInvited && visitorType === 'student' && (
+                    <>
+                      <div>
+                        <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>College</label>
+                        <select style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', appearance: 'none', cursor: 'pointer' }}
+                          value={college} onChange={e => { setCollege(e.target.value); setCourse(''); }}>
+                          <option value="">— Select College —</option>
+                          {COLLEGES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                        </select>
+                      </div>
+
+                      {college && courses.length > 0 && (
+                        <div>
+                          <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>Program / Course</label>
+                          <select style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', appearance: 'none', cursor: 'pointer' }}
+                            value={course} onChange={e => setCourse(e.target.value)}>
+                            <option value="">— Select Program —</option>
+                            {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </>
                   )}
 
-                  {/* Course */}
-                  {!isInvited && college && courses.length > 0 && (
+                  {/* Department — faculty only */}
+                  {!isInvited && visitorType === 'faculty' && (
                     <div>
-                      <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>Course</label>
-                      <select style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', appearance: 'none', cursor: 'pointer' }}
-                        value={course} onChange={e => setCourse(e.target.value)}>
-                        <option value="">— Select Course —</option>
-                        {courses.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                      <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>
+                        Department <span style={{ ...PP, fontSize: 10, color: 'var(--text-dim)', textTransform: 'none', letterSpacing: 0 }}>(e.g. College of Engineering)</span>
+                      </label>
+                      <input
+                        style={{ ...inputSt }}
+                        placeholder="e.g. College of Informatics and Computing Studies"
+                        value={department}
+                        onChange={e => setDepartment(e.target.value)}
+                        onFocus={onFocus} onBlur={onBlur}
+                      />
+                      <p style={{ ...PP, fontSize: 11, color: 'var(--text-dim)', marginTop: 4 }}>
+                        Enter your college, school, or department name.
+                      </p>
                     </div>
                   )}
 
