@@ -1,7 +1,6 @@
 // src/components/shared/FloatingTutorial.jsx
 // Floating "?" button with tutorial card. ONLY renders for prime admin emails.
-// Includes a toggle to turn the tutorial system on/off permanently.
-// Makes it very clear to the professor that this feature is exclusive to him.
+// All hooks MUST be called before any conditional returns (React rules of hooks).
 import { useState, useEffect, useRef } from 'react';
 import { useTutorial } from '../../context/TutorialContext';
 import { useAuth } from '../../context/AuthContext';
@@ -12,7 +11,7 @@ const MN = { fontFamily: "'IBM Plex Mono', monospace" };
 const SR = { fontFamily: "'Playfair Display', serif" };
 
 export default function FloatingTutorial({ pageKey }) {
-  const { tutorialActive, hasTutorialAccess, tutorialEnabled, isPageDismissed, dismissPage, dismissAll, toggleTutorial } = useTutorial();
+  const { tutorialActive, hasTutorialAccess, tutorialEnabled, isPageDismissed, dismissPage, dismissAll } = useTutorial();
   const { userProfile } = useAuth();
   const [open, setOpen] = useState(false);
   const [pulse, setPulse] = useState(true);
@@ -20,27 +19,21 @@ export default function FloatingTutorial({ pageKey }) {
   const cardRef = useRef(null);
   const btnRef = useRef(null);
 
-  // Only prime admins ever see this component
-  if (!hasTutorialAccess) return null;
+  const content = TUTORIAL_CONTENT[pageKey] || null;
+  const shouldRender = hasTutorialAccess && tutorialEnabled && content && !isPageDismissed(pageKey);
 
-  // If tutorial is globally toggled off, don't render anything
-  if (!tutorialEnabled) return null;
-
-  // If this specific page is dismissed, don't show
-  if (isPageDismissed(pageKey)) return null;
-
-  const content = TUTORIAL_CONTENT[pageKey];
-  if (!content) return null;
+  // ── All hooks MUST be above this line — no early returns before hooks ──────
 
   // Stop pulse after 5 seconds
   useEffect(() => {
+    if (!shouldRender) return;
     const t = setTimeout(() => setPulse(false), 5000);
     return () => clearTimeout(t);
-  }, []);
+  }, [shouldRender]);
 
   // Close on outside click
   useEffect(() => {
-    if (!open) return;
+    if (!open || !shouldRender) return;
     const handler = (e) => {
       if (cardRef.current && !cardRef.current.contains(e.target) &&
           btnRef.current && !btnRef.current.contains(e.target)) {
@@ -50,7 +43,17 @@ export default function FloatingTutorial({ pageKey }) {
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  }, [open, shouldRender]);
+
+  // Reset state when pageKey changes
+  useEffect(() => {
+    setOpen(false);
+    setPulse(true);
+    setConfirmSkipAll(false);
+  }, [pageKey]);
+
+  // ── Now safe to early-return ──────────────────────────────────────────────
+  if (!shouldRender) return null;
 
   const handleDismissPage = () => {
     dismissPage(pageKey);
@@ -130,7 +133,7 @@ export default function FloatingTutorial({ pageKey }) {
                 <p style={{ ...SR, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{content.title}</p>
               </div>
             </div>
-            {/* Exclusive notice for the professor */}
+            {/* Exclusive notice */}
             <div style={{
               marginTop: 8,
               padding: '8px 10px',
@@ -139,7 +142,7 @@ export default function FloatingTutorial({ pageKey }) {
               borderRadius: 8,
             }}>
               <p style={{ ...MN, fontSize: 9, color: '#60a5fa', lineHeight: 1.5, letterSpacing: '0.04em' }}>
-                This guide is exclusive to you as the system administrator. Regular staff and students cannot see this. You can turn it off anytime using the toggle below.
+                This guide is exclusive to you as the system administrator. Regular staff and students cannot see this. You can turn it off anytime using the sidebar toggle.
               </p>
             </div>
           </div>
@@ -206,28 +209,25 @@ export default function FloatingTutorial({ pageKey }) {
           </div>
 
           {/* Actions */}
-          <div style={{ padding: '12px 20px 16px', borderTop: '1px solid var(--divider)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {/* Top row: Got it + Skip all */}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={handleDismissPage} style={{
-                flex: 1, padding: '10px 14px', borderRadius: 8,
-                background: 'var(--gold-soft)', border: '1px solid var(--gold-border)',
-                color: 'var(--gold)', cursor: 'pointer',
-                ...PP, fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
-              }}>
-                Got it for this page
-              </button>
-              <button onClick={handleSkipAll} style={{
-                padding: '10px 14px', borderRadius: 8,
-                background: confirmSkipAll ? 'var(--red-soft)' : 'var(--surface)',
-                border: `1px solid ${confirmSkipAll ? 'var(--red-border)' : 'var(--card-border)'}`,
-                color: confirmSkipAll ? 'var(--red)' : 'var(--text-dim)',
-                cursor: 'pointer',
-                ...PP, fontSize: 12, fontWeight: 500, transition: 'all 0.15s',
-              }}>
-                {confirmSkipAll ? 'Confirm turn off' : 'Turn off all guides'}
-              </button>
-            </div>
+          <div style={{ padding: '12px 20px 16px', borderTop: '1px solid var(--divider)', display: 'flex', gap: 8 }}>
+            <button onClick={handleDismissPage} style={{
+              flex: 1, padding: '10px 14px', borderRadius: 8,
+              background: 'var(--gold-soft)', border: '1px solid var(--gold-border)',
+              color: 'var(--gold)', cursor: 'pointer',
+              ...PP, fontSize: 12, fontWeight: 600, transition: 'all 0.15s',
+            }}>
+              Got it for this page
+            </button>
+            <button onClick={handleSkipAll} style={{
+              padding: '10px 14px', borderRadius: 8,
+              background: confirmSkipAll ? 'var(--red-soft)' : 'var(--surface)',
+              border: `1px solid ${confirmSkipAll ? 'var(--red-border)' : 'var(--card-border)'}`,
+              color: confirmSkipAll ? 'var(--red)' : 'var(--text-dim)',
+              cursor: 'pointer',
+              ...PP, fontSize: 12, fontWeight: 500, transition: 'all 0.15s',
+            }}>
+              {confirmSkipAll ? 'Confirm turn off' : 'Turn off all guides'}
+            </button>
           </div>
         </div>
       )}
