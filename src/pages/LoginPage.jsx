@@ -19,29 +19,35 @@ function GoogleIcon() {
   );
 }
 
-// Modal popup component
-function Modal({ title, message, onClose, variant = 'error' }) {
-  const accent = variant === 'info' ? 'var(--blue)' : variant === 'warn' ? 'var(--gold)' : 'var(--red)';
-  const accentSoft = variant === 'info' ? 'var(--blue-soft)' : variant === 'warn' ? 'var(--gold-soft)' : 'var(--red-soft)';
-  const accentBorder = variant === 'info' ? 'var(--blue-border)' : variant === 'warn' ? 'var(--gold-border)' : 'var(--red-border)';
+function Modal({ title, message, onClose, variant = 'error', actionLabel = 'OK', secondaryLabel, onSecondary }) {
+  const accent       = variant === 'warn' ? 'var(--gold)' : 'var(--red)';
+  const accentSoft   = variant === 'warn' ? 'var(--gold-soft)' : 'var(--red-soft)';
+  const accentBorder = variant === 'warn' ? 'var(--gold-border)' : 'var(--red-border)';
   return (
-    <div style={{ position:'fixed', inset:0, zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.7)', backdropFilter:'blur(4px)', padding:16 }}>
+    <div style={{ position:'fixed', inset:0, zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.72)', backdropFilter:'blur(4px)', padding:16 }}>
       <div style={{ width:'100%', maxWidth:400, background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:18, overflow:'hidden', boxShadow:'var(--shadow-modal)', animation:'fadeUp 0.2s ease both' }}>
         <div style={{ height:3, background:`linear-gradient(90deg, ${accent}, transparent)` }} />
         <div style={{ padding:'28px 28px 24px' }}>
           <div style={{ width:48, height:48, borderRadius:'50%', background:accentSoft, border:`1px solid ${accentBorder}`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
-            {variant === 'warn' ? (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            ) : (
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            )}
+            {variant === 'warn'
+              ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            }
           </div>
           <h2 style={{ ...SERIF, fontSize:20, fontWeight:700, color:'var(--text-primary)', textAlign:'center', marginBottom:10 }}>{title}</h2>
-          <p style={{ ...PP, fontSize:14, color:'var(--text-muted)', textAlign:'center', lineHeight:1.7, marginBottom:22 }}>{message}</p>
-          <button onClick={onClose}
-            style={{ width:'100%', padding:'12px', borderRadius:10, background:accentSoft, border:`1px solid ${accentBorder}`, color:accent, cursor:'pointer', ...MONO, fontSize:'11px', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700 }}>
-            OK
-          </button>
+          <p  style={{ ...PP, fontSize:14, color:'var(--text-muted)', textAlign:'center', lineHeight:1.7, marginBottom:22 }}>{message}</p>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <button onClick={onClose}
+              style={{ width:'100%', padding:'12px', borderRadius:10, background:accentSoft, border:`1px solid ${accentBorder}`, color:accent, cursor:'pointer', ...MONO, fontSize:'11px', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700 }}>
+              {actionLabel}
+            </button>
+            {secondaryLabel && (
+              <button onClick={onSecondary}
+                style={{ width:'100%', padding:'12px', borderRadius:10, background:'var(--surface)', border:'1px solid var(--card-border)', color:'var(--text-muted)', cursor:'pointer', ...MONO, fontSize:'11px', letterSpacing:'0.14em', textTransform:'uppercase' }}>
+                {secondaryLabel}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -54,7 +60,7 @@ export default function LoginPage() {
   const { dark, toggle } = useTheme();
 
   const [loading, setLoading] = useState(false);
-  const [modal,   setModal]   = useState(null); // { title, message, variant, onClose }
+  const [modal,   setModal]   = useState(null);
 
   const handleGoogle = async () => {
     setLoading(true);
@@ -63,25 +69,29 @@ export default function LoginPage() {
       navigate('/dashboard', { replace: true });
     } catch (err) {
       if (err.code === 'not-registered') {
-        // Valid NEU email but no account yet — route to registration
+        // Valid NEU email but no account yet — show modal then go to register
         setModal({
-          title: 'Not Registered Yet',
-          message: 'You are not registered yet. Please fill up the form first.',
-          variant: 'warn',
-          onClose: () => { setModal(null); navigate('/register'); },
+          title:       'Not Registered Yet',
+          message:     'Your Google account was found but you haven\'t registered in the visitor log yet. Please fill up the registration form first.',
+          variant:     'warn',
+          actionLabel: 'Register Now',
+          onClose:     () => { setModal(null); navigate('/register'); },
         });
       } else if (err.code === 'non-neu-email') {
         setModal({
-          title: 'Non-Institutional Email',
-          message: 'Non-institutional emails are not accepted. Please use your @neu.edu.ph email address to access the library system.',
+          title:   'Institutional Email Required',
+          message: 'Only @neu.edu.ph Google accounts are accepted. Please sign in with your NEU email address.',
           variant: 'error',
           onClose: () => setModal(null),
         });
-      } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-        // User closed popup — no error shown
+      } else if (
+        err.code === 'auth/popup-closed-by-user' ||
+        err.code === 'auth/cancelled-popup-request'
+      ) {
+        // Silently ignore — user chose to close the popup
       } else {
         setModal({
-          title: 'Sign-In Failed',
+          title:   'Sign-In Failed',
           message: err.message || 'An unexpected error occurred. Please try again.',
           variant: 'error',
           onClose: () => setModal(null),
@@ -98,20 +108,20 @@ export default function LoginPage() {
       background: 'linear-gradient(160deg, var(--bg-base) 0%, var(--bg-mid) 55%, var(--bg-top) 100%)',
       display: 'flex', flexDirection: 'column', transition: 'background 0.25s',
     }}>
-      {/* NEU stripe */}
-      <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', flexShrink: 0 }} />
+      {/* NEU colour stripe */}
+      <div style={{ height:'3px', background:'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', flexShrink:0 }} />
 
       {/* Header */}
-      <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--divider)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <img src="/liblogo.png" alt="NEU" style={{ width: 38, height: 38, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+      <div style={{ padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid var(--divider)' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+          <img src="/liblogo.png" alt="NEU" style={{ width:38, height:38, objectFit:'cover', borderRadius:'50%' }} onError={e=>{e.currentTarget.style.display='none';}} />
           <div>
-            <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 2 }}>New Era University</p>
-            <p style={{ ...SERIF, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Library Management System</p>
+            <p style={{ ...MONO, fontSize:'8px', letterSpacing:'0.24em', color:'var(--gold)', textTransform:'uppercase', marginBottom:2 }}>New Era University</p>
+            <p style={{ ...SERIF, fontSize:'14px', fontWeight:700, color:'var(--text-primary)', lineHeight:1.2 }}>Library Visitor Log</p>
           </div>
         </div>
         <button onClick={toggle} title={dark ? 'Light Mode' : 'Dark Mode'}
-          style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid var(--card-border)', background: 'var(--surface)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          style={{ width:36, height:36, borderRadius:8, border:'1px solid var(--card-border)', background:'var(--surface)', color:'var(--gold)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
           {dark
             ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
             : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -120,22 +130,22 @@ export default function LoginPage() {
       </div>
 
       {/* Main */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
-        <div style={{ width: '100%', maxWidth: 400, animation: 'fadeUp 0.35s ease both' }}>
+      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 16px' }}>
+        <div style={{ width:'100%', maxWidth:400, animation:'fadeUp 0.35s ease both' }}>
 
-          {/* Welcome card */}
-          <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-modal)', marginBottom: 16 }}>
-            <div style={{ height: 3, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
-            <div style={{ padding: '40px 32px' }}>
+          {/* Card */}
+          <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:20, overflow:'hidden', boxShadow:'var(--shadow-modal)', marginBottom:16 }}>
+            <div style={{ height:3, background:'linear-gradient(90deg, var(--gold), transparent)' }} />
+            <div style={{ padding:'40px 32px' }}>
 
-              {/* Logo */}
-              <div style={{ textAlign: 'center', marginBottom: 28 }}>
-                <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--gold-soft)', border: '2px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', overflow: 'hidden' }}>
-                  <img src="/liblogo.png" alt="NEU" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+              {/* Logo + title */}
+              <div style={{ textAlign:'center', marginBottom:28 }}>
+                <div style={{ width:72, height:72, borderRadius:'50%', background:'var(--gold-soft)', border:'2px solid var(--gold-border)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px', overflow:'hidden' }}>
+                  <img src="/liblogo.png" alt="NEU" style={{ width:64, height:64, objectFit:'cover', borderRadius:'50%' }} onError={e=>{e.currentTarget.style.display='none';}} />
                 </div>
-                <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 6 }}>Welcome to</p>
-                <h1 style={{ ...SERIF, fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2, marginBottom: 6 }}>NEU Library</h1>
-                <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)' }}>Sign in with your institutional Google account</p>
+                <p style={{ ...MONO, fontSize:'9px', letterSpacing:'0.24em', color:'var(--gold)', textTransform:'uppercase', marginBottom:6 }}>Welcome to</p>
+                <h1 style={{ ...SERIF, fontSize:26, fontWeight:700, color:'var(--text-primary)', lineHeight:1.2, marginBottom:8 }}>NEU Library</h1>
+                <p style={{ ...PP, fontSize:14, color:'var(--text-muted)', lineHeight:1.6 }}>Sign in with your NEU Google account to log your visit</p>
               </div>
 
               {/* Google button */}
@@ -143,23 +153,23 @@ export default function LoginPage() {
                 onClick={handleGoogle}
                 disabled={loading}
                 style={{
-                  width: '100%', padding: '14px 20px', borderRadius: 12,
+                  width:'100%', padding:'14px 20px', borderRadius:12,
                   background: loading ? 'var(--surface)' : 'var(--card)',
-                  border: '1px solid var(--card-border)',
-                  color: 'var(--text-primary)',
+                  border:'1px solid var(--card-border)',
+                  color:'var(--text-primary)',
                   cursor: loading ? 'not-allowed' : 'pointer',
                   opacity: loading ? 0.65 : 1,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                  ...PP, fontSize: '15px', fontWeight: 600, transition: 'all 0.15s',
+                  display:'flex', alignItems:'center', justifyContent:'center', gap:12,
+                  ...PP, fontSize:'15px', fontWeight:600, transition:'all 0.15s',
                   boxShadow: loading ? 'none' : '0 2px 8px rgba(0,0,0,0.15)',
                 }}
-                onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = 'var(--surface-hover)'; e.currentTarget.style.borderColor = 'var(--gold-border)'; } }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'var(--card)'; e.currentTarget.style.borderColor = 'var(--card-border)'; }}
+                onMouseEnter={e=>{ if(!loading){ e.currentTarget.style.background='var(--surface-hover)'; e.currentTarget.style.borderColor='var(--gold-border)'; }}}
+                onMouseLeave={e=>{ e.currentTarget.style.background='var(--card)'; e.currentTarget.style.borderColor='var(--card-border)'; }}
               >
                 {loading ? (
                   <>
-                    <div style={{ width: 18, height: 18, border: '2px solid var(--gold-border)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    <span style={{ ...MONO, fontSize: '11px', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Connecting…</span>
+                    <div style={{ width:18, height:18, border:'2px solid var(--gold-border)', borderTopColor:'var(--gold)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+                    <span style={{ ...MONO, fontSize:'11px', letterSpacing:'0.1em', color:'var(--text-muted)' }}>Signing in…</span>
                   </>
                 ) : (
                   <>
@@ -169,23 +179,31 @@ export default function LoginPage() {
                 )}
               </button>
 
-              <p style={{ ...PP, fontSize: 12, color: 'var(--text-dim)', textAlign: 'center', marginTop: 16, lineHeight: 1.6 }}>
-                Use your <span style={{ color: 'var(--gold)', fontWeight: 600 }}>@neu.edu.ph</span> institutional email
+              <p style={{ ...PP, fontSize:12, color:'var(--text-dim)', textAlign:'center', marginTop:16, lineHeight:1.6 }}>
+                Use your <span style={{ color:'var(--gold)', fontWeight:600 }}>@neu.edu.ph</span> institutional email
               </p>
             </div>
           </div>
 
-          <p style={{ textAlign: 'center', ...MONO, fontSize: '10px', letterSpacing: '0.14em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
-            New Era University — Library Management System
+          <p style={{ textAlign:'center', ...MONO, fontSize:'10px', letterSpacing:'0.14em', color:'var(--text-dim)', textTransform:'uppercase' }}>
+            New Era University — Library Visitor Log
           </p>
         </div>
       </div>
 
-      {modal && <Modal title={modal.title} message={modal.message} variant={modal.variant} onClose={modal.onClose} />}
+      {modal && (
+        <Modal
+          title={modal.title}
+          message={modal.message}
+          variant={modal.variant}
+          actionLabel={modal.actionLabel}
+          onClose={modal.onClose}
+        />
+      )}
 
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin   { to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

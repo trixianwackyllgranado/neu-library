@@ -14,22 +14,46 @@ function Splash({ text = 'Loading...' }) {
   );
 }
 
-// RequireGuest: redirect logged-in users away from /login and /register
-// Exception: if pendingGoogleUser exists, allow /register through
+// RequireGuest: redirects logged-in registered users away from /login and /register.
+// If pendingGoogleUser exists, the user just signed in with Google but hasn't
+// registered yet — allow /register through unconditionally. This is the
+// second line of defence after the loginInProgressRef lock in AuthContext.
 export function RequireGuest({ children }) {
   const { currentUser, loadingAuth, userProfile, profileLoading, pendingGoogleUser } = useAuth();
+
+  // Always wait for auth to finish initialising
   if (loadingAuth || profileLoading) return <Splash />;
-  // If they have a pending Google user (not yet registered), allow /register
+
+  // Unregistered Google user waiting to fill the form — never block /register
   if (pendingGoogleUser) return children;
+
+  // Fully registered and logged in — send them to the kiosk
   if (currentUser && userProfile) return <Navigate to="/dashboard" replace />;
+
+  // Not logged in — show login/register pages normally
   return children;
 }
 
+// RequireAuth: protects pages that need a fully registered, logged-in user.
+// If pendingGoogleUser exists, the user IS authenticated at the Firebase Auth
+// level but hasn't created a Firestore profile yet — send them to /register,
+// not /login (which would be confusing since they just signed in).
 export function RequireAuth({ children }) {
-  const { currentUser, loadingAuth, userProfile, profileLoading } = useAuth();
+  const { currentUser, loadingAuth, userProfile, profileLoading, pendingGoogleUser } = useAuth();
   const location = useLocation();
+
   if (loadingAuth || profileLoading) return <Splash />;
-  if (!currentUser || !userProfile) return <Navigate to="/login" state={{ from: location }} replace />;
+
+  // Authenticated but no Firestore profile yet → needs to register first
+  if (currentUser && !userProfile && pendingGoogleUser) {
+    return <Navigate to="/register" replace />;
+  }
+
+  // Not authenticated at all → send to login
+  if (!currentUser || !userProfile) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
   return children;
 }
 

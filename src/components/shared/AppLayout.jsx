@@ -108,7 +108,7 @@ export default function AppLayout({ children }) {
             </div>
             <div style={{minWidth:0}}>
               <p style={{...PP,fontSize:11,fontWeight:700,color:'var(--gold)',whiteSpace:'nowrap',lineHeight:1.2}}>NEU Library</p>
-              <p style={{...PP,fontSize:10,color:'var(--text-muted)',whiteSpace:'nowrap',lineHeight:1.3}}>Management System</p>
+              <p style={{...PP,fontSize:10,color:'var(--text-muted)',whiteSpace:'nowrap',lineHeight:1.3}}>Visitor Log</p>
             </div>
           </div>
         )}
@@ -181,7 +181,7 @@ export default function AppLayout({ children }) {
             <div style={{width:32,height:32,borderRadius:'50%',background:'var(--gold-soft)',border:'1px solid var(--gold-border)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}}>
               <img src="/liblogo.png" alt="NEU" style={{width:26,height:26,objectFit:'cover',borderRadius:'50%'}} onError={e=>{e.currentTarget.style.display='none';}} />
             </div>
-            <p style={{...PP,fontSize:13,fontWeight:700,color:'var(--text-primary)'}}>NEU Library</p>
+            <p style={{...PP,fontSize:13,fontWeight:700,color:'var(--text-primary)'}}>NEU Library Visitor Log</p>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <button onClick={toggleTheme} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:8,width:38,height:38,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'var(--text-muted)'}}>
