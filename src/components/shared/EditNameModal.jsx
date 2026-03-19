@@ -1,6 +1,7 @@
 // src/components/shared/EditNameModal.jsx
 // Admin-only — edit a user's first name, last name, and middle initial
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { doc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
@@ -72,10 +73,10 @@ export default function EditNameModal({ onClose, targetUid, targetProfile }) {
     }
   };
 
-  return (
+  const modal = (
     <div
       onClick={e => { if (e.target === e.currentTarget && !loading) onClose(); }}
-      style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', padding: 16, animation: 'fadeIn 0.18s ease both' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', padding: 16, animation: 'fadeIn 0.18s ease both' }}
     >
       <div style={{ width: '100%', maxWidth: 460, background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--shadow-modal)', animation: 'slideUp 0.22s cubic-bezier(0.34,1.56,0.64,1) both' }}>
         <div style={{ height: 3, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
@@ -194,4 +195,6 @@ export default function EditNameModal({ onClose, targetUid, targetProfile }) {
       `}</style>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

@@ -1,8 +1,9 @@
 // src/pages/admin/UserManagementPage.jsx
 import { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   collection, updateDoc, addDoc, doc, onSnapshot,
-  serverTimestamp, deleteDoc, writeBatch, getDocs, query, where,
+  serverTimestamp, deleteDoc,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
@@ -24,7 +25,8 @@ const ROLE_COLOR = {
 function RoleBadge({ role }) {
   const c = ROLE_COLOR[role] || { bg:'var(--surface)', border:'var(--card-border)', color:'var(--text-dim)' };
   return (
-    <span style={{ ...MN, fontSize:9, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:20, background:c.bg, border:`1px solid ${c.border}`, color:c.color }}>
+    <span style={{ ...MN, fontSize:9, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase',
+      padding:'3px 10px', borderRadius:20, background:c.bg, border:`1px solid ${c.border}`, color:c.color }}>
       {role || 'visitor'}
     </span>
   );
@@ -32,7 +34,11 @@ function RoleBadge({ role }) {
 
 function exportUsersCSV(users) {
   const headers = ['Role','Last Name','First Name','Middle Initial','ID Number','Email','College','Course','Account Created'];
-  const rows = users.map(u=>[u.role??'',u.lastName??'',u.firstName??'',u.middleInitial??'',u.idNumber??'',u.email??'',u.college??u.department??'',u.course??'',u.createdAt?.toDate?u.createdAt.toDate().toLocaleDateString('en-PH'):'']);
+  const rows = users.map(u=>[
+    u.role??'', u.lastName??'', u.firstName??'', u.middleInitial??'',
+    u.idNumber??'', u.email??'', u.college??u.department??'', u.course??'',
+    u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString('en-PH') : '',
+  ]);
   const csv  = [headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv],{type:'text/csv'});
   const url  = URL.createObjectURL(blob);
@@ -41,22 +47,28 @@ function exportUsersCSV(users) {
 }
 
 // ── Audit Log ─────────────────────────────────────────────────────────────────
-const ACTIVITY_TABS = [
-  {key:'all',label:'All'},{key:'role_change',label:'Role Changes'},
-  {key:'edit_approved',label:'Info Edits'},{key:'name_change',label:'Name Changes'},
-  {key:'program_change',label:'Program Changes'},{key:'user_deletion',label:'Deletions'},
+const AUDIT_FILTER_TABS = [
+  {key:'all',label:'All'},
+  {key:'role_change',label:'Role Changes'},
+  {key:'edit_approved',label:'Info Edits'},
+  {key:'name_change',label:'Name Changes'},
+  {key:'program_change',label:'Program Changes'},
 ];
 const ACTIVITY_META = {
   role_change:    {color:'var(--red)',   label:'Role'   },
   edit_approved:  {color:'var(--gold)',  label:'Edit'   },
   name_change:    {color:'var(--gold)',  label:'Name'   },
   program_change: {color:'var(--green)', label:'Program'},
-  user_deletion:  {color:'var(--red)',   label:'Deleted'},
 };
 
 function AuditTypeBadge({ type }) {
   const m = ACTIVITY_META[type] || {color:'var(--text-dim)',label:type||'?'};
-  return <span style={{...MN,fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',padding:'3px 10px',borderRadius:20,background:m.color+'20',border:`1px solid ${m.color}40`,color:m.color}}>{m.label}</span>;
+  return (
+    <span style={{...MN,fontSize:9,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',
+      padding:'3px 10px',borderRadius:20,background:m.color+'20',border:`1px solid ${m.color}40`,color:m.color}}>
+      {m.label}
+    </span>
+  );
 }
 
 function AuditRow({ log }) {
@@ -67,16 +79,20 @@ function AuditRow({ log }) {
     if(log.activityType==='edit_approved')  return Object.keys(log.changes||{}).join(', ')||'—';
     if(log.activityType==='name_change')    return `${log.oldName||'?'} → ${log.newName||'?'}`;
     if(log.activityType==='program_change') return `${log.oldProgram||'?'} → ${log.newProgram||'?'}`;
-    if(log.activityType==='user_deletion')  return 'Hard deleted';
     return '—';
   };
   return (
     <>
-      <tr onClick={()=>setExpanded(e=>!e)} style={{borderBottom:expanded?'none':'1px solid var(--row-border)',cursor:'pointer'}}
+      <tr onClick={()=>setExpanded(e=>!e)}
+        style={{borderBottom:expanded?'none':'1px solid var(--row-border)',cursor:'pointer'}}
         onMouseEnter={e=>{if(!expanded)e.currentTarget.style.background='var(--row-hover-bg)';}}
         onMouseLeave={e=>{e.currentTarget.style.background='transparent';}}>
         <td style={{padding:'11px 8px 11px 16px',width:28}}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{transform:expanded?'rotate(90deg)':'none',transition:'transform 0.15s'}}><polyline points="9 18 15 12 9 6"/></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2.5"
+            strokeLinecap="round" strokeLinejoin="round"
+            style={{transform:expanded?'rotate(90deg)':'none',transition:'transform 0.15s'}}>
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
         </td>
         <td style={{padding:'11px 12px',...MN,fontSize:11,color:'var(--text-muted)',whiteSpace:'nowrap'}}>{fmt(log.timestamp)}</td>
         <td style={{padding:'11px 12px'}}><AuditTypeBadge type={log.activityType}/></td>
@@ -106,9 +122,6 @@ function AuditRow({ log }) {
                   ))}
                 </div>
               )}
-              {log.activityType==='user_deletion' && (
-                <p style={{...MN,fontSize:11,color:'var(--red)'}}>ID: {log.deletedIdNumber||'—'} · {log.borrowsSnapshotted??0} borrows · {log.logsSnapshotted??0} visits snapshotted</p>
-              )}
             </div>
           </td>
         </tr>
@@ -118,17 +131,20 @@ function AuditRow({ log }) {
 }
 
 function AuditModal({ logs, onClose }) {
-  const [actFilter,setActFilter] = useState('all');
-  const [search,setSearch]       = useState('');
+  const [actFilter, setActFilter] = useState('all');
+  const [search,    setSearch]    = useState('');
   const filtered = logs
-    .filter(l=>actFilter==='all'||l.activityType===actFilter)
-    .filter(l=>{
-      if(!search.trim())return true;
-      const q=search.toLowerCase();
-      return(l.targetName||'').toLowerCase().includes(q)||(l.changedByName||'').toLowerCase().includes(q)||(l.reason||'').toLowerCase().includes(q);
+    .filter(l => actFilter==='all' || l.activityType===actFilter)
+    .filter(l => {
+      if(!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (l.targetName||'').toLowerCase().includes(q)
+          || (l.changedByName||'').toLowerCase().includes(q)
+          || (l.reason||'').toLowerCase().includes(q);
     });
-  return (
-    <div style={{position:'fixed',inset:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',backdropFilter:'blur(3px)',padding:16}}>
+
+  return createPortal(
+    <div style={{position:'fixed',inset:0,zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.65)',backdropFilter:'blur(4px)',padding:16}}>
       <div style={{background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:16,width:'100%',maxWidth:900,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'var(--shadow-modal)',overflow:'hidden'}}>
         <div style={{background:'var(--thead-bg)',borderBottom:'1px solid var(--divider)',padding:'16px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
           <div>
@@ -140,10 +156,12 @@ function AuditModal({ logs, onClose }) {
           </button>
         </div>
         <div style={{padding:'12px 24px',borderBottom:'1px solid var(--divider)',flexShrink:0,display:'flex',flexDirection:'column',gap:10}}>
-          <input style={{width:'100%',background:'var(--input-bg)',border:'1px solid var(--input-border)',borderRadius:9,padding:'9px 14px',fontSize:13,color:'var(--text-primary)',fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}
-            placeholder="Search by name, reason, or changed by…" value={search} onChange={e=>setSearch(e.target.value)} />
+          <input
+            style={{width:'100%',background:'var(--input-bg)',border:'1px solid var(--input-border)',borderRadius:9,padding:'9px 14px',fontSize:13,color:'var(--text-primary)',fontFamily:'inherit',outline:'none',boxSizing:'border-box'}}
+            placeholder="Search by name, reason, or changed by…"
+            value={search} onChange={e=>setSearch(e.target.value)} />
           <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-            {ACTIVITY_TABS.map(t=>(
+            {AUDIT_FILTER_TABS.map(t=>(
               <button key={t.key} onClick={()=>setActFilter(t.key)}
                 style={{padding:'6px 14px',...MN,fontSize:10,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer',borderRadius:8,transition:'all 0.15s',
                   background:actFilter===t.key?'var(--gold-soft)':'var(--surface)',
@@ -176,70 +194,116 @@ function AuditModal({ logs, onClose }) {
           <p style={{...MN,fontSize:10,color:'var(--text-dim)'}}>Showing {filtered.length} of {logs.length} entries · Click any row to expand</p>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
 // ── Staff Invite Modal ────────────────────────────────────────────────────────
 function StaffInviteModal({ invites, myProfile, onClose, showToast }) {
-  const [email,setEmail]     = useState('');
-  const [saving,setSaving]   = useState(false);
-  const [deleting,setDeleting]= useState(null);
-  const fmt = ts=>{if(!ts)return'—';const d=ts.toDate?ts.toDate():new Date(ts);return d.toLocaleDateString('en-PH',{dateStyle:'medium'});};
+  const [email,    setEmail]    = useState('');
+  const [saving,   setSaving]   = useState(false);
+  const [deleting, setDeleting] = useState(null);
+
+  const fmt = ts => { if(!ts)return'—'; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleDateString('en-PH',{dateStyle:'medium'}); };
+
   const handleInvite = async () => {
-    const clean = email.trim().toLowerCase(); if(!clean)return;
+    const clean = email.trim().toLowerCase();
+    if(!clean) return;
     setSaving(true);
     try {
-      if(invites.find(i=>i.email===clean&&i.status==='pending')){showToast('Already has a pending invite.',false);setSaving(false);return;}
-      await addDoc(collection(db,'staffInvites'),{email:clean,invitedBy:myProfile?.uid,invitedByName:`${myProfile?.lastName}, ${myProfile?.firstName}`,invitedAt:serverTimestamp(),status:'pending'});
-      showToast(`Invite sent to ${clean}.`,true); setEmail('');
+      if(invites.find(i=>i.email===clean&&i.status==='pending')) {
+        showToast('Already has a pending invite.',false);
+        setSaving(false);
+        return;
+      }
+      await addDoc(collection(db,'staffInvites'),{
+        email:clean,
+        invitedBy:myProfile?.uid,
+        invitedByName:`${myProfile?.lastName}, ${myProfile?.firstName}`,
+        invitedAt:serverTimestamp(),
+        status:'pending',
+      });
+      showToast(`Invite recorded for ${clean}.`,true);
+      setEmail('');
     }catch(e){showToast('Failed: '+e.message,false);}
     setSaving(false);
   };
-  const handleDelete = async id => {
+
+  const handleCancelInvite = async id => {
     setDeleting(id);
-    try{await deleteDoc(doc(db,'staffInvites',id));showToast('Invite cancelled.',true);}catch{showToast('Failed.',false);}
+    try{await deleteDoc(doc(db,'staffInvites',id));showToast('Invite cancelled.',true);}
+    catch{showToast('Failed.',false);}
     setDeleting(null);
   };
-  return (
-    <div style={{position:'fixed',inset:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',backdropFilter:'blur(3px)',padding:16}}>
-      <div style={{background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:16,width:'100%',maxWidth:520,maxHeight:'85vh',display:'flex',flexDirection:'column',boxShadow:'var(--shadow-modal)',overflow:'hidden'}}>
+
+  return createPortal(
+    <div style={{position:'fixed',inset:0,zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.65)',backdropFilter:'blur(4px)',padding:16}}>
+      <div style={{background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:16,width:'100%',maxWidth:540,maxHeight:'85vh',display:'flex',flexDirection:'column',boxShadow:'var(--shadow-modal)',overflow:'hidden',animation:'slideUp 0.2s ease'}}>
+        <div style={{height:3,background:'linear-gradient(90deg,var(--gold),transparent)'}}/>
         <div style={{background:'var(--thead-bg)',borderBottom:'1px solid var(--divider)',padding:'16px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
-          <div><p style={{...MN,fontSize:9,letterSpacing:'0.2em',color:'var(--gold)',textTransform:'uppercase',marginBottom:4}}>Pre-Registration</p><h2 style={{...SR,fontSize:18,fontWeight:700,color:'var(--text-primary)'}}>Invite Staff</h2></div>
+          <div>
+            <p style={{...MN,fontSize:9,letterSpacing:'0.2em',color:'var(--gold)',textTransform:'uppercase',marginBottom:4}}>Pre-Registration</p>
+            <h2 style={{...SR,fontSize:18,fontWeight:700,color:'var(--text-primary)'}}>Invite Staff</h2>
+          </div>
           <button onClick={onClose} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:8,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-muted)',cursor:'pointer'}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
+
         <div style={{padding:'20px 24px',flexShrink:0}}>
-          <p style={{...PP,fontSize:13,color:'var(--text-muted)',marginBottom:14,lineHeight:1.6}}>Enter a staff member's email. When they sign in, they'll be auto-registered as Library Staff.</p>
+          <p style={{...PP,fontSize:13,color:'var(--text-muted)',marginBottom:14,lineHeight:1.6}}>
+            Enter the staff member's email. When they sign in with that Google account for the first time, they'll automatically be registered as Library Staff.
+          </p>
           <div style={{display:'flex',gap:8}}>
-            <input style={{flex:1,background:'var(--input-bg)',border:'1px solid var(--input-border)',borderRadius:9,padding:'10px 13px',fontSize:13,color:'var(--text-primary)',fontFamily:'inherit',outline:'none'}}
-              type="email" placeholder="staff@example.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')handleInvite();}}/>
+            <input
+              style={{flex:1,background:'var(--input-bg)',border:'1px solid var(--input-border)',borderRadius:9,padding:'10px 13px',fontSize:13,color:'var(--text-primary)',fontFamily:'inherit',outline:'none'}}
+              type="email" placeholder="staff@neu.edu.ph or gmail.com"
+              value={email} onChange={e=>setEmail(e.target.value)}
+              onKeyDown={e=>{if(e.key==='Enter')handleInvite();}}
+              autoFocus />
             <button onClick={handleInvite} disabled={saving||!email.trim()}
-              style={{padding:'10px 18px',borderRadius:9,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',cursor:saving||!email.trim()?'not-allowed':'pointer',opacity:saving||!email.trim()?0.5:1,whiteSpace:'nowrap'}}>
-              {saving?'Sending…':'Invite'}
+              style={{padding:'10px 20px',borderRadius:9,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',cursor:saving||!email.trim()?'not-allowed':'pointer',opacity:saving||!email.trim()?0.5:1,whiteSpace:'nowrap'}}>
+              {saving?'Adding…':'Add Invite'}
             </button>
           </div>
         </div>
+
         <div style={{overflowY:'auto',flex:1,borderTop:'1px solid var(--divider)'}}>
           {invites.length===0
-            ? <p style={{padding:24,textAlign:'center',...PP,fontSize:13,color:'var(--text-muted)'}}>No invites yet.</p>
+            ? (
+              <div style={{padding:32,textAlign:'center'}}>
+                <p style={{...PP,fontSize:13,color:'var(--text-muted)'}}>No invites yet.</p>
+                <p style={{...MN,fontSize:11,color:'var(--text-dim)',marginTop:6}}>Add an email above to pre-register a staff member.</p>
+              </div>
+            )
             : (
               <table style={{width:'100%',borderCollapse:'collapse'}}>
                 <thead style={{position:'sticky',top:0,background:'var(--thead-bg)'}}>
-                  <tr>{['Email','Sent','Status',''].map(h=><th key={h} style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-muted)',padding:'10px 14px',textAlign:'left',fontWeight:600,borderBottom:'1px solid var(--divider)'}}>{h}</th>)}</tr>
+                  <tr>
+                    {['Email','Invited','Status',''].map(h=>(
+                      <th key={h} style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-muted)',padding:'10px 14px',textAlign:'left',fontWeight:600,borderBottom:'1px solid var(--divider)'}}>{h}</th>
+                    ))}
+                  </tr>
                 </thead>
                 <tbody>
                   {invites.map(inv=>(
-                    <tr key={inv.id} style={{borderBottom:'1px solid var(--row-border)'}} onMouseEnter={e=>e.currentTarget.style.background='var(--row-hover-bg)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                      <td style={{padding:'10px 14px',...MN,fontSize:12,color:'var(--text-primary)'}}>{inv.email}</td>
-                      <td style={{padding:'10px 14px',...MN,fontSize:11,color:'var(--text-dim)',whiteSpace:'nowrap'}}>{fmt(inv.invitedAt)}</td>
-                      <td style={{padding:'10px 14px'}}>
-                        {inv.status==='pending'&&<span style={{...MN,fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',textTransform:'uppercase'}}>Pending</span>}
-                        {inv.status==='claimed'&&<span style={{...MN,fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,background:'var(--green-soft)',border:'1px solid var(--green-border)',color:'var(--green)',textTransform:'uppercase'}}>Claimed</span>}
+                    <tr key={inv.id} style={{borderBottom:'1px solid var(--row-border)'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='var(--row-hover-bg)'}
+                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                      <td style={{padding:'11px 14px',...MN,fontSize:12,color:'var(--text-primary)'}}>{inv.email}</td>
+                      <td style={{padding:'11px 14px',...MN,fontSize:11,color:'var(--text-dim)',whiteSpace:'nowrap'}}>{fmt(inv.invitedAt)}</td>
+                      <td style={{padding:'11px 14px'}}>
+                        {inv.status==='pending' && <span style={{...MN,fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',textTransform:'uppercase'}}>Pending</span>}
+                        {inv.status==='claimed'  && <span style={{...MN,fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,background:'var(--green-soft)',border:'1px solid var(--green-border)',color:'var(--green)',textTransform:'uppercase'}}>Claimed ✓</span>}
                       </td>
-                      <td style={{padding:'10px 14px'}}>
-                        {inv.status==='pending'&&<button onClick={()=>handleDelete(inv.id)} disabled={deleting===inv.id} style={{padding:'4px 10px',borderRadius:6,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',...MN,fontSize:9,fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}>{deleting===inv.id?'…':'Cancel'}</button>}
+                      <td style={{padding:'11px 14px'}}>
+                        {inv.status==='pending' && (
+                          <button onClick={()=>handleCancelInvite(inv.id)} disabled={deleting===inv.id}
+                            style={{padding:'4px 10px',borderRadius:6,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...MN,fontSize:9,fontWeight:700,cursor:'pointer',textTransform:'uppercase'}}>
+                            {deleting===inv.id?'…':'Remove'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -248,78 +312,107 @@ function StaffInviteModal({ invites, myProfile, onClose, showToast }) {
             )}
         </div>
       </div>
-    </div>
+      <style>{`@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}`}</style>
+    </div>,
+    document.body
   );
 }
 
-// ── Profile Panel ─────────────────────────────────────────────────────────────
+// ── Profile Panel — rendered via portal so it covers the sidebar ──────────────
 function ProfilePanel({ user, myProfile, pendingEditUids, onClose, showToast, onEditProfile, onEditName }) {
-  const [roleAction,   setRoleAction]   = useState(null); // 'staff' | 'visitor'
-  const [reason,       setReason]       = useState('');
-  const [saving,       setSaving]       = useState(false);
-  const [deleteMode,   setDeleteMode]   = useState(false);
-  const [deleteReason, setDeleteReason] = useState('');
-  const [deleteSaving, setDeleteSaving] = useState(false);
+  const [roleAction,  setRoleAction]  = useState(null); // 'staff' | 'visitor'
+  const [reason,      setReason]      = useState('');
+  const [saving,      setSaving]      = useState(false);
 
-  const canChange    = user.id !== myProfile?.uid && user.role !== 'admin';
-  const hasPending   = pendingEditUids.has(user.id);
+  const canChange  = user.id !== myProfile?.uid && user.role !== 'admin';
+  const hasPending = pendingEditUids.has(user.id);
   const fmt = ts => { if(!ts)return'—'; const d=ts.toDate?ts.toDate():new Date(ts); return d.toLocaleDateString('en-PH',{dateStyle:'long'}); };
 
   const handleRoleChange = async () => {
-    if(reason.trim().length<10){showToast('Reason must be at least 10 characters.',false);return;}
+    if(reason.trim().length < 10) { showToast('Reason must be at least 10 characters.',false); return; }
     setSaving(true);
     try {
       await updateDoc(doc(db,'users',user.id),{role:roleAction});
-      await addDoc(collection(db,'adminAuditLogs'),{activityType:'role_change',targetId:user.id,targetName:`${user.lastName}, ${user.firstName}`,fromRole:user.role,toRole:roleAction,changedBy:myProfile?.uid,changedByName:`${myProfile?.lastName}, ${myProfile?.firstName}`,reason:reason.trim(),timestamp:serverTimestamp()});
+      await addDoc(collection(db,'adminAuditLogs'),{
+        activityType:'role_change',
+        targetId:user.id,
+        targetName:`${user.lastName}, ${user.firstName}`,
+        fromRole:user.role,
+        toRole:roleAction,
+        changedBy:myProfile?.uid,
+        changedByName:`${myProfile?.lastName}, ${myProfile?.firstName}`,
+        reason:reason.trim(),
+        timestamp:serverTimestamp(),
+      });
       showToast(`${user.firstName}'s role updated to ${roleAction}.`,true);
-      setRoleAction(null); setReason('');
-    }catch(e){showToast('Error: '+e.message,false);}
+      setRoleAction(null);
+      setReason('');
+    } catch(e) { showToast('Error: '+e.message,false); }
     setSaving(false);
   };
 
-  const handleDelete = async () => {
-    if(deleteReason.trim().length<10){showToast('Reason must be at least 10 characters.',false);return;}
-    setDeleteSaving(true);
-    try {
-      await addDoc(collection(db,'deleteRequests'),{targetId:user.id,targetName:`${user.lastName}, ${user.firstName}`,targetIdNumber:user.idNumber||'',targetRole:user.role||'visitor',reason:deleteReason.trim(),requestedBy:myProfile?.uid,requestedByName:`${myProfile?.lastName}, ${myProfile?.firstName}`,requestedAt:serverTimestamp(),status:'pending'});
-      showToast(`Deletion request submitted for ${user.firstName}.`,true);
-      setDeleteMode(false); setDeleteReason(''); onClose();
-    }catch(e){showToast('Failed: '+e.message,false);}
-    setDeleteSaving(false);
+  const inputSt = {
+    width:'100%',background:'var(--input-bg)',border:'1px solid var(--input-border)',
+    borderRadius:9,padding:'9px 13px',fontSize:13,color:'var(--text-primary)',
+    fontFamily:'inherit',outline:'none',boxSizing:'border-box',
   };
 
-  const inputSt = {width:'100%',background:'var(--input-bg)',border:'1px solid var(--input-border)',borderRadius:9,padding:'9px 13px',fontSize:13,color:'var(--text-primary)',fontFamily:'inherit',outline:'none',boxSizing:'border-box'};
-
-  return (
+  const panel = (
     <>
-      <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:40,background:'rgba(0,0,0,0.35)',backdropFilter:'blur(2px)'}}/>
-      <div style={{position:'fixed',top:0,right:0,height:'100%',width:'clamp(300px,36vw,440px)',zIndex:50,background:'var(--card)',borderLeft:'1px solid var(--divider)',display:'flex',flexDirection:'column',boxShadow:'-8px 0 40px rgba(0,0,0,0.25)',animation:'slideInRight 0.2s ease'}}>
+      {/* Full-screen backdrop — covers everything including sidebar */}
+      <div
+        onClick={onClose}
+        style={{position:'fixed',inset:0,zIndex:8000,background:'rgba(0,0,0,0.5)',backdropFilter:'blur(3px)'}}
+      />
+      {/* Slide-in panel */}
+      <div style={{
+        position:'fixed',top:0,right:0,height:'100vh',
+        width:'clamp(300px,38vw,460px)',
+        zIndex:8001,
+        background:'var(--card)',
+        borderLeft:'1px solid var(--divider)',
+        display:'flex',flexDirection:'column',
+        boxShadow:'-12px 0 48px rgba(0,0,0,0.35)',
+        animation:'slideInRight 0.22s cubic-bezier(0.25,0.46,0.45,0.94)',
+      }}>
+        {/* Gold top stripe */}
+        <div style={{height:3,background:'linear-gradient(90deg,var(--gold),transparent)',flexShrink:0}}/>
+
         {/* Header */}
         <div style={{padding:'18px 20px',borderBottom:'1px solid var(--divider)',display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12,flexShrink:0}}>
           <div style={{minWidth:0}}>
-            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,flexWrap:'wrap'}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8,flexWrap:'wrap'}}>
               <RoleBadge role={user.role}/>
-              {hasPending&&<span style={{...MN,fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Pending Edit</span>}
+              {hasPending && (
+                <span style={{...MN,fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',textTransform:'uppercase',letterSpacing:'0.08em'}}>
+                  Pending Edit
+                </span>
+              )}
             </div>
-            <h2 style={{...SR,fontSize:20,fontWeight:700,color:'var(--text-primary)',lineHeight:1.2,marginBottom:2}}>
-              {user.lastName?`${user.lastName}, ${user.firstName}${user.middleInitial?' '+user.middleInitial+'.':''}`:user.email}
+            <h2 style={{...SR,fontSize:20,fontWeight:700,color:'var(--text-primary)',lineHeight:1.2,marginBottom:3}}>
+              {user.lastName
+                ? `${user.lastName}, ${user.firstName}${user.middleInitial ? ' '+user.middleInitial+'.' : ''}`
+                : user.email}
             </h2>
-            {user.idNumber&&<p style={{...MN,fontSize:12,color:'var(--text-muted)'}}>{user.idNumber}</p>}
+            {user.idNumber && <p style={{...MN,fontSize:12,color:'var(--text-muted)'}}>{user.idNumber}</p>}
           </div>
-          <button onClick={onClose} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:8,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-muted)',cursor:'pointer',flexShrink:0}}>
+          <button onClick={onClose}
+            style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:8,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-muted)',cursor:'pointer',flexShrink:0}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
+        {/* Scrollable body */}
         <div style={{overflowY:'auto',flex:1,padding:'18px 20px',display:'flex',flexDirection:'column',gap:16}}>
-          {/* Info grid */}
+
+          {/* Info cards */}
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
             {[
-              {label:'Email',      value:user.email,                                 full:true  },
-              {label:'Visitor Type',value:user.visitorType||(user.role!=='visitor'?'—':'Student')},
-              {label:'College',    value:user.college||user.department||'—'                      },
-              {label:'Course',     value:user.course||'—'                                        },
-              {label:'Joined',     value:fmt(user.createdAt)                                     },
+              {label:'Email',        value:user.email,                                                   full:true},
+              {label:'Visitor Type', value:user.visitorType||(user.role!=='visitor'?'—':'Student')              },
+              {label:'College',      value:user.college||user.department||'—'                                   },
+              {label:'Course',       value:user.course||'—'                                                     },
+              {label:'Joined',       value:fmt(user.createdAt)                                                  },
             ].map(({label,value,full})=>(
               <div key={label} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px',gridColumn:full?'1 / -1':undefined}}>
                 <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>{label}</p>
@@ -328,53 +421,80 @@ function ProfilePanel({ user, myProfile, pendingEditUids, onClose, showToast, on
             ))}
           </div>
 
+          {/* Actions */}
           {canChange && (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <p style={{...MN,fontSize:10,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)'}}>Actions</p>
+
               <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                {user.role==='visitor'&&<button onClick={()=>{setRoleAction('staff');setReason('');}} style={{padding:'7px 14px',borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>↑ Promote to Staff</button>}
-                {user.role==='staff'  &&<button onClick={()=>{setRoleAction('visitor');setReason('');}} style={{padding:'7px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>↓ Demote to Visitor</button>}
-                <button onClick={()=>onEditProfile({uid:user.id,profile:user})} style={{padding:'7px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>Edit Profile</button>
-                <button onClick={()=>onEditName({uid:user.id,profile:user})}    style={{padding:'7px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--green-border)',color:'var(--green)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>Edit Name</button>
+                {user.role==='visitor' && (
+                  <button onClick={()=>{setRoleAction('staff');setReason('');}}
+                    style={{padding:'7px 14px',borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
+                    ↑ Promote to Staff
+                  </button>
+                )}
+                {user.role==='staff' && (
+                  <button onClick={()=>{setRoleAction('visitor');setReason('');}}
+                    style={{padding:'7px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
+                    ↓ Demote to Visitor
+                  </button>
+                )}
+                <button onClick={()=>onEditProfile({uid:user.id,profile:user})}
+                  style={{padding:'7px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
+                  Edit Profile
+                </button>
+                <button onClick={()=>onEditName({uid:user.id,profile:user})}
+                  style={{padding:'7px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--green-border)',color:'var(--green)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
+                  Edit Name
+                </button>
               </div>
 
+              {/* Role change reason box */}
               {roleAction && (
                 <div style={{background:'var(--gold-soft)',border:'1px solid var(--gold-border)',borderRadius:10,padding:'14px'}}>
-                  <p style={{...MN,fontSize:10,color:'var(--gold)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>{roleAction==='staff'?'Promoting to Staff':'Demoting to Visitor'} — Reason</p>
-                  <textarea rows={3} style={{...inputSt,resize:'none',height:68,marginBottom:8}} placeholder="Minimum 10 characters…" value={reason} onChange={e=>setReason(e.target.value)} autoFocus/>
+                  <p style={{...MN,fontSize:10,color:'var(--gold)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>
+                    {roleAction==='staff' ? 'Promoting to Staff' : 'Demoting to Visitor'} — Reason Required
+                  </p>
+                  <textarea
+                    rows={3}
+                    style={{...inputSt,resize:'none',height:68,marginBottom:8}}
+                    placeholder="Minimum 10 characters…"
+                    value={reason}
+                    onChange={e=>setReason(e.target.value)}
+                    autoFocus
+                  />
+                  <p style={{...MN,fontSize:10,color:'var(--gold)',opacity:0.7,marginBottom:8}}>{reason.trim().length} / 10 min</p>
                   <div style={{display:'flex',gap:8}}>
-                    <button onClick={()=>{setRoleAction(null);setReason('');}} style={{flex:1,padding:'8px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...PP,fontSize:12,cursor:'pointer'}}>Cancel</button>
-                    <button onClick={handleRoleChange} disabled={reason.trim().length<10||saving} style={{flex:1,padding:'8px',borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,cursor:reason.trim().length<10?'not-allowed':'pointer',opacity:reason.trim().length<10?0.5:1,textTransform:'uppercase',letterSpacing:'0.08em'}}>{saving?'Saving…':'Confirm'}</button>
+                    <button onClick={()=>{setRoleAction(null);setReason('');}}
+                      style={{flex:1,padding:'8px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...PP,fontSize:12,cursor:'pointer'}}>
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleRoleChange}
+                      disabled={reason.trim().length<10||saving}
+                      style={{flex:1,padding:'8px',borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,cursor:reason.trim().length<10?'not-allowed':'pointer',opacity:reason.trim().length<10?0.5:1,textTransform:'uppercase',letterSpacing:'0.08em'}}>
+                      {saving ? 'Saving…' : 'Confirm'}
+                    </button>
                   </div>
                 </div>
               )}
-
-              {!deleteMode
-                ? <button onClick={()=>setDeleteMode(true)} style={{padding:'7px 14px',borderRadius:8,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em',alignSelf:'flex-start'}}>Request Deletion</button>
-                : (
-                  <div style={{background:'var(--red-soft)',border:'1px solid var(--red-border)',borderRadius:10,padding:'14px'}}>
-                    <p style={{...MN,fontSize:10,color:'var(--red)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8}}>Submit Deletion Request</p>
-                    <textarea rows={3} style={{...inputSt,resize:'none',height:68,marginBottom:8}} placeholder="Reason (min 10 chars)…" value={deleteReason} onChange={e=>setDeleteReason(e.target.value)} autoFocus/>
-                    <div style={{display:'flex',gap:8}}>
-                      <button onClick={()=>{setDeleteMode(false);setDeleteReason('');}} style={{flex:1,padding:'8px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...PP,fontSize:12,cursor:'pointer'}}>Cancel</button>
-                      <button onClick={handleDelete} disabled={deleteReason.trim().length<10||deleteSaving} style={{flex:1,padding:'8px',borderRadius:8,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',...MN,fontSize:10,fontWeight:700,cursor:deleteReason.trim().length<10?'not-allowed':'pointer',opacity:deleteReason.trim().length<10?0.5:1,textTransform:'uppercase',letterSpacing:'0.08em'}}>{deleteSaving?'Submitting…':'Submit'}</button>
-                    </div>
-                  </div>
-                )
-              }
             </div>
           )}
 
-          {user.role==='admin'&&user.id!==myProfile?.uid&&(
+          {user.role==='admin' && user.id!==myProfile?.uid && (
             <div style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'12px 14px'}}>
               <p style={{...MN,fontSize:11,color:'var(--text-muted)',fontStyle:'italic'}}>Admin accounts are protected and cannot be modified here.</p>
             </div>
           )}
         </div>
       </div>
+
       <style>{`@keyframes slideInRight{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
     </>
   );
+
+  // Render into document.body so it's outside any stacking context from the layout
+  return createPortal(panel, document.body);
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -383,78 +503,89 @@ export default function UserManagementPage() {
   const location = useLocation();
   const initRole = location.state?.filterRole || 'all';
 
-  const [users,          setUsers]          = useState([]);
-  const [auditLogs,      setAuditLogs]      = useState([]);
-  const [staffInvites,   setStaffInvites]   = useState([]);
-  const [editRequests,   setEditRequests]   = useState([]);
-  const [deleteRequests, setDeleteRequests] = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [toast,          setToast]          = useState(null);
+  const [users,         setUsers]         = useState([]);
+  const [auditLogs,     setAuditLogs]     = useState([]);
+  const [staffInvites,  setStaffInvites]  = useState([]);
+  const [editRequests,  setEditRequests]  = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [toast,         setToast]         = useState(null);
 
   const [search,     setSearch]     = useState('');
   const [roleFilter, setRoleFilter] = useState(initRole);
   const [sortBy,     setSortBy]     = useState('name');
 
-  const [auditOpen,          setAuditOpen]          = useState(false);
-  const [staffInviteOpen,    setStaffInviteOpen]    = useState(false);
-  const [showDeleteRequests, setShowDeleteRequests] = useState(false);
-  const [selectedUser,       setSelectedUser]       = useState(null);
-  const [editProfileTarget,  setEditProfileTarget]  = useState(null);
-  const [editNameTarget,     setEditNameTarget]     = useState(null);
+  const [auditOpen,         setAuditOpen]         = useState(false);
+  const [staffInviteOpen,   setStaffInviteOpen]   = useState(false);
+  const [selectedUser,      setSelectedUser]      = useState(null);
+  const [editProfileTarget, setEditProfileTarget] = useState(null);
+  const [editNameTarget,    setEditNameTarget]    = useState(null);
 
   useEffect(() => {
     setLoading(true);
-    const u1 = onSnapshot(collection(db,'users'),snap=>{const docs=snap.docs.map(d=>({id:d.id,...d.data()}));docs.sort((a,b)=>(a.lastName??'').localeCompare(b.lastName??''));setUsers(docs);setLoading(false);},()=>setLoading(false));
-    const u2 = onSnapshot(collection(db,'adminAuditLogs'),snap=>{const docs=snap.docs.map(d=>({id:d.id,...d.data()}));docs.sort((a,b)=>(b.timestamp?.toMillis?.()??0)-(a.timestamp?.toMillis?.()??0));setAuditLogs(docs);},()=>{});
-    const u3 = onSnapshot(collection(db,'staffInvites'),snap=>{const docs=snap.docs.map(d=>({id:d.id,...d.data()}));docs.sort((a,b)=>(b.invitedAt?.toMillis?.()??0)-(a.invitedAt?.toMillis?.()??0));setStaffInvites(docs);},()=>{});
-    const u4 = onSnapshot(collection(db,'editRequests'),snap=>{setEditRequests(snap.docs.map(d=>({id:d.id,...d.data()})));},()=>{});
-    const u5 = onSnapshot(collection(db,'deleteRequests'),snap=>{const docs=snap.docs.map(d=>({id:d.id,...d.data()}));docs.sort((a,b)=>(b.requestedAt?.toMillis?.()??0)-(a.requestedAt?.toMillis?.()??0));setDeleteRequests(docs);},()=>{});
-    return()=>{u1();u2();u3();u4();u5();};
-  },[]);
+    const u1 = onSnapshot(collection(db,'users'), snap=>{
+      const docs = snap.docs.map(d=>({id:d.id,...d.data()}));
+      docs.sort((a,b)=>(a.lastName??'').localeCompare(b.lastName??''));
+      setUsers(docs); setLoading(false);
+    }, ()=>setLoading(false));
+    const u2 = onSnapshot(collection(db,'adminAuditLogs'), snap=>{
+      const docs = snap.docs.map(d=>({id:d.id,...d.data()}));
+      docs.sort((a,b)=>(b.timestamp?.toMillis?.()??0)-(a.timestamp?.toMillis?.()??0));
+      setAuditLogs(docs);
+    }, ()=>{});
+    const u3 = onSnapshot(collection(db,'staffInvites'), snap=>{
+      const docs = snap.docs.map(d=>({id:d.id,...d.data()}));
+      docs.sort((a,b)=>(b.invitedAt?.toMillis?.()??0)-(a.invitedAt?.toMillis?.()??0));
+      setStaffInvites(docs);
+    }, ()=>{});
+    const u4 = onSnapshot(collection(db,'editRequests'), snap=>{
+      setEditRequests(snap.docs.map(d=>({id:d.id,...d.data()})));
+    }, ()=>{});
+    return () => { u1(); u2(); u3(); u4(); };
+  }, []);
 
-  const pendingEditUids = useMemo(()=>new Set(editRequests.filter(r=>r.status==='pending').map(r=>r.uid)),[editRequests]);
-  const visibleUsers    = users.filter(u=>!IT_SUPPORT_EMAILS.includes((u.email||'').toLowerCase()));
+  const pendingEditUids = useMemo(()=>
+    new Set(editRequests.filter(r=>r.status==='pending').map(r=>r.uid)),
+  [editRequests]);
+
+  const visibleUsers = users.filter(u=>!IT_SUPPORT_EMAILS.includes((u.email||'').toLowerCase()));
 
   const filtered = visibleUsers
-    .filter(u=>{
-      const ms = !search||`${u.firstName} ${u.lastName} ${u.idNumber} ${u.email} ${u.course||''} ${u.college||''}`.toLowerCase().includes(search.toLowerCase());
-      const mr = roleFilter==='all'||u.role===roleFilter;
-      return ms&&mr;
+    .filter(u => {
+      const ms = !search ||
+        `${u.firstName} ${u.lastName} ${u.idNumber} ${u.email} ${u.course||''} ${u.college||''}`
+          .toLowerCase().includes(search.toLowerCase());
+      const mr = roleFilter==='all' || u.role===roleFilter;
+      return ms && mr;
     })
-    .sort((a,b)=>{
-      if(sortBy==='role'){const o={admin:0,staff:1,visitor:2};return(o[a.role]??3)-(o[b.role]??3);}
-      if(sortBy==='college')return(a.college||'').localeCompare(b.college||'');
-      return(a.lastName||'').localeCompare(b.lastName||'');
+    .sort((a,b) => {
+      if(sortBy==='role')    { const o={admin:0,staff:1,visitor:2}; return (o[a.role]??3)-(o[b.role]??3); }
+      if(sortBy==='college') return (a.college||'').localeCompare(b.college||'');
+      return (a.lastName||'').localeCompare(b.lastName||'');
     });
 
-  const counts = {all:visibleUsers.length,visitor:visibleUsers.filter(u=>u.role==='visitor').length,staff:visibleUsers.filter(u=>u.role==='staff').length,admin:visibleUsers.filter(u=>u.role==='admin').length};
-  const ROLE_TABS = [{key:'all',label:'All'},{key:'visitor',label:'Visitors'},{key:'staff',label:'Staff'},{key:'admin',label:'Admins'}];
-
-  const showToast = (msg,ok)=>{setToast({msg,ok});setTimeout(()=>setToast(null),4500);};
-
-  const handleApproveDelete = async req=>{
-    if(!window.confirm(`Permanently delete "${req.targetName}"?`))return;
-    try{
-      const batch=writeBatch(db);
-      const bs=await getDocs(query(collection(db,'borrows'),where('userId','==',req.targetId)));
-      bs.forEach(d=>batch.update(doc(db,'borrows',d.id),{studentName:req.targetName,studentId:req.targetIdNumber,userDeleted:true}));
-      const ls=await getDocs(query(collection(db,'logger'),where('uid','==',req.targetId)));
-      ls.forEach(d=>batch.update(doc(db,'logger',d.id),{studentName:req.targetName,studentId:req.targetIdNumber,userDeleted:true}));
-      batch.delete(doc(db,'users',req.targetId));
-      batch.update(doc(db,'deleteRequests',req.id),{status:'approved',approvedBy:myProfile?.uid,approvedByName:`${myProfile?.lastName}, ${myProfile?.firstName}`,approvedAt:serverTimestamp()});
-      await batch.commit();
-      await addDoc(collection(db,'adminAuditLogs'),{activityType:'user_deletion',targetId:req.targetId,targetName:req.targetName,deletedIdNumber:req.targetIdNumber,reason:req.reason,requestedBy:req.requestedBy,requestedByName:req.requestedByName,approvedBy:myProfile?.uid,approvedByName:`${myProfile?.lastName}, ${myProfile?.firstName}`,borrowsSnapshotted:bs.size,logsSnapshotted:ls.size,timestamp:serverTimestamp()});
-      showToast(`${req.targetName} permanently deleted.`,true);
-    }catch(e){showToast('Delete failed: '+e.message,false);}
+  const counts = {
+    all:     visibleUsers.length,
+    visitor: visibleUsers.filter(u=>u.role==='visitor').length,
+    staff:   visibleUsers.filter(u=>u.role==='staff').length,
+    admin:   visibleUsers.filter(u=>u.role==='admin').length,
   };
-  const handleRejectDelete = async req=>{
-    try{await updateDoc(doc(db,'deleteRequests',req.id),{status:'rejected',rejectedBy:myProfile?.uid,rejectedAt:serverTimestamp()});showToast('Request rejected.',true);}
-    catch(e){showToast('Failed.',false);}
-  };
+
+  const ROLE_TABS = [
+    {key:'all',label:'All'},
+    {key:'visitor',label:'Visitors'},
+    {key:'staff',label:'Staff'},
+    {key:'admin',label:'Admins'},
+  ];
+
+  const showToast = (msg, ok) => { setToast({msg,ok}); setTimeout(()=>setToast(null),4500); };
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:24,animation:'fadeUp 0.3s ease both'}}>
-      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}} @keyframes spin{to{transform:rotate(360deg)}} tr.urow:hover td{background:var(--row-hover-bg)!important;}`}</style>
+      <style>{`
+        @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin   { to{transform:rotate(360deg)} }
+        tr.urow:hover td  { background:var(--row-hover-bg)!important; }
+      `}</style>
 
       {/* Header */}
       <div style={{paddingBottom:20,borderBottom:'1px solid var(--divider)',display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
@@ -464,17 +595,15 @@ export default function UserManagementPage() {
           <p style={{...PP,fontSize:14,color:'var(--text-muted)'}}>Click any row to view profile and actions.</p>
         </div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
-          {deleteRequests.filter(r=>r.status==='pending').length>0&&(
-            <button onClick={()=>setShowDeleteRequests(true)} style={{padding:'8px 16px',borderRadius:9,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',...MN,fontSize:10,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>
-              ⚠ Delete Requests ({deleteRequests.filter(r=>r.status==='pending').length})
-            </button>
-          )}
           {[
-            {label:'Invite Staff',  fn:()=>setStaffInviteOpen(true)},
-            {label:`Export CSV (${filtered.length})`, fn:()=>exportUsersCSV(filtered)},
-            {label:`Audit Log (${auditLogs.length})`, fn:()=>setAuditOpen(true)},
+            {label:'Invite Staff',               fn:()=>setStaffInviteOpen(true)         },
+            {label:`Export CSV (${filtered.length})`, fn:()=>exportUsersCSV(filtered)    },
+            {label:`Audit Log (${auditLogs.length})`, fn:()=>setAuditOpen(true)          },
           ].map(({label,fn})=>(
-            <button key={label} onClick={fn} style={{padding:'8px 16px',borderRadius:9,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...MN,fontSize:10,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>{label}</button>
+            <button key={label} onClick={fn}
+              style={{padding:'8px 16px',borderRadius:9,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...MN,fontSize:10,fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',cursor:'pointer'}}>
+              {label}
+            </button>
           ))}
         </div>
       </div>
@@ -482,141 +611,148 @@ export default function UserManagementPage() {
       {/* Filters */}
       <div style={{display:'flex',flexDirection:'column',gap:12}}>
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-          <input style={{flex:'1 1 200px',background:'var(--input-bg)',border:'1px solid var(--input-border)',borderRadius:9,padding:'9px 14px',fontSize:13,color:'var(--text-primary)',fontFamily:'inherit',outline:'none'}}
-            placeholder="Search by name, ID, email, course, college…" value={search} onChange={e=>setSearch(e.target.value)}/>
-          <select style={{background:'var(--input-bg)',border:'1px solid var(--input-border)',borderRadius:9,padding:'9px 14px',fontSize:13,color:'var(--text-primary)',fontFamily:'inherit',outline:'none',cursor:'pointer'}}
+          <input
+            style={{flex:'1 1 200px',background:'var(--input-bg)',border:'1px solid var(--input-border)',borderRadius:9,padding:'9px 14px',fontSize:13,color:'var(--text-primary)',fontFamily:'inherit',outline:'none'}}
+            placeholder="Search by name, ID, email, course, college…"
+            value={search} onChange={e=>setSearch(e.target.value)} />
+          <select
+            style={{background:'var(--input-bg)',border:'1px solid var(--input-border)',borderRadius:9,padding:'9px 14px',fontSize:13,color:'var(--text-primary)',fontFamily:'inherit',outline:'none',cursor:'pointer'}}
             value={sortBy} onChange={e=>setSortBy(e.target.value)}>
             <option value="name">Sort: Name (A–Z)</option>
             <option value="role">Sort: Role</option>
             <option value="college">Sort: College</option>
           </select>
         </div>
+
+        {/* Role tabs */}
         <div style={{display:'flex',borderBottom:'1px solid var(--divider)'}}>
           {ROLE_TABS.map(t=>(
             <button key={t.key} onClick={()=>setRoleFilter(t.key)}
-              style={{padding:'10px 18px',...MN,fontSize:10,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'none',borderBottom:roleFilter===t.key?'2px solid var(--gold)':'2px solid transparent',color:roleFilter===t.key?'var(--gold)':'var(--text-muted)',display:'flex',alignItems:'center',gap:7,transition:'all 0.15s'}}>
+              style={{padding:'10px 18px',...MN,fontSize:10,fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',cursor:'pointer',background:'transparent',border:'none',
+                borderBottom:roleFilter===t.key?'2px solid var(--gold)':'2px solid transparent',
+                color:roleFilter===t.key?'var(--gold)':'var(--text-muted)',
+                display:'flex',alignItems:'center',gap:7,transition:'all 0.15s',
+              }}>
               {t.label}
-              <span style={{fontSize:9,padding:'1px 7px',borderRadius:10,background:t.key==='admin'?'var(--badge-red-bg)':t.key==='staff'?'var(--badge-gold-bg)':t.key==='visitor'?'var(--badge-green-bg)':'var(--surface)',color:t.key==='admin'?'var(--badge-red-text)':t.key==='staff'?'var(--badge-gold-text)':t.key==='visitor'?'var(--badge-green-text)':'var(--text-dim)',border:'1px solid transparent'}}>{counts[t.key]}</span>
+              <span style={{fontSize:9,padding:'1px 7px',borderRadius:10,
+                background:t.key==='admin'?'var(--badge-red-bg)':t.key==='staff'?'var(--badge-gold-bg)':t.key==='visitor'?'var(--badge-green-bg)':'var(--surface)',
+                color:t.key==='admin'?'var(--badge-red-text)':t.key==='staff'?'var(--badge-gold-text)':t.key==='visitor'?'var(--badge-green-text)':'var(--text-dim)',
+                border:'1px solid transparent',
+              }}>{counts[t.key]}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {(search||roleFilter!=='all')&&(
+      {(search || roleFilter!=='all') && (
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <p style={{...MN,fontSize:11,color:'var(--text-muted)'}}>Showing <strong style={{color:'var(--text-primary)'}}>{filtered.length}</strong> of {visibleUsers.length}</p>
-          <button style={{...MN,fontSize:11,color:'var(--gold)',background:'none',border:'none',cursor:'pointer'}} onClick={()=>{setSearch('');setRoleFilter('all');}}>Clear filters</button>
+          <p style={{...MN,fontSize:11,color:'var(--text-muted)'}}>
+            Showing <strong style={{color:'var(--text-primary)'}}>{filtered.length}</strong> of {visibleUsers.length}
+          </p>
+          <button style={{...MN,fontSize:11,color:'var(--gold)',background:'none',border:'none',cursor:'pointer'}}
+            onClick={()=>{setSearch('');setRoleFilter('all');}}>
+            Clear filters
+          </button>
         </div>
       )}
 
       {/* Table */}
       <div style={{background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:14,overflow:'hidden',boxShadow:'var(--shadow-card)'}}>
-        {loading
-          ? <div style={{padding:32,display:'flex',alignItems:'center',gap:12}}><div style={{width:20,height:20,border:'2px solid var(--gold-border)',borderTopColor:'var(--gold)',borderRadius:'50%',animation:'spin 0.8s linear infinite',flexShrink:0}}/><p style={{...PP,fontSize:13,color:'var(--text-muted)'}}>Loading users…</p></div>
-          : filtered.length===0
-            ? <p style={{...PP,fontSize:13,color:'var(--text-muted)',padding:32,textAlign:'center'}}>No users match your filters.</p>
-            : (
-              <div style={{overflowX:'auto'}}>
-                <table style={{width:'100%',minWidth:600,borderCollapse:'collapse'}}>
-                  <thead>
-                    <tr style={{background:'var(--thead-bg)'}}>
-                      {['Name','ID Number','Email','College / Course','Role'].map(h=>(
-                        <th key={h} style={{...MN,fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-muted)',padding:'12px 16px',textAlign:'left',fontWeight:600,borderBottom:'1px solid var(--divider)',whiteSpace:'nowrap'}}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map(u=>(
-                      <tr key={u.id} className="urow" onClick={()=>setSelectedUser(u)}
-                        style={{borderBottom:'1px solid var(--row-border)',cursor:'pointer',transition:'background 0.1s'}}>
-                        <td style={{padding:'13px 16px'}}>
-                          <div style={{display:'flex',alignItems:'center',gap:8}}>
-                            <div>
-                              <p style={{...PP,fontSize:13,fontWeight:600,color:'var(--text-primary)'}}>{u.lastName?`${u.lastName}, ${u.firstName}${u.middleInitial?' '+u.middleInitial+'.':''}`:u.email}</p>
-                              {u.id===myProfile?.uid&&<span style={{...MN,fontSize:10,color:'var(--gold)'}}>you</span>}
-                            </div>
-                            {pendingEditUids.has(u.id)&&<span title="Pending edit request" style={{width:7,height:7,borderRadius:'50%',background:'var(--gold)',flexShrink:0,display:'inline-block'}}/>}
-                          </div>
-                        </td>
-                        <td style={{padding:'13px 16px',...MN,fontSize:12,color:'var(--text-body)'}}>{u.idNumber||'—'}</td>
-                        <td style={{padding:'13px 16px',...MN,fontSize:11,color:'var(--text-muted)',maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.email}</td>
-                        <td style={{padding:'13px 16px'}}>
-                          <p style={{...PP,fontSize:12,fontWeight:500,color:'var(--text-body)'}}>{u.college||u.department||'—'}</p>
-                          {u.course&&<p style={{...PP,fontSize:11,color:'var(--text-muted)',marginTop:1}}>{u.course}</p>}
-                        </td>
-                        <td style={{padding:'13px 16px'}}><RoleBadge role={u.role}/></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )
-        }
+        {loading ? (
+          <div style={{padding:32,display:'flex',alignItems:'center',gap:12}}>
+            <div style={{width:20,height:20,border:'2px solid var(--gold-border)',borderTopColor:'var(--gold)',borderRadius:'50%',animation:'spin 0.8s linear infinite',flexShrink:0}}/>
+            <p style={{...PP,fontSize:13,color:'var(--text-muted)'}}>Loading users…</p>
+          </div>
+        ) : filtered.length===0 ? (
+          <p style={{...PP,fontSize:13,color:'var(--text-muted)',padding:32,textAlign:'center'}}>No users match your filters.</p>
+        ) : (
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%',minWidth:600,borderCollapse:'collapse'}}>
+              <thead>
+                <tr style={{background:'var(--thead-bg)'}}>
+                  {['Name','ID Number','Email','College / Course','Role'].map(h=>(
+                    <th key={h} style={{...MN,fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-muted)',padding:'12px 16px',textAlign:'left',fontWeight:600,borderBottom:'1px solid var(--divider)',whiteSpace:'nowrap'}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(u=>(
+                  <tr key={u.id} className="urow"
+                    onClick={()=>setSelectedUser(u)}
+                    style={{borderBottom:'1px solid var(--row-border)',cursor:'pointer',transition:'background 0.1s'}}>
+                    <td style={{padding:'13px 16px'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <div>
+                          <p style={{...PP,fontSize:13,fontWeight:600,color:'var(--text-primary)'}}>
+                            {u.lastName
+                              ? `${u.lastName}, ${u.firstName}${u.middleInitial?' '+u.middleInitial+'.':''}`
+                              : u.email}
+                          </p>
+                          {u.id===myProfile?.uid && <span style={{...MN,fontSize:10,color:'var(--gold)'}}>you</span>}
+                        </div>
+                        {pendingEditUids.has(u.id) && (
+                          <span title="Pending edit request"
+                            style={{width:7,height:7,borderRadius:'50%',background:'var(--gold)',flexShrink:0,display:'inline-block'}}/>
+                        )}
+                      </div>
+                    </td>
+                    <td style={{padding:'13px 16px',...MN,fontSize:12,color:'var(--text-body)'}}>{u.idNumber||'—'}</td>
+                    <td style={{padding:'13px 16px',...MN,fontSize:11,color:'var(--text-muted)',maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.email}</td>
+                    <td style={{padding:'13px 16px'}}>
+                      <p style={{...PP,fontSize:12,fontWeight:500,color:'var(--text-body)'}}>{u.college||u.department||'—'}</p>
+                      {u.course && <p style={{...PP,fontSize:11,color:'var(--text-muted)',marginTop:1}}>{u.course}</p>}
+                    </td>
+                    <td style={{padding:'13px 16px'}}><RoleBadge role={u.role}/></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <div style={{padding:'10px 16px',borderTop:'1px solid var(--divider)',background:'var(--surface)'}}>
           <p style={{...MN,fontSize:10,color:'var(--text-dim)'}}>{filtered.length} user{filtered.length!==1?'s':''} shown · Click any row to open profile</p>
         </div>
       </div>
 
-      {/* Slide-out profile panel */}
-      {selectedUser&&(
-        <ProfilePanel user={selectedUser} myProfile={myProfile} pendingEditUids={pendingEditUids}
-          onClose={()=>setSelectedUser(null)} showToast={showToast}
+      {/* All portalled overlays */}
+      {selectedUser && (
+        <ProfilePanel
+          user={selectedUser}
+          myProfile={myProfile}
+          pendingEditUids={pendingEditUids}
+          onClose={()=>setSelectedUser(null)}
+          showToast={showToast}
           onEditProfile={t=>{setEditProfileTarget(t);setSelectedUser(null);}}
-          onEditName={t=>{setEditNameTarget(t);setSelectedUser(null);}}/>
+          onEditName={t=>{setEditNameTarget(t);setSelectedUser(null);}}
+        />
       )}
-
-      {/* Delete Requests */}
-      {showDeleteRequests&&(
-        <div style={{position:'fixed',inset:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.6)',backdropFilter:'blur(3px)',padding:16}}>
-          <div style={{background:'var(--card)',border:'1px solid var(--card-border)',borderRadius:16,width:'100%',maxWidth:660,maxHeight:'80vh',display:'flex',flexDirection:'column',boxShadow:'var(--shadow-modal)',overflow:'hidden'}}>
-            <div style={{background:'var(--thead-bg)',borderBottom:'1px solid var(--divider)',padding:'16px 24px',display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
-              <h2 style={{...SR,fontSize:18,fontWeight:700,color:'var(--text-primary)'}}>Deletion Requests</h2>
-              <button onClick={()=>setShowDeleteRequests(false)} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:8,width:34,height:34,display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-muted)',cursor:'pointer'}}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
-            </div>
-            <div style={{overflowY:'auto',flex:1}}>
-              {deleteRequests.length===0
-                ? <p style={{padding:24,textAlign:'center',...PP,fontSize:13,color:'var(--text-muted)'}}>No deletion requests.</p>
-                : (
-                  <table style={{width:'100%',minWidth:500,borderCollapse:'collapse'}}>
-                    <thead style={{position:'sticky',top:0,background:'var(--thead-bg)'}}>
-                      <tr>{['User','Reason','Requested By','Status','Actions'].map(h=><th key={h} style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-muted)',padding:'10px 14px',textAlign:'left',fontWeight:600,borderBottom:'1px solid var(--divider)'}}>{h}</th>)}</tr>
-                    </thead>
-                    <tbody>
-                      {deleteRequests.map(req=>(
-                        <tr key={req.id} style={{borderBottom:'1px solid var(--row-border)'}} onMouseEnter={e=>e.currentTarget.style.background='var(--row-hover-bg)'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                          <td style={{padding:'11px 14px'}}><p style={{...PP,fontSize:13,fontWeight:600,color:'var(--text-primary)'}}>{req.targetName}</p><p style={{...MN,fontSize:10,color:'var(--text-muted)'}}>{req.targetIdNumber}</p></td>
-                          <td style={{padding:'11px 14px',...PP,fontSize:12,color:'var(--text-body)',maxWidth:160}}>{req.reason}</td>
-                          <td style={{padding:'11px 14px',...PP,fontSize:12,color:'var(--text-muted)'}}>{req.requestedByName||'—'}</td>
-                          <td style={{padding:'11px 14px'}}>
-                            {req.status==='pending' &&<span style={{...MN,fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',textTransform:'uppercase'}}>Pending</span>}
-                            {req.status==='approved'&&<span style={{...MN,fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',textTransform:'uppercase'}}>Deleted</span>}
-                            {req.status==='rejected'&&<span style={{...MN,fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-dim)',textTransform:'uppercase'}}>Rejected</span>}
-                          </td>
-                          <td style={{padding:'11px 14px'}}>
-                            {req.status==='pending'&&<div style={{display:'flex',gap:6}}>
-                              <button style={{padding:'4px 10px',borderRadius:6,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',...MN,fontSize:9,fontWeight:700,cursor:'pointer',textTransform:'uppercase'}} onClick={()=>handleApproveDelete(req)}>Approve</button>
-                              <button style={{padding:'4px 10px',borderRadius:6,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...MN,fontSize:9,fontWeight:700,cursor:'pointer',textTransform:'uppercase'}} onClick={()=>handleRejectDelete(req)}>Reject</button>
-                            </div>}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-            </div>
-          </div>
-        </div>
+      {editProfileTarget && (
+        <EditProfileModal
+          uid={editProfileTarget.uid}
+          profile={editProfileTarget.profile}
+          targetUid={editProfileTarget.uid}
+          targetProfile={editProfileTarget.profile}
+          onClose={()=>setEditProfileTarget(null)}
+          onSaved={()=>setEditProfileTarget(null)}
+        />
       )}
+      {editNameTarget && (
+        <EditNameModal
+          targetUid={editNameTarget.uid}
+          targetProfile={editNameTarget.profile}
+          onClose={()=>setEditNameTarget(null)}
+        />
+      )}
+      {auditOpen       && <AuditModal      logs={auditLogs}    onClose={()=>setAuditOpen(false)}       />}
+      {staffInviteOpen && <StaffInviteModal invites={staffInvites} myProfile={myProfile} onClose={()=>setStaffInviteOpen(false)} showToast={showToast} />}
 
-      {editProfileTarget&&<EditProfileModal uid={editProfileTarget.uid} profile={editProfileTarget.profile} onClose={()=>setEditProfileTarget(null)} onSaved={()=>setEditProfileTarget(null)}/>}
-      {editNameTarget&&<EditNameModal targetUid={editNameTarget.uid} targetProfile={editNameTarget.profile} onClose={()=>setEditNameTarget(null)}/>}
-      {auditOpen&&<AuditModal logs={auditLogs} onClose={()=>setAuditOpen(false)}/>}
-      {staffInviteOpen&&<StaffInviteModal invites={staffInvites} myProfile={myProfile} onClose={()=>setStaffInviteOpen(false)} showToast={showToast}/>}
-
-      {toast&&(
-        <div style={{position:'fixed',bottom:24,right:24,zIndex:60,padding:'12px 20px',borderRadius:10,boxShadow:'0 8px 24px rgba(0,0,0,0.3)',...MN,fontSize:12,letterSpacing:'0.06em',background:toast.ok?'var(--green-soft)':'var(--red-soft)',border:`1px solid ${toast.ok?'var(--green-border)':'var(--red-border)'}`,color:toast.ok?'var(--green)':'var(--red)'}}>
+      {/* Toast */}
+      {toast && (
+        <div style={{position:'fixed',bottom:24,right:24,zIndex:9999,padding:'12px 20px',borderRadius:10,boxShadow:'0 8px 24px rgba(0,0,0,0.3)',...MN,fontSize:12,letterSpacing:'0.06em',
+          background:toast.ok?'var(--green-soft)':'var(--red-soft)',
+          border:`1px solid ${toast.ok?'var(--green-border)':'var(--red-border)'}`,
+          color:toast.ok?'var(--green)':'var(--red)',
+        }}>
           {toast.msg}
         </div>
       )}
