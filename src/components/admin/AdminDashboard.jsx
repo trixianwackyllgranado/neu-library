@@ -1,5 +1,5 @@
 // src/components/admin/AdminDashboard.jsx
-// Admin dashboard with visitor statistics — day/week/date range, filter by reason/college/employee type
+// Admin dashboard with visitor statistics + edit request notification dot
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
@@ -32,9 +32,7 @@ function inRange(ts, preset, customFrom, customTo) {
   if (!d) return false;
   if (preset === 'all') return true;
   const now = new Date();
-  if (preset === 'today') {
-    return d.toDateString() === now.toDateString();
-  }
+  if (preset === 'today') return d.toDateString() === now.toDateString();
   if (preset === 'week') {
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
     return d >= cutoff;
@@ -56,33 +54,41 @@ export default function AdminDashboard() {
   const [totalLog, setTotalLog] = useState(0);
   const [users,    setUsers]    = useState({ total:0, visitors:0, staff:0 });
 
-  // Logger history for stats cards
+  // Logger history
   const [logs,     setLogs]     = useState([]);
   const [userMap,  setUserMap]  = useState({});
   const [loading,  setLoading]  = useState(true);
 
+  // Pending edit requests count (for notification dot)
+  const [pendingEditRequests, setPendingEditRequests] = useState(0);
+
   // Filters
-  const [datePreset,  setDatePreset]  = useState('today'); // today | week | custom
-  const [customFrom,  setCustomFrom]  = useState('');
-  const [customTo,    setCustomTo]    = useState('');
+  const [datePreset,    setDatePreset]    = useState('today');
+  const [customFrom,    setCustomFrom]    = useState('');
+  const [customTo,      setCustomTo]      = useState('');
   const [filterReason,  setFilterReason]  = useState('');
   const [filterCollege, setFilterCollege] = useState('');
-  const [filterEmpType, setFilterEmpType] = useState(''); // '' | 'student' | 'faculty'
+  const [filterEmpType, setFilterEmpType] = useState('');
 
   useEffect(() => {
-    // Live listeners
     const u1 = onSnapshot(query(collection(db,'logger'),where('active','==',true)), s => setInLib(s.size));
     const u2 = onSnapshot(collection(db,'users'), s => {
       const docs = s.docs.map(d=>d.data());
-      const map = {};
+      const map  = {};
       docs.forEach(d => { map[d.uid] = d; });
       setUserMap(map);
       setUsers({
-        total: docs.length,
+        total:    docs.length,
         visitors: docs.filter(u => u.role === 'visitor').length,
-        staff: docs.filter(u => u.role === 'staff' || u.role === 'admin').length,
+        staff:    docs.filter(u => u.role === 'staff' || u.role === 'admin').length,
       });
     });
+    // Pending edit requests listener
+    const u3 = onSnapshot(
+      query(collection(db,'editRequests'), where('status','==','pending')),
+      s => setPendingEditRequests(s.size),
+      () => {}
+    );
     // One-time fetch of completed logs
     getDocs(collection(db,'logger')).then(snap => {
       const rows = snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -90,13 +96,12 @@ export default function AdminDashboard() {
       setTotalLog(rows.filter(r=>!r.active).length);
       setLoading(false);
     });
-    return () => { u1(); u2(); };
+    return () => { u1(); u2(); u3(); };
   }, []);
 
-  // Filtered logs for stats
   const filteredLogs = useMemo(() => {
     return logs.filter(r => {
-      if (r.active) return false; // only completed visits
+      if (r.active) return false;
       if (!inRange(r.entryTime, datePreset, customFrom, customTo)) return false;
       if (filterReason && r.purpose !== filterReason) return false;
       const u = userMap[r.uid];
@@ -106,11 +111,9 @@ export default function AdminDashboard() {
     });
   }, [logs, userMap, datePreset, customFrom, customTo, filterReason, filterCollege, filterEmpType]);
 
-  // Derive dropdown options from all logs
   const allReasons  = useMemo(() => [...new Set(logs.map(r=>r.purpose).filter(Boolean))].sort(), [logs]);
   const allColleges = useMemo(() => [...new Set(Object.values(userMap).map(u=>u.college).filter(Boolean))].sort(), [userMap]);
 
-  // Stats from filtered logs
   const studentVisits = filteredLogs.filter(r => (userMap[r.uid]?.visitorType || 'student') === 'student').length;
   const facultyVisits = filteredLogs.filter(r => userMap[r.uid]?.visitorType === 'faculty').length;
 
@@ -124,7 +127,10 @@ export default function AdminDashboard() {
 
   return (
     <div style={{ animation:'fadeUp 0.3s ease both' }}>
-      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <style>{`
+        @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin   { to{transform:rotate(360deg)} }
+      `}</style>
 
       {/* Header */}
       <div style={{ marginBottom:32 }}>
@@ -143,20 +149,19 @@ export default function AdminDashboard() {
         <StatCard label="Total Visits"    value={totalLog}       color="blue"  sub="All completed visits" />
       </div>
 
-      {/* Visitor Statistics Section */}
+      {/* Visitor Statistics */}
       <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:14, padding:'24px', marginBottom:24, boxShadow:'var(--shadow-card)' }}>
         <p style={{...SR,fontSize:20,fontWeight:700,color:'var(--text-primary)',marginBottom:4}}>Visitor Statistics</p>
         <p style={{...PP,fontSize:13,color:'var(--text-muted)',marginBottom:20}}>Filter and analyze library visit data</p>
 
         {/* Filter row */}
         <div style={{ display:'flex', flexWrap:'wrap', gap:10, marginBottom:20 }}>
-          {/* Date preset */}
           <div style={{ display:'flex', gap:6 }}>
             {[
-              { key:'today', label:'Today' },
-              { key:'week',  label:'This Week' },
-              { key:'custom',label:'Custom' },
-              { key:'all',   label:'All Time' },
+              { key:'today',  label:'Today' },
+              { key:'week',   label:'This Week' },
+              { key:'custom', label:'Custom' },
+              { key:'all',    label:'All Time' },
             ].map(({ key, label }) => (
               <button key={key} type="button" onClick={() => setDatePreset(key)}
                 style={{ padding:'7px 14px', borderRadius:8, cursor:'pointer', fontSize:12, fontWeight:600, fontFamily:"'Poppins',sans-serif",
@@ -169,19 +174,16 @@ export default function AdminDashboard() {
             ))}
           </div>
 
-          {/* Reason filter */}
           <select style={inputSt} value={filterReason} onChange={e => setFilterReason(e.target.value)}>
             <option value="">All Reasons</option>
             {allReasons.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
 
-          {/* College filter */}
           <select style={inputSt} value={filterCollege} onChange={e => setFilterCollege(e.target.value)}>
             <option value="">All Colleges</option>
             {allColleges.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
 
-          {/* Employee/visitor type filter */}
           <select style={inputSt} value={filterEmpType} onChange={e => setFilterEmpType(e.target.value)}>
             <option value="">All Types</option>
             <option value="student">Students</option>
@@ -189,7 +191,6 @@ export default function AdminDashboard() {
           </select>
         </div>
 
-        {/* Custom date range */}
         {datePreset === 'custom' && (
           <div style={{ display:'flex', gap:10, marginBottom:20, flexWrap:'wrap' }}>
             <div>
@@ -210,20 +211,18 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <>
-            {/* Stats cards */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12, marginBottom:20 }}>
-              <StatCard label="Total Visits"     value={filteredLogs.length} color="gold" />
-              <StatCard label="Student Visits"   value={studentVisits}       color="blue" />
-              <StatCard label="Faculty Visits"   value={facultyVisits}       color="blue" />
+              <StatCard label="Total Visits"   value={filteredLogs.length} color="gold" />
+              <StatCard label="Student Visits" value={studentVisits}       color="blue" />
+              <StatCard label="Faculty Visits" value={facultyVisits}       color="blue" />
             </div>
 
-            {/* Reason breakdown */}
             {reasonBreakdown.length > 0 && (
               <div>
                 <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12}}>Visits by Reason</p>
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {reasonBreakdown.map(([reason, count]) => {
-                    const pct = filteredLogs.length > 0 ? Math.round((count / filteredLogs.length) * 100) : 0;
+                    const pct = filteredLogs.length > 0 ? Math.round((count/filteredLogs.length)*100) : 0;
                     return (
                       <div key={reason}>
                         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
@@ -251,21 +250,30 @@ export default function AdminDashboard() {
       <p style={{...PP,fontSize:11,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Quick Access</p>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
         {[
-          { label:'Library Logger',  sub:'View active sessions',      path:'/logger',           color:'var(--gold)'  },
-          { label:'User Management', sub:'Manage accounts and roles', path:'/admin/users',      color:'var(--blue)'  },
-          { label:'Reports',         sub:'Analytics and exports',     path:'/admin/reports',    color:'var(--gold)'  },
-        ].map(({ label, sub, path, color }) => (
+          { label:'Library Logger',  sub:'View active sessions',      path:'/logger',        color:'var(--gold)', dot: false },
+          {
+            label:'User Management',
+            sub: pendingEditRequests > 0
+              ? `${pendingEditRequests} pending edit request${pendingEditRequests > 1 ? 's' : ''}`
+              : 'Manage accounts and roles',
+            path:'/admin/users',
+            color:'var(--blue)',
+            dot: pendingEditRequests > 0,
+          },
+          { label:'Reports',         sub:'Analytics and exports',     path:'/admin/reports', color:'var(--gold)', dot: false },
+        ].map(({ label, sub, path, color, dot }) => (
           <button key={path} onClick={() => navigate(path)}
-            style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderTop:`3px solid ${color}`, borderRadius:12, padding:'18px 20px', textAlign:'left', cursor:'pointer', transition:'all 0.15s', boxShadow:'var(--shadow-card)' }}
+            style={{ position:'relative', background:'var(--card)', border:'1px solid var(--card-border)', borderTop:`3px solid ${color}`, borderRadius:12, padding:'18px 20px', textAlign:'left', cursor:'pointer', transition:'all 0.15s', boxShadow:'var(--shadow-card)' }}
             onMouseEnter={e=>e.currentTarget.style.background='var(--surface-hover)'}
             onMouseLeave={e=>e.currentTarget.style.background='var(--card)'}>
+            {dot && (
+              <span style={{ position:'absolute', top:10, right:10, width:10, height:10, borderRadius:'50%', background:'var(--red)', border:'2px solid var(--card)' }} />
+            )}
             <p style={{...PP,fontSize:15,fontWeight:600,color:'var(--text-primary)',marginBottom:4}}>{label}</p>
-            <p style={{...PP,fontSize:13,color:'var(--text-muted)'}}>{sub}</p>
+            <p style={{...PP,fontSize:13,color: dot ? 'var(--red)' : 'var(--text-muted)'}}>{sub}</p>
           </button>
         ))}
       </div>
-
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }

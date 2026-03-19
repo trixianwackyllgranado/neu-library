@@ -23,13 +23,10 @@ service cloud.firestore {
       return hasRole('admin');
     }
 
-    function isNEUEmail() {
-      return isSignedIn() &&
-             request.auth.token.email != null &&
-             request.auth.token.email.matches('.*@neu[.]edu[.]ph$');
-    }
-
     // Users collection
+    // Note: create is open to any signed-in user (their own doc) because IT support
+    // Gmail accounts and staff-invited Gmail accounts bypass the NEU email domain.
+    // Domain enforcement is handled in application code (AuthContext).
     match /users/{userId} {
       allow get: if isSignedIn() && (
         request.auth.uid == userId ||
@@ -37,16 +34,13 @@ service cloud.firestore {
       );
       allow list: if isSignedIn();
 
-      // Only NEU emails can create their own profile (Google sign-in sets this)
-      allow create: if isSignedIn() &&
-                       request.auth.uid == userId &&
-                       isNEUEmail();
+      allow create: if isSignedIn() && request.auth.uid == userId;
 
       allow update: if isSignedIn() && (
-        // Own doc — no role changes
+        // Own doc — no role changes allowed by self
         (request.auth.uid == userId &&
          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
-        // Admin can change roles (not to admin)
+        // Admin can change roles (not to admin, not own doc)
         (isAdmin() &&
          request.auth.uid != userId &&
          resource.data.role != 'admin' &&
@@ -57,7 +51,7 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Logger — visitors and staff/admin can read own, staff/admin can read all
+    // Logger — visitors and staff/admin
     match /logger/{logId} {
       allow read: if isSignedIn() && (
         resource.data.uid == request.auth.uid ||
@@ -95,6 +89,36 @@ service cloud.firestore {
         isSignedIn() &&
         resource.data.toUid == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledged', 'acknowledgedAt'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Edit Requests — visitors submit requests to change their info;
+    // only the owner can cancel their own pending request; admin approves/rejects.
+    match /editRequests/{reqId} {
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow read: if isSignedIn() && (
+        resource.data.uid == request.auth.uid ||
+        isAdmin()
+      );
+      // Visitor can only cancel their own pending request
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        resource.data.uid == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'cancelledAt']) &&
+        request.resource.data.status == 'cancelled'
+      );
+      allow delete: if false;
+    }
+
+    // Staff Invites — admin creates, any signed-in user can read (to check their own invite)
+    match /staffInvites/{inviteId} {
+      allow create: if isAdmin();
+      allow read:   if isSignedIn();
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        resource.data.email == request.auth.token.email &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'claimedAt', 'claimedBy'])
       );
       allow delete: if isAdmin();
     }
