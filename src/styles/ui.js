@@ -1,10 +1,10 @@
-// src/styles/ui.js
+tree / ftree / f > structure.txt// src/styles/ui.js
 // Shared design tokens — import in every page/component
 // No emojis, no hardcoded hex — everything uses CSS variables from theme.css
 
 export const POPPINS = { fontFamily: "'Poppins', sans-serif" };
-export const MONO    = { fontFamily: "'IBM Plex Mono', monospace" };
-export const SERIF   = { fontFamily: "'Playfair Display', serif" };
+export const MONO = { fontFamily: "'IBM Plex Mono', monospace" };
+export const SERIF = { fontFamily: "'Playfair Display', serif" };
 
 // Page header helper
 export const pageHeader = (label, title, subtitle) => ({ label, title, subtitle });
@@ -83,11 +83,11 @@ export const btnGhost = {
 
 export const badge = (variant = 'gray') => {
   const map = {
-    gold:  { bg: 'var(--gold-soft)',  border: 'var(--gold-border)',  color: 'var(--gold)'  },
+    gold: { bg: 'var(--gold-soft)', border: 'var(--gold-border)', color: 'var(--gold)' },
     green: { bg: 'var(--green-soft)', border: 'var(--green-border)', color: 'var(--green)' },
-    blue:  { bg: 'var(--blue-soft)',  border: 'var(--blue-border)',  color: 'var(--blue)'  },
-    red:   { bg: 'var(--red-soft)',   border: 'var(--red-border)',   color: 'var(--red)'   },
-    gray:  { bg: 'var(--surface)',    border: 'var(--card-border)',  color: 'var(--text-muted)' },
+    blue: { bg: 'var(--blue-soft)', border: 'var(--blue-border)', color: 'var(--blue)' },
+    red: { bg: 'var(--red-soft)', border: 'var(--red-border)', color: 'var(--red)' },
+    gray: { bg: 'var(--surface)', border: 'var(--card-border)', color: 'var(--text-muted)' },
   };
   const t = map[variant] || map.gray;
   return {
@@ -126,4 +126,4 @@ export const tdStyle = {
 };
 
 export const onFocus = e => { e.currentTarget.style.borderColor = 'var(--gold)'; };
-export const onBlur  = e => { e.currentTarget.style.borderColor = 'var(--input-border)'; };
+export const onBlur = e => { e.currentTarget.style.borderColor = 'var(--input-border)'; };
