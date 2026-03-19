@@ -199,17 +199,33 @@ export function AuthProvider({ children }) {
     const email      = googleUser.email || '';
     const emailLower = email.toLowerCase();
 
-    // ── Prime Admin bypass (jcesperanza@neu.edu.ph) ────────────────────────
+    // ── Prime Admin bypass ───────────────────────────────────────────────
     if (isPrimeAdminEmail(emailLower)) {
       let snap = null;
       try { snap = await getDoc(doc(db, 'users', googleUser.uid)); } catch (_) {}
 
       if (!snap?.exists()) {
-        const parsed = parseNameFromEmail(emailLower);
+        // Use Google profile displayName for proper name formatting
+        // googleUser.displayName = "Jeremy Esperanza" or "Wackyll Trixian" etc.
+        const gName = googleUser.displayName || '';
+        const nameParts = gName.trim().split(/\s+/);
+        let firstName, lastName;
+        if (nameParts.length >= 2) {
+          firstName = nameParts[0].toUpperCase();
+          lastName = nameParts.slice(1).join(' ').toUpperCase();
+        } else if (nameParts.length === 1 && nameParts[0]) {
+          firstName = nameParts[0].toUpperCase();
+          lastName = '';
+        } else {
+          // Fallback: parse from email
+          const parsed = parseNameFromEmail(emailLower);
+          firstName = parsed.firstName.toUpperCase();
+          lastName = parsed.lastName.toUpperCase();
+        }
+
         await setDoc(doc(db, 'users', googleUser.uid), {
           uid: googleUser.uid, email: emailLower,
-          firstName: parsed.firstName.toUpperCase(),
-          lastName: parsed.lastName.toUpperCase(),
+          firstName, lastName,
           middleInitial: '',
           idNumber: 'PRIME-ADMIN', role: 'admin', visitorType: null,
           college: null, course: null,
@@ -234,9 +250,24 @@ export function AuthProvider({ children }) {
       try { snap = await getDoc(doc(db, 'users', googleUser.uid)); } catch (_) {}
 
       if (!snap?.exists()) {
+        // Use Google profile displayName for proper name formatting
+        const gName = googleUser.displayName || '';
+        const nameParts = gName.trim().split(/\s+/);
+        let firstName, lastName;
+        if (nameParts.length >= 2) {
+          firstName = nameParts[0].toUpperCase();
+          lastName = nameParts.slice(1).join(' ').toUpperCase();
+        } else if (nameParts.length === 1 && nameParts[0]) {
+          firstName = nameParts[0].toUpperCase();
+          lastName = '';
+        } else {
+          firstName = 'IT';
+          lastName = 'SUPPORT';
+        }
+
         await setDoc(doc(db, 'users', googleUser.uid), {
           uid: googleUser.uid, email: emailLower,
-          firstName: 'IT', lastName: 'SUPPORT', middleInitial: '',
+          firstName, lastName, middleInitial: '',
           idNumber: 'IT-SUPPORT', role: 'admin', visitorType: null,
           college: null, course: null, isITSupport: true,
           createdAt: serverTimestamp(),

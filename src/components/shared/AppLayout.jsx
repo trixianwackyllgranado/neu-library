@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import FloatingTutorial from './FloatingTutorial';
+import { useTutorial } from '../../context/TutorialContext';
 
 const PP = { fontFamily: "'Poppins', sans-serif" };
 const SR = { fontFamily: "'Playfair Display', serif" };
@@ -131,6 +132,7 @@ export default function AppLayout({ children }) {
   const { userProfile, logout, effectiveRole, canSwitchRole } = useAuth();
   const { session, markWebSignedOut } = useLibrarySession();
   const { dark, toggle: toggleTheme } = useTheme();
+  const { hasTutorialAccess, tutorialEnabled, toggleTutorial } = useTutorial();
   const navigate  = useNavigate();
   const location  = useLocation();
 
@@ -265,6 +267,20 @@ export default function AppLayout({ children }) {
             <p style={{ ...PP, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</p>
             {userProfile?.idNumber && <p style={{ ...MN, fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{userProfile.idNumber}</p>}
           </div>
+        )}
+        {/* Tutorial toggle — prime admins only */}
+        {hasTutorialAccess && (!collapsed || mob) && (
+          <button onClick={toggleTutorial}
+            style={{ width: '100%', padding: '9px 12px', borderRadius: 10, background: tutorialEnabled ? 'var(--gold-soft)' : 'var(--surface)', border: `1px solid ${tutorialEnabled ? 'var(--gold-border)' : 'var(--card-border)'}`, color: tutorialEnabled ? 'var(--gold)' : 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.15s', marginBottom: 6 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span style={{ ...PP, fontSize: 12, fontWeight: 500 }}>{tutorialEnabled ? 'Guides: ON' : 'Guides: OFF'}</span>
+          </button>
+        )}
+        {hasTutorialAccess && collapsed && !mob && (
+          <button onClick={toggleTutorial} title={tutorialEnabled ? 'Page guides: ON' : 'Page guides: OFF'}
+            style={{ width: '100%', padding: 10, borderRadius: 10, background: tutorialEnabled ? 'var(--gold-soft)' : 'var(--surface)', border: `1px solid ${tutorialEnabled ? 'var(--gold-border)' : 'var(--card-border)'}`, color: tutorialEnabled ? 'var(--gold)' : 'var(--text-dim)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s', marginBottom: 6 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </button>
         )}
         <button onClick={toggleTheme}
           style={{ width: '100%', padding: collapsed && !mob ? 10 : '9px 12px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.15s', marginBottom: 6 }}>
