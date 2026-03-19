@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
-import ChangePasswordModal from '../shared/ChangePasswordModal';
-import EditProfileModal from '../shared/EditProfileModal';
+
 
 const PP = { fontFamily:"'Poppins',sans-serif" };
 const SR = { fontFamily:"'Playfair Display',serif" };
@@ -42,26 +41,16 @@ function getGreeting(firstName) {
 export default function StaffDashboard() {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
-  const [showChangePw,    setShowChangePw]    = useState(false);
-  const [showEditProfile, setShowEditProfile] = useState(false);
-  const [pending, setPending] = useState(0);
-  const [active,  setActive]  = useState(0);
-  const [overdue, setOverdue] = useState(0);
+
   const [inLib,   setInLib]   = useState(0);
   const [recent,  setRecent]  = useState([]);
 
   useEffect(() => {
-    const u1 = onSnapshot(query(collection(db,'borrows'),where('status','==','pending')), s => setPending(s.size));
-    const u2 = onSnapshot(query(collection(db,'borrows'),where('status','==','active')), s => {
-      const now = new Date(); let od = 0;
-      s.docs.forEach(d => { const due = d.data().dueDate?.toDate?.(); if(due && due<now) od++; });
-      setActive(s.size); setOverdue(od);
-    });
     const u3 = onSnapshot(query(collection(db,'logger'),where('active','==',true)), s => {
       setInLib(s.size);
       setRecent(s.docs.map(d=>({id:d.id,...d.data()})).slice(0,8));
     });
-    return () => { u1(); u2(); u3(); };
+    return () => { u3(); };
   }, []);
 
   const greeting = userProfile ? getGreeting(userProfile.firstName) : 'Staff Dashboard';
@@ -75,33 +64,18 @@ export default function StaffDashboard() {
         <h1 style={{...SR,fontSize:'clamp(24px,4vw,32px)',fontWeight:700,color:'var(--text-primary)',marginBottom:6}}>{greeting}</h1>
         <p style={{...PP,fontSize:15,color:'var(--text-muted)'}}>Library operations at a glance.</p>
         <div style={{marginTop:16,height:1,background:'linear-gradient(90deg,var(--gold-border),transparent)'}} />
-        <button onClick={() => setShowChangePw(true)}
-          style={{...PP,marginTop:12,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',transition:'all 0.15s',display:'inline-flex',alignItems:'center',gap:6}}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Change Password
-        </button>
-        <button onClick={() => setShowEditProfile(true)}
-          style={{...PP,marginTop:12,marginLeft:8,fontSize:12,fontWeight:600,padding:'7px 16px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',cursor:'pointer',transition:'all 0.15s',display:'inline-flex',alignItems:'center',gap:6}}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Edit College/Course
-        </button>
+
       </div>
 
       <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Live Stats</p>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:28}}>
-        <StatCard label="Pending Requests" value={pending} color="gold"  sub="Awaiting review"    onClick={()=>navigate('/borrows')} />
-        <StatCard label="Active Borrows"   value={active}  color="blue"  sub="Currently borrowed" onClick={()=>navigate('/borrows')} />
-        <StatCard label="Overdue"          value={overdue} color="red"   sub="Past due date"      onClick={()=>navigate('/borrows')} />
-        <StatCard label="In Library Now"   value={inLib}   color="green" sub="Students present"   onClick={()=>navigate('/logger')} />
+        <StatCard label="In Library Now" value={inLib} color="green" sub="Currently checked in" onClick={()=>navigate('/logger')} />
       </div>
 
       <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Quick Actions</p>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12,marginBottom:28}}>
         {[
-          { label:'QR Scanner',      sub:'Check students in and out',   path:'/staff/qr-logger', color:'var(--gold)'  },
-          { label:'Borrowing',       sub:'Review and approve requests', path:'/borrows',          color:'var(--blue)'  },
-          { label:'Student Records', sub:'View and manage profiles',    path:'/staff/students',   color:'var(--blue)'  },
-          { label:'Book Catalog',    sub:'Manage catalog entries',      path:'/catalog',          color:'var(--green)' },
+          { label:'Library Logger', sub:'View active sessions', path:'/logger', color:'var(--gold)' },
         ].map(({ label, sub, path, color }) => (
           <button key={path} onClick={() => navigate(path)}
             style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderTop:`3px solid ${color}`, borderRadius:12, padding:'18px 20px', textAlign:'left', cursor:'pointer', transition:'all 0.15s', boxShadow:'var(--shadow-card)' }}
@@ -129,8 +103,7 @@ export default function StaffDashboard() {
           </div>
         </div>
       )}
-      {showChangePw && <ChangePasswordModal onClose={() => setShowChangePw(false)} />}
-      {showEditProfile && <EditProfileModal onClose={() => setShowEditProfile(false)} />}
+
     </div>
   );
 }

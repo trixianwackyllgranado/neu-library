@@ -251,7 +251,6 @@ export default function AdminDashboard() {
       <p style={{...PP,fontSize:11,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Quick Access</p>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12}}>
         {[
-          { label:'QR Scanner',      sub:'Check visitors in and out', path:'/staff/qr-logger', color:'var(--green)' },
           { label:'Library Logger',  sub:'View active sessions',      path:'/logger',           color:'var(--gold)'  },
           { label:'User Management', sub:'Manage accounts and roles', path:'/admin/users',      color:'var(--blue)'  },
           { label:'Reports',         sub:'Analytics and exports',     path:'/admin/reports',    color:'var(--gold)'  },

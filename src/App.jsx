@@ -11,7 +11,6 @@ import DashboardPage      from './pages/DashboardPage';
 import LoggerPage         from './pages/LoggerPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import ReportsPage        from './pages/admin/ReportsPage';
-import QRLoggerPage       from './pages/staff/QRLoggerPage';
 
 function Layout({ children }) {
   return <AppLayout>{children}</AppLayout>;
@@ -39,14 +38,6 @@ export default function App() {
               </RequireAuth>
             } />
 
-            {/* Staff + Admin */}
-            <Route path="/staff/qr-logger" element={
-              <RequireAuth>
-                <RequireRole roles={['admin', 'staff']}>
-                  <Layout><QRLoggerPage /></Layout>
-                </RequireRole>
-              </RequireAuth>
-            } />
 
             {/* Admin only */}
             <Route path="/admin/users" element={
