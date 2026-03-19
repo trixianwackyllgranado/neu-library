@@ -1,41 +1,15 @@
 // src/pages/RegisterPage.jsx
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
-import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useAuth, parseNameFromEmail } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { COLLEGES } from '../data/colleges';
 
 const MONO  = { fontFamily: "'IBM Plex Mono', monospace" };
 const SERIF = { fontFamily: "'Playfair Display', serif" };
-
-const C = {
-  gold:       'var(--gold)',
-  white:      'var(--text-primary)',
-  body:       'var(--text-body)',
-  muted:      'var(--text-muted)',
-  border:     'var(--input-border)',
-  surface:    'var(--input-bg)',
-  surfaceHov: 'var(--surface-hover)',
-  red:        'var(--red)',
-  green:      'var(--green)',
-};
-
-const getBG = () => ({
-  minHeight: '100vh',
-  background: 'linear-gradient(160deg, var(--bg-base) 0%, var(--bg-mid) 50%, var(--bg-top) 100%)',
-  display: 'flex', flexDirection: 'column', transition: 'background 0.25s',
-});
+const PP    = { fontFamily: "'Poppins', sans-serif" };
 
 const ID_REGEX = /^\d{2}-\d{5}-\d{3}$/;
-
 const INVITE_CODES = { staff: 'NEU-STAFF-2123', admin: 'NEU-ADMIN-2067' };
-
-const ROLES = {
-  student: { label: 'Student',       desc: 'Browse books, request borrows, and log library visits.' },
-  staff:   { label: 'Library Staff', desc: 'Manage borrowing, view student records, and oversee the logger.' },
-  admin:   { label: 'Administrator', desc: 'Full system access including user management and reports.' },
-};
 
 function formatId(raw) {
   const d = raw.replace(/\D/g, '').slice(0, 10);
@@ -44,423 +18,271 @@ function formatId(raw) {
   return `${d.slice(0,2)}-${d.slice(2,7)}-${d.slice(7)}`;
 }
 
-function Header({ dark, toggle }) {
-  return (
-    <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '13px', flexShrink: 0, borderBottom: '1px solid var(--divider)', justifyContent: 'space-between' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '13px' }}>
-        <img src="/liblogo.png" alt="NEU" style={{ width: 34, height: 34, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
-        <div>
-          <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.24em', color: C.gold, textTransform: 'uppercase', marginBottom: '2px' }}>New Era University</p>
-          <p style={{ ...SERIF, fontSize: '14px', fontWeight: 700, color: C.white, lineHeight: 1.2 }}>Library Management System</p>
-        </div>
-      </div>
-      <button onClick={toggle} title={dark ? 'Light Mode' : 'Dark Mode'}
-        style={{ width: 36, height: 36, borderRadius: '8px', border: '1px solid var(--card-border)', background: 'var(--surface)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', flexShrink: 0 }}>
-        {dark
-          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        }
-      </button>
-    </div>
-  );
-}
-
-function Footer() {
-  return (
-    <footer style={{ textAlign: 'center', padding: '16px', ...MONO, fontSize: '9px', letterSpacing: '0.18em', color: 'var(--text-dim)', textTransform: 'uppercase' }}>
-      New Era University — Library Management System
-    </footer>
-  );
-}
-
-function Card({ children }) {
-  return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: '18px', padding: '36px 32px', boxShadow: 'var(--shadow-modal)' }}>
-      {children}
-    </div>
-  );
-}
-
-function Eyebrow({ children }) {
-  return <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.24em', color: C.gold, textTransform: 'uppercase', marginBottom: '8px' }}>{children}</p>;
-}
-
-function FieldLabel({ children, required }) {
-  return (
-    <label style={{ ...MONO, fontSize: '10px', letterSpacing: '0.16em', color: C.muted, textTransform: 'uppercase', display: 'block', marginBottom: '7px', fontWeight: 600 }}>
-      {children}{required && <span style={{ color: C.red, marginLeft: '3px' }}>*</span>}
-    </label>
-  );
-}
-
-function Hint({ children }) {
-  return <p style={{ ...MONO, fontSize: '10px', color: C.muted, marginTop: '5px' }}>{children}</p>;
-}
-
-function primaryBtn(loading = false) {
-  return {
-    width: '100%', padding: '13px', borderRadius: '10px',
-    background: loading ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.18)',
-    border: '1px solid rgba(245,158,11,0.45)',
-    color: C.gold, cursor: loading ? 'not-allowed' : 'pointer',
-    opacity: loading ? 0.65 : 1,
-    ...MONO, fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700,
-    transition: 'all 0.15s',
-  };
-}
-
 export default function RegisterPage() {
-  const { register } = useAuth();
+  const { pendingGoogleUser, register, logout } = useAuth();
   const navigate = useNavigate();
   const { dark, toggle } = useTheme();
 
-  const [role,          setRole]          = useState('student');
-  const [inviteCode,    setInviteCode]    = useState('');
-  const [codeVerified,  setCodeVerified]  = useState(false);
-  const [codeInput,     setCodeInput]     = useState('');
-  const [codeError,     setCodeError]     = useState('');
+  // If no pending Google user, they shouldn't be here — send to login
+  useEffect(() => {
+    if (!pendingGoogleUser) navigate('/login', { replace: true });
+  }, [pendingGoogleUser]);
+
+  // Auto-parse name from Google email
+  const email = pendingGoogleUser?.email || '';
+  const parsed = parseNameFromEmail(email);
+
+  const [firstName,     setFirstName]     = useState(parsed.firstName);
+  const [lastName,      setLastName]      = useState(parsed.lastName);
+  const [middleInitial, setMiddleInitial] = useState('');
   const [idNumber,      setIdNumber]      = useState('');
   const [idFormat,      setIdFormat]      = useState('');
-  const [lastName,      setLastName]      = useState('');
-  const [firstName,     setFirstName]     = useState('');
-  const [middleInitial, setMiddleInitial] = useState('');
-  const [college,       setCollege]       = useState('');
-  const [course,        setCourse]        = useState('');
-  const [email,         setEmail]         = useState('');
-  const [password,      setPassword]      = useState('');
-  const [confirm,       setConfirm]       = useState('');
+  const [role,          setRole]          = useState('visitor');
+  const [visitorType,   setVisitorType]   = useState('student');
+  const [inviteCode,    setInviteCode]    = useState('');
+  const [codeVerified,  setCodeVerified]  = useState(false);
+  const [codeError,     setCodError]      = useState('');
   const [error,         setError]         = useState('');
   const [loading,       setLoading]       = useState(false);
-  const [registered,    setRegistered]    = useState(null);
+  const [done,          setDone]          = useState(false);
 
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-
-  useEffect(() => {
-    const handler = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile && (role === 'staff' || role === 'admin')) {
-        handleRoleChange('student');
-      }
-    };
-    window.addEventListener('resize', handler);
-    // Also enforce on mount
-    if (window.innerWidth < 768 && (role === 'staff' || role === 'admin')) {
-      handleRoleChange('student');
-    }
-    return () => window.removeEventListener('resize', handler);
-  }, [role]);
+  if (!pendingGoogleUser) return null;
 
   const needsCode = role === 'staff' || role === 'admin';
-  const isStaffOrAdmin = needsCode;
-  const selectedCollege = COLLEGES.find(c => c.name === college);
-  const courses = selectedCollege?.courses || [];
 
-  // When role switches, reset the code gate
-  const handleRoleChange = (key) => {
-    setRole(key);
-    setInviteCode('');
-    setCodeInput('');
-    setCodeError('');
-    setCodeVerified(false);
-    setError('');
+  const inputSt = {
+    width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)',
+    borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)',
+    fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s',
   };
+  const onFocus = e => { e.currentTarget.style.borderColor = 'var(--gold)'; };
+  const onBlur  = e => { e.currentTarget.style.borderColor = 'var(--input-border)'; };
 
-  const handleVerifyCode = (e) => {
-    e.preventDefault();
-    setCodeError('');
-    if (!codeInput.trim()) { setCodeError('Please enter the invitation code.'); return; }
-    if (codeInput.trim() !== INVITE_CODES[role]) {
-      setCodeError('Invalid invitation code. Contact your library administrator.');
-      return;
-    }
-    setInviteCode(codeInput.trim());
+  const handleVerifyCode = () => {
+    setCodError('');
+    if (!inviteCode.trim()) { setCodError('Enter the invitation code.'); return; }
+    if (inviteCode.trim() !== INVITE_CODES[role]) { setCodError('Invalid invitation code.'); return; }
     setCodeVerified(true);
   };
 
-  const inputBase = (extra = {}) => ({
-    width: '100%', background: C.surface, border: `1px solid ${C.border}`,
-    borderRadius: '9px', padding: '11px 14px', fontSize: '14px', color: C.white,
-    fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s, background 0.15s',
-    ...extra,
-  });
-  const onFocus = e => { e.currentTarget.style.borderColor = C.gold;   e.currentTarget.style.background = C.surfaceHov; };
-  const onBlur  = e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.surface; };
+  const handleRoleChange = (r) => {
+    setRole(r);
+    setCodeVerified(false);
+    setInviteCode('');
+    setCodError('');
+    setError('');
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); setError('');
-    if (!ID_REGEX.test(idNumber))             { setError('ID Number must be in format 22-12345-123.'); return; }
-    if (!lastName.trim() || !firstName.trim()){ setError('Last name and first name are required.'); return; }
-    if (!isStaffOrAdmin && !college)          { setError('Please select a college.'); return; }
-    if (!isStaffOrAdmin && courses.length > 0 && !course) { setError('Please select a course.'); return; }
-    if (password.length < 8)                  { setError('Password must be at least 8 characters.'); return; }
-    if (password !== confirm)                 { setError('Passwords do not match.'); return; }
-
+    e.preventDefault();
+    setError('');
+    if (!firstName.trim() || !lastName.trim()) { setError('First and last name are required.'); return; }
+    if (!ID_REGEX.test(idNumber)) { setError('ID Number must be in format YY-NNNNN-NNN.'); return; }
+    if (needsCode && !codeVerified) { setError('Please verify your invitation code.'); return; }
     setLoading(true);
     try {
       await register({
-        idNumber: idNumber.trim(), lastName: lastName.trim(), firstName: firstName.trim(),
-        middleInitial: middleInitial.trim().replace(/\.+$/, ''),
-        college: isStaffOrAdmin ? 'LIBRARY STAFF' : college.trim(),
-        course:  isStaffOrAdmin ? role.toUpperCase() : (course.trim() || college.trim()),
-        email:   email.trim() || undefined,
-        role, password,
+        uid:           pendingGoogleUser.uid,
+        email,
+        firstName,
+        lastName,
+        middleInitial,
+        idNumber,
+        role,
+        visitorType:   role === 'visitor' ? visitorType : null,
       });
-      setRegistered({ idNumber: idNumber.trim(), name: `${lastName.trim()}, ${firstName.trim()}` });
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+      setDone(true);
+      setTimeout(() => navigate('/dashboard', { replace: true }), 2000);
+    } catch (err) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ── Success / QR screen ───────────────────────────────────────────────────
-  if (registered) {
+  const handleCancel = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
+
+  if (done) {
     return (
-      <div style={getBG()}>
-        <Header dark={dark} toggle={toggle} />
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
-          <div style={{ width: '100%', maxWidth: '420px', textAlign: 'center' }}>
-            <Card>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px', color: C.green }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-              <Eyebrow>Account Created</Eyebrow>
-              <h1 style={{ ...SERIF, fontSize: '26px', fontWeight: 700, color: C.white, marginBottom: '8px' }}>Welcome to NEU Library</h1>
-              <p style={{ fontSize: '14px', color: C.body, marginBottom: '28px' }}>
-                {registered.name} &mdash; <span style={{ ...MONO, color: C.gold, fontSize: '13px' }}>{registered.idNumber}</span>
-              </p>
-              <div style={{ background: '#ffffff', borderRadius: '14px', padding: '20px', display: 'inline-block', marginBottom: '20px', boxShadow: '0 8px 32px rgba(0,0,0,0.35)' }}>
-                <QRCodeSVG value={registered.idNumber} size={190} level="M" includeMargin={false} />
-              </div>
-              <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.14em', color: C.muted, marginBottom: '6px', textTransform: 'uppercase' }}>Your Library QR Code</p>
-              <p style={{ fontSize: '13px', color: C.body, marginBottom: '22px', lineHeight: 1.7 }}>
-                Screenshot or save this QR code. Show it to library staff to check in and out instantly.
-              </p>
-              <div style={{ background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', borderRadius: '10px', padding: '14px 16px', marginBottom: '24px', textAlign: 'left' }}>
-                <p style={{ ...MONO, fontSize: '10px', letterSpacing: '0.14em', color: C.gold, textTransform: 'uppercase', marginBottom: '8px' }}>How to use</p>
-                <ul style={{ fontSize: '13px', color: C.body, paddingLeft: '18px', lineHeight: 1.9, margin: 0 }}>
-                  <li>Show this QR code to the staff scanner when entering</li>
-                  <li>Log in with your ID Number from any device</li>
-                  <li>Your QR code is always available on your dashboard</li>
-                </ul>
-              </div>
-              <button onClick={() => navigate('/login')} style={primaryBtn()}>Proceed to Sign In</button>
-            </Card>
+      <div style={{ minHeight: '100vh', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--green-soft)', border: '1px solid var(--green-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: 'var(--green)' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
+          <h2 style={{ ...SERIF, fontSize: 24, color: 'var(--text-primary)', marginBottom: 8 }}>Welcome to NEU Library!</h2>
+          <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)' }}>Account created. Redirecting…</p>
         </div>
-        <Footer />
       </div>
     );
   }
 
-  // ── Registration form ─────────────────────────────────────────────────────
   return (
-    <div style={getBG()}>
-      <Header dark={dark} toggle={toggle} />
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, var(--bg-base) 0%, var(--bg-mid) 55%, var(--bg-top) 100%)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: 3, background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)' }} />
+
+      {/* Header */}
+      <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--divider)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <img src="/liblogo.png" alt="NEU" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+          <div>
+            <p style={{ ...MONO, fontSize: 8, letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 2 }}>New Era University</p>
+            <p style={{ ...SERIF, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Library Management System</p>
+          </div>
+        </div>
+        <button onClick={toggle} style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid var(--card-border)', background: 'var(--surface)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {dark ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>}
+        </button>
+      </div>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
-        <div style={{ width: '100%', maxWidth: '460px' }}>
-          <Card>
-            <div style={{ marginBottom: '28px' }}>
-              <Eyebrow>New Account</Eyebrow>
-              <h1 style={{ ...SERIF, fontSize: '28px', fontWeight: 700, color: C.white, lineHeight: 1.15, marginBottom: '8px' }}>Create Account</h1>
-              <p style={{ fontSize: '14px', color: C.body }}>Enter your student information to register.</p>
-            </div>
+        <div style={{ width: '100%', maxWidth: 480, animation: 'fadeUp 0.35s ease both' }}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-modal)' }}>
+            <div style={{ height: 3, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
+            <div style={{ padding: '32px 32px 36px' }}>
 
-            {error && (
-              <div style={{ marginBottom: '20px', background: 'var(--red-soft)', border: '1px solid var(--red-border)', borderRadius: '10px', padding: '12px 16px' }}>
-                <p style={{ ...MONO, fontSize: '12px', color: C.red }}>{error}</p>
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ ...MONO, fontSize: 9, letterSpacing: '0.24em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 6 }}>New Account</p>
+                <h1 style={{ ...SERIF, fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Create Account</h1>
+                <p style={{ ...PP, fontSize: 13, color: 'var(--text-muted)' }}>Signing up as <strong style={{ color: 'var(--gold)' }}>{email}</strong></p>
               </div>
-            )}
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-
-              <div>
-                <FieldLabel>Account Type</FieldLabel>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                  {Object.entries(ROLES)
-                    .filter(([key]) => !isMobile || key === 'student')
-                    .map(([key, info]) => {
-                    const active = role === key;
-                    return (
-                      <button key={key} type="button"
-                        onClick={() => handleRoleChange(key)}
-                        style={{
-                          padding: '11px 8px', borderRadius: '9px', cursor: 'pointer', transition: 'all 0.15s',
-                          background: active ? 'rgba(245,158,11,0.14)' : 'rgba(255,255,255,0.04)',
-                          border: `1px solid ${active ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                        }}>
-                        <p style={{ ...MONO, fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', color: active ? C.gold : C.muted, textTransform: 'uppercase', margin: 0 }}>
-                          {info.label}
-                        </p>
-                      </button>
-                    );
-                  })}
+              {error && (
+                <div style={{ background: 'var(--red-soft)', border: '1px solid var(--red-border)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+                  <p style={{ ...MONO, fontSize: 11, color: 'var(--red)' }}>{error}</p>
                 </div>
-                {isMobile && (
-                  <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '10px 13px', marginBottom: '10px', display: 'flex', alignItems: 'flex-start', gap: '9px' }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: '1px' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    <p style={{ fontSize: '12px', color: C.muted, margin: 0, lineHeight: 1.5 }}>
-                      Staff and Administrator registration is only available on desktop. Please use a computer to register a staff or admin account.
-                    </p>
+              )}
+
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                {/* Role selector */}
+                <div>
+                  <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 8, fontWeight: 600 }}>Account Type</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {[
+                      { key: 'visitor', label: 'Visitor' },
+                      { key: 'staff',   label: 'Library Staff' },
+                      { key: 'admin',   label: 'Administrator' },
+                    ].map(({ key, label }) => (
+                      <button key={key} type="button" onClick={() => handleRoleChange(key)}
+                        style={{ flex: 1, padding: '9px 8px', borderRadius: 9, cursor: 'pointer', transition: 'all 0.15s', fontSize: 12, fontWeight: 600, fontFamily: "'Poppins', sans-serif",
+                          background: role === key ? 'var(--gold-soft)' : 'var(--surface)',
+                          border: `1px solid ${role === key ? 'var(--gold-border)' : 'var(--card-border)'}`,
+                          color: role === key ? 'var(--gold)' : 'var(--text-muted)',
+                        }}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Visitor type — only when role === visitor */}
+                {role === 'visitor' && (
+                  <div>
+                    <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 8, fontWeight: 600 }}>Visitor Type</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[
+                        { key: 'student', label: 'Student' },
+                        { key: 'faculty', label: 'Faculty' },
+                      ].map(({ key, label }) => (
+                        <button key={key} type="button" onClick={() => setVisitorType(key)}
+                          style={{ flex: 1, padding: '9px 8px', borderRadius: 9, cursor: 'pointer', transition: 'all 0.15s', fontSize: 13, fontWeight: 600, fontFamily: "'Poppins', sans-serif",
+                            background: visitorType === key ? 'var(--blue-soft)' : 'var(--surface)',
+                            border: `1px solid ${visitorType === key ? 'var(--blue-border)' : 'var(--card-border)'}`,
+                            color: visitorType === key ? 'var(--blue)' : 'var(--text-muted)',
+                          }}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
-                <div style={{ background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: '8px', padding: '10px 13px' }}>
-                  <p style={{ fontSize: '13px', color: C.body, margin: 0 }}>{ROLES[role].desc}</p>
-                </div>
-              </div>
 
-              {/* ── Staff/Admin: code gate ── */}
-              {isStaffOrAdmin && !codeVerified && (
-                <div style={{ background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', borderRadius: '12px', padding: '20px' }}>
-                  <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.18em', color: C.gold, textTransform: 'uppercase', marginBottom: '8px' }}>
-                    {ROLES[role].label} Access Required
-                  </p>
-                  <p style={{ fontSize: '13px', color: C.body, marginBottom: '16px', lineHeight: 1.6 }}>
-                    {ROLES[role].label} accounts require an invitation code from the library administrator before you can continue.
-                  </p>
-                  {codeError && (
-                    <div style={{ background: 'var(--red-soft)', border: '1px solid var(--red-border)', borderRadius: '8px', padding: '10px 13px', marginBottom: '12px' }}>
-                      <p style={{ ...MONO, fontSize: '11px', color: C.red }}>{codeError}</p>
+                {/* Invite code gate for staff/admin */}
+                {needsCode && !codeVerified && (
+                  <div style={{ background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', borderRadius: 10, padding: '14px 16px' }}>
+                    <p style={{ ...MONO, fontSize: 10, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Invitation Code Required</p>
+                    {codeError && <p style={{ ...MONO, fontSize: 11, color: 'var(--red)', marginBottom: 8 }}>{codeError}</p>}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input style={{ ...inputSt, flex: 1, ...MONO, letterSpacing: '0.12em' }}
+                        placeholder={`NEU-${role.toUpperCase()}-XXXX`}
+                        value={inviteCode} onChange={e => { setInviteCode(e.target.value); setCodError(''); }}
+                        onFocus={onFocus} onBlur={onBlur} />
+                      <button type="button" onClick={handleVerifyCode}
+                        style={{ padding: '11px 16px', borderRadius: 9, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: 'pointer', ...MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+                        Verify
+                      </button>
                     </div>
-                  )}
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <input
-                      style={{ ...inputBase({ ...MONO, letterSpacing: '0.14em', flex: 1 }), flex: 1 }}
-                      placeholder={`NEU-${role.toUpperCase()}-XXXX`}
-                      value={codeInput}
-                      onChange={e => { setCodeInput(e.target.value); setCodeError(''); }}
-                      onFocus={onFocus} onBlur={onBlur}
-                      autoComplete="off"
-                    />
-                    <button type="button" onClick={handleVerifyCode}
-                      style={{ padding: '11px 18px', borderRadius: '9px', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: C.gold, cursor: 'pointer', ...MONO, fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                      Verify
-                    </button>
                   </div>
-                  <p style={{ ...MONO, fontSize: '10px', color: C.muted, marginTop: '8px' }}>
-                    Contact your library administrator for this code.
-                  </p>
-                </div>
-              )}
+                )}
+                {needsCode && codeVerified && (
+                  <div style={{ background: 'var(--green-soft)', border: '1px solid var(--green-border)', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <p style={{ ...MONO, fontSize: 11, color: 'var(--green)' }}>Invitation code verified</p>
+                  </div>
+                )}
 
-              {/* ── Staff/Admin: verified badge ── */}
-              {isStaffOrAdmin && codeVerified && (
-                <div style={{ background: 'var(--green-soft)', border: '1px solid var(--green-border)', borderRadius: '10px', padding: '11px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  <p style={{ ...MONO, fontSize: '11px', color: C.green }}>Invitation code verified — {ROLES[role].label} access granted</p>
-                </div>
-              )}
+                {/* Show rest of form when: visitor, OR staff/admin with verified code */}
+                {(!needsCode || codeVerified) && (
+                  <>
+                    {/* Names */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>First Name <span style={{ color: 'var(--red)' }}>*</span></label>
+                        <input style={{ ...inputSt, textTransform: 'uppercase' }} value={firstName}
+                          onChange={e => setFirstName(e.target.value)} onFocus={onFocus} onBlur={onBlur} required />
+                      </div>
+                      <div>
+                        <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>Last Name <span style={{ color: 'var(--red)' }}>*</span></label>
+                        <input style={{ ...inputSt, textTransform: 'uppercase' }} value={lastName}
+                          onChange={e => setLastName(e.target.value)} onFocus={onFocus} onBlur={onBlur} required />
+                      </div>
+                    </div>
+                    <p style={{ ...PP, fontSize: 11, color: 'var(--text-dim)', marginTop: -8 }}>
+                      Auto-filled from your email. Edit if needed.
+                    </p>
 
-              {/* Only show rest of form once code is verified for staff/admin, always show for students */}
-              {(!isStaffOrAdmin || codeVerified) && (<>
+                    {/* Middle Initial */}
+                    <div>
+                      <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>Middle Initial</label>
+                      <input style={{ ...inputSt, width: 72, textTransform: 'uppercase', textAlign: 'center' }}
+                        placeholder="D" maxLength={2} value={middleInitial}
+                        onChange={e => setMiddleInitial(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
+                        onFocus={onFocus} onBlur={onBlur} />
+                    </div>
 
-              {/* ID Number — label changes by role */}
-              <div>
-                <FieldLabel required>{isStaffOrAdmin ? 'Staff ID' : 'Student Number'}</FieldLabel>
-                <input type="text" inputMode="numeric"
-                  style={inputBase({ ...MONO, letterSpacing: '0.16em' })}
-                  placeholder={isStaffOrAdmin ? 'Staff ID Number' : '22-12345-123'} value={idFormat}
-                  onChange={e => { const f = formatId(e.target.value); setIdFormat(f); setIdNumber(f); setError(''); }}
-                  onFocus={onFocus} onBlur={onBlur} required />
-                <Hint>{isStaffOrAdmin ? 'Enter your assigned staff ID number.' : 'Format: YY-NNNNN-NNN'}</Hint>
-              </div>
+                    {/* ID Number */}
+                    <div>
+                      <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>ID Number <span style={{ color: 'var(--red)' }}>*</span></label>
+                      <input type="text" inputMode="numeric"
+                        style={{ ...inputSt, ...MONO, letterSpacing: '0.16em' }}
+                        placeholder="22-12345-123" value={idFormat}
+                        onChange={e => { const f = formatId(e.target.value); setIdFormat(f); setIdNumber(f); setError(''); }}
+                        onFocus={onFocus} onBlur={onBlur} required />
+                      <p style={{ ...MONO, fontSize: 10, color: 'var(--text-dim)', marginTop: 4 }}>Format: YY-NNNNN-NNN</p>
+                    </div>
+                  </>
+                )}
 
-              {/* Last + First name */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <FieldLabel required>Last Name</FieldLabel>
-                  <input style={{ ...inputBase(), textTransform: 'uppercase' }} placeholder="SANTOS" value={lastName}
-                    onChange={e => { setLastName(e.target.value.toUpperCase()); setError(''); }}
-                    onFocus={onFocus} onBlur={onBlur} required />
-                </div>
-                <div>
-                  <FieldLabel required>First Name</FieldLabel>
-                  <input style={{ ...inputBase(), textTransform: 'uppercase' }} placeholder="JUAN" value={firstName}
-                    onChange={e => { setFirstName(e.target.value.toUpperCase()); setError(''); }}
-                    onFocus={onFocus} onBlur={onBlur} required />
-                </div>
-              </div>
+                <button type="submit" disabled={loading || (needsCode && !codeVerified)}
+                  style={{ width: '100%', padding: 13, borderRadius: 10, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: (loading || (needsCode && !codeVerified)) ? 'not-allowed' : 'pointer', opacity: (loading || (needsCode && !codeVerified)) ? 0.5 : 1, ...MONO, fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700, transition: 'all 0.15s' }}>
+                  {loading ? 'Creating Account…' : 'Create Account'}
+                </button>
 
-              {/* Middle Initial */}
-              <div>
-                <FieldLabel>Middle Initial</FieldLabel>
-                <input style={{ ...inputBase(), width: '72px', textTransform: 'uppercase', textAlign: 'center' }}
-                  placeholder="D" maxLength={2} value={middleInitial}
-                  onChange={e => setMiddleInitial(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
-                  onFocus={onFocus} onBlur={onBlur} />
-              </div>
-
-              {/* College — students only */}
-              {!isStaffOrAdmin && (
-              <div>
-                <FieldLabel required>College</FieldLabel>
-                <select style={{ ...inputBase(), appearance: 'none', cursor: 'pointer' }}
-                  value={college} onChange={e => { setCollege(e.target.value); setCourse(''); setError(''); }}
-                  onFocus={onFocus} onBlur={onBlur} required>
-                  <option value="">— Select College —</option>
-                  {COLLEGES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
-                </select>
-              </div>
-              )}
-
-              {/* Course — students only */}
-              {!isStaffOrAdmin && college && courses.length > 0 && (
-                <div>
-                  <FieldLabel required>Course</FieldLabel>
-                  <select style={{ ...inputBase(), appearance: 'none', cursor: 'pointer' }}
-                    value={course} onChange={e => { setCourse(e.target.value); setError(''); }}
-                    onFocus={onFocus} onBlur={onBlur} required>
-                    <option value="">— Select Course —</option>
-                    {courses.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              )}
-
-              {/* Email — optional but recommended */}
-              <div>
-                <FieldLabel>Institutional Email</FieldLabel>
-                <input
-                  type="email"
-                  style={inputBase()}
-                  placeholder="firstname.lastname@neu.edu.ph"
-                  value={email}
-                  onChange={e => { setEmail(e.target.value); setError(''); }}
-                  onFocus={onFocus} onBlur={onBlur}
-                  autoComplete="email"
-                />
-                <Hint>Optional. Enter your @neu.edu.ph email for library records.</Hint>
-              </div>
-
-              {/* Password */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <FieldLabel required>Password</FieldLabel>
-                  <input type="password" style={inputBase()} placeholder="Min. 8 chars"
-                    value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
-                    onFocus={onFocus} onBlur={onBlur} required />
-                </div>
-                <div>
-                  <FieldLabel required>Confirm</FieldLabel>
-                  <input type="password" style={inputBase()} placeholder="Re-enter"
-                    value={confirm} onChange={e => { setConfirm(e.target.value); setError(''); }}
-                    onFocus={onFocus} onBlur={onBlur} required />
-                </div>
-              </div>
-
-              </>)}
-
-              <button type="submit" disabled={loading || (isStaffOrAdmin && !codeVerified)} style={primaryBtn(loading || (isStaffOrAdmin && !codeVerified))}>
-                {loading ? 'Creating Account…' : 'Create Account & Get QR Code'}
-              </button>
-            </form>
-
-            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--divider)', textAlign: 'center' }}>
-              <p style={{ fontSize: '14px', color: C.body }}>
-                Already have an account?{' '}
-                <Link to="/login" style={{ color: C.gold, fontWeight: 600, textDecoration: 'none', ...MONO, fontSize: '13px' }}>Sign In</Link>
-              </p>
+                <button type="button" onClick={handleCancel}
+                  style={{ width: '100%', padding: '10px', borderRadius: 10, background: 'transparent', border: '1px solid var(--card-border)', color: 'var(--text-dim)', cursor: 'pointer', ...PP, fontSize: 13 }}>
+                  Cancel — Sign in with a different account
+                </button>
+              </form>
             </div>
-          </Card>
+          </div>
         </div>
       </div>
-      <Footer />
+
+      <style>{`@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }`}</style>
     </div>
   );
 }

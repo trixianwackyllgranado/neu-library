@@ -7,16 +7,11 @@ import AppLayout from './components/shared/AppLayout';
 
 import LoginPage          from './pages/LoginPage';
 import RegisterPage       from './pages/RegisterPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage      from './pages/DashboardPage';
-import CatalogPage        from './pages/CatalogPage';
 import LoggerPage         from './pages/LoggerPage';
-import BorrowingPage      from './pages/BorrowingPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import ReportsPage        from './pages/admin/ReportsPage';
-import StudentRecordsPage from './pages/staff/StudentRecordsPage';
 import QRLoggerPage       from './pages/staff/QRLoggerPage';
-import AuthActionPage     from './pages/AuthActionPage';
 
 function Layout({ children }) {
   return <AppLayout>{children}</AppLayout>;
@@ -29,25 +24,22 @@ export default function App() {
         <LibrarySessionProvider>
           <Routes>
             {/* Public */}
-            <Route path="/login"           element={<RequireGuest><LoginPage /></RequireGuest>} />
-            <Route path="/register"        element={<RequireGuest><RegisterPage /></RequireGuest>} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/login"    element={<RequireGuest><LoginPage /></RequireGuest>} />
+            <Route path="/register" element={<RequireGuest><RegisterPage /></RequireGuest>} />
 
-            {/* App shell — all auth-required routes */}
+            {/* All authenticated users → dashboard (role-based rendering inside) */}
             <Route path="/dashboard" element={<RequireAuth><Layout><DashboardPage /></Layout></RequireAuth>} />
-            <Route path="/catalog"   element={<RequireAuth><Layout><CatalogPage /></Layout></RequireAuth>} />
-            <Route path="/logger"    element={<RequireAuth><Layout><LoggerPage /></Layout></RequireAuth>} />
-            <Route path="/borrows"   element={<RequireAuth><Layout><BorrowingPage /></Layout></RequireAuth>} />
-            <Route path="/student/borrows" element={<RequireAuth><Layout><BorrowingPage /></Layout></RequireAuth>} />
 
-            {/* Staff + Admin */}
-            <Route path="/staff/students" element={
+            {/* Logger — staff and admin only (visitors use kiosk on dashboard) */}
+            <Route path="/logger" element={
               <RequireAuth>
-                <RequireRole roles={['admin', 'staff']}>
-                  <Layout><StudentRecordsPage /></Layout>
+                <RequireRole roles={['staff', 'admin']}>
+                  <Layout><LoggerPage /></Layout>
                 </RequireRole>
               </RequireAuth>
             } />
+
+            {/* Staff + Admin */}
             <Route path="/staff/qr-logger" element={
               <RequireAuth>
                 <RequireRole roles={['admin', 'staff']}>
@@ -71,9 +63,6 @@ export default function App() {
                 </RequireRole>
               </RequireAuth>
             } />
-
-            {/* Firebase out-of-band action handler */}
-            <Route path="/auth/action" element={<AuthActionPage />} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

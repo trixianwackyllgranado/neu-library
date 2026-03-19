@@ -14,18 +14,22 @@ function Splash({ text = 'Loading...' }) {
   );
 }
 
+// RequireGuest: redirect logged-in users away from /login and /register
+// Exception: if pendingGoogleUser exists, allow /register through
 export function RequireGuest({ children }) {
-  const { currentUser, loadingAuth } = useAuth();
-  if (loadingAuth) return <Splash />;
-  if (currentUser) return <Navigate to="/dashboard" replace />;
+  const { currentUser, loadingAuth, userProfile, profileLoading, pendingGoogleUser } = useAuth();
+  if (loadingAuth || profileLoading) return <Splash />;
+  // If they have a pending Google user (not yet registered), allow /register
+  if (pendingGoogleUser) return children;
+  if (currentUser && userProfile) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
 export function RequireAuth({ children }) {
-  const { currentUser, loadingAuth } = useAuth();
+  const { currentUser, loadingAuth, userProfile, profileLoading } = useAuth();
   const location = useLocation();
-  if (loadingAuth) return <Splash />;
-  if (!currentUser) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (loadingAuth || profileLoading) return <Splash />;
+  if (!currentUser || !userProfile) return <Navigate to="/login" state={{ from: location }} replace />;
   return children;
 }
 

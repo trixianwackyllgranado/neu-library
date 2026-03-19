@@ -6,21 +6,8 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getRootUid() {
-      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      let isUser = exists(userPath);
-      let hasLink = isUser && 'linkedUid' in get(userPath).data;
-      let qrPath = /databases/$(database)/documents/qrUsers/$(request.auth.uid);
-      let isQr = exists(qrPath);
-      
-      return hasLink ? get(userPath).data.linkedUid
-           : isUser ? request.auth.uid
-           : isQr ? get(qrPath).data.mainUid
-           : request.auth.uid;
-    }
-
     function getUserData() {
-      let path = /databases/$(database)/documents/users/$(getRootUid());
+      let path = /databases/$(database)/documents/users/$(request.auth.uid);
       return exists(path) ? get(path).data : {"role": "guest"};
     }
 
@@ -37,158 +24,76 @@ service cloud.firestore {
     }
 
     function isNEUEmail() {
-      return isSignedIn() && 
-             request.auth.token.email != null && 
+      return isSignedIn() &&
+             request.auth.token.email != null &&
              request.auth.token.email.matches('.*@neu[.]edu[.]ph$');
     }
 
-    function isAllowedAdmin() {
-      return isSignedIn() && request.auth.token.email in [
-        'jcesperanza@neu.edu.ph',
-        'trixianwackyll.granado@neu.edu.ph'
-      ];
-    }
-
+    // Users collection
     match /users/{userId} {
-      // ── READ ──────────────────────────────────────────────────────────────────
-      // Signed-in: own doc, staff/admin, or email match
-      // Unauthenticated: ONLY allowed when querying by idNumber field
-      //   (used by ForgotPasswordPage and login to look up real email)
       allow get: if isSignedIn() && (
-        getRootUid() == userId ||
-        isStaffOrAdmin() ||
-        resource.data.email == request.auth.token.email
+        request.auth.uid == userId ||
+        isStaffOrAdmin()
       );
+      allow list: if isSignedIn();
 
-      // List queries:
-      // Unauthenticated allowed — needed for login + forgot-password email lookup.
-      // Write operations are fully protected so this is safe.
-      allow list: if request.auth == null || isSignedIn();
-
-      // ── CREATE ────────────────────────────────────────────────────────────────
-      allow create: if isSignedIn() && 
+      // Only NEU emails can create their own profile (Google sign-in sets this)
+      allow create: if isSignedIn() &&
                        request.auth.uid == userId &&
-                       (request.auth.token.firebase.sign_in_provider != 'google.com' || isNEUEmail());
+                       isNEUEmail();
 
-      // ── UPDATE ────────────────────────────────────────────────────────────────
       allow update: if isSignedIn() && (
-        (
-          getRootUid() == userId &&
-          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
-        ) ||
-        (
-          getRootUid() == userId &&
-          isAllowedAdmin() &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']) &&
-          request.resource.data.role in ['student', 'admin']
-        ) ||
-        (
-          isAdmin() &&
-          getRootUid() != userId &&
-          resource.data.role != 'admin' &&
-          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
-           request.resource.data.role in ['staff', 'student'])
-        )
+        // Own doc — no role changes
+        (request.auth.uid == userId &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        // Admin can change roles (not to admin)
+        (isAdmin() &&
+         request.auth.uid != userId &&
+         resource.data.role != 'admin' &&
+         (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) ||
+          request.resource.data.role in ['staff', 'visitor']))
       );
 
       allow delete: if isAdmin();
     }
 
-    // ── QR Users ──────────────────────────────────────────────────────────────
-    match /qrUsers/{qrUid} {
-      allow read:           if isSignedIn() && request.auth.uid == qrUid;
-      allow create:         if isSignedIn() && request.auth.uid == qrUid;
-      allow update, delete: if false;
+    // Logger — visitors and staff/admin can read own, staff/admin can read all
+    match /logger/{logId} {
+      allow read: if isSignedIn() && (
+        resource.data.uid == request.auth.uid ||
+        isStaffOrAdmin()
+      );
+      allow create: if isSignedIn() && (
+        request.resource.data.uid == request.auth.uid || isStaffOrAdmin()
+      );
+      allow update: if isSignedIn() && (
+        resource.data.uid == request.auth.uid || isStaffOrAdmin()
+      );
+      allow delete: if isAdmin();
     }
 
-    // ── Role Change Audit Log (legacy) ────────────────────────────────────────
-    match /roleChangeLogs/{logId} {
-      allow read:           if isAdmin();
-      allow create:         if isAdmin();
-      allow update, delete: if false;
-    }
-
-    // ── Admin Audit Log ───────────────────────────────────────────────────────
+    // Admin Audit Log — immutable
     match /adminAuditLogs/{logId} {
       allow read:           if isAdmin();
       allow create:         if isAdmin();
       allow update, delete: if false;
     }
 
-    // ── Delete Requests ───────────────────────────────────────────────────────
+    // Delete Requests
     match /deleteRequests/{reqId} {
       allow create: if isStaffOrAdmin();
-      allow read:   if isAdmin() || (isStaffOrAdmin() && resource.data.requestedBy == getRootUid());
+      allow read:   if isAdmin() || (isStaffOrAdmin() && resource.data.requestedBy == request.auth.uid);
       allow update: if isAdmin();
       allow delete: if false;
     }
 
-    // ── Books ─────────────────────────────────────────────────────────────────
-    match /books/{bookId} {
-      allow read:           if isSignedIn();
-      allow create, update: if isStaffOrAdmin();
-      allow delete:         if isStaffOrAdmin();
-    }
-
-    // ── Borrows ───────────────────────────────────────────────────────────────
-    match /borrows/{borrowId} {
-      allow read: if isSignedIn() && (resource.data.userId == getRootUid() || isStaffOrAdmin());
-      allow create: if isSignedIn() && (
-        isStaffOrAdmin() ||
-        (request.resource.data.userId == getRootUid() && request.resource.data.status == 'pending')
-      );
-      allow update: if isStaffOrAdmin() || (
-        isSignedIn() &&
-        resource.data.userId == getRootUid() &&
-        resource.data.status == 'pending' &&
-        request.resource.data.status == 'cancelled' &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-      );
-      allow delete: if isAdmin();
-    }
-
-    // ── Logger ────────────────────────────────────────────────────────────────
-    match /logger/{logId} {
-      allow read: if isSignedIn() && (
-        resource.data.uid == getRootUid() ||
-        isStaffOrAdmin()
-      );
-      allow create: if isSignedIn() && (
-        request.resource.data.uid == getRootUid() || isStaffOrAdmin()
-      );
-      allow update: if isSignedIn() && (
-        resource.data.uid == getRootUid() || isStaffOrAdmin()
-      );
-      allow delete: if isAdmin();
-    }
-
-    // ── Penalties ─────────────────────────────────────────────────────────────
-    match /penalties/{penaltyId} {
-      allow read:  if isSignedIn() && (resource.data.userId == getRootUid() || isStaffOrAdmin());
-      allow write: if isStaffOrAdmin();
-    }
-
-    // ── Email queue ───────────────────────────────────────────────────────────
-    match /emailQueue/{docId} {
-      allow read:           if isStaffOrAdmin();
-      allow create:         if isStaffOrAdmin();
-      allow update, delete: if isAdmin();
-    }
-
-    // ── Book Activity Log ─────────────────────────────────────────────────────
-    match /bookLogs/{logId} {
-      allow read:           if isStaffOrAdmin();
-      allow create:         if isStaffOrAdmin();
-      allow update, delete: if false;
-    }
-
-    // ── Notifications ─────────────────────────────────────────────────────────
+    // Notifications
     match /notifications/{notifId} {
-      allow read: if isSignedIn() && (resource.data.toUid == getRootUid() || isStaffOrAdmin());
+      allow read: if isSignedIn() && (resource.data.toUid == request.auth.uid || isStaffOrAdmin());
       allow create: if isStaffOrAdmin();
       allow update: if isStaffOrAdmin() || (
         isSignedIn() &&
-        resource.data.toUid == getRootUid() &&
+        resource.data.toUid == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acknowledged', 'acknowledgedAt'])
       );
       allow delete: if isAdmin();
