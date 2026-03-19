@@ -1,7 +1,7 @@
 // src/pages/VisitorKioskPage.jsx
 // Full-screen kiosk for visitors (students & faculty).
-// No sidebar, no dashboard — purpose of visit + log in/out + edit request.
-import { useState, useEffect } from 'react';
+// No sidebar, no dashboard — purpose of visit + log in/out + edit request + QR code.
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLibrarySession } from '../context/LibrarySessionContext';
 import { useTheme } from '../context/ThemeContext';
@@ -52,7 +52,73 @@ function formatReadable(seconds) {
   return `${h}hr ${m}m`;
 }
 
-// ── Edit Request Modal ────────────────────────────────────────────────────────
+// ── QR Code Generator (canvas-based, no extra package needed) ────────────────
+function QRCodeDisplay({ value, size = 160 }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (!value || !canvasRef.current) return;
+    // Dynamically import qrcode to generate
+    import('qrcode').then(QRCode => {
+      QRCode.toCanvas(canvasRef.current, value, {
+        width: size,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' },
+      }).catch(console.error);
+    }).catch(() => {
+      // Fallback: draw a placeholder if qrcode isn't installed
+      const ctx = canvasRef.current.getContext('2d');
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('QR unavailable', size/2, size/2);
+    });
+  }, [value, size]);
+
+  const handleSave = () => {
+    if (!canvasRef.current) return;
+    const link = document.createElement('a');
+    link.download = 'neu-library-qr.png';
+    link.href = canvasRef.current.toDataURL('image/png');
+    link.click();
+  };
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+      <canvas ref={canvasRef} width={size} height={size} style={{ borderRadius:8, border:'1px solid var(--card-border)', display:'block' }}/>
+      <button onClick={handleSave}
+        style={{ padding:'6px 16px', borderRadius:8, background:'var(--gold-soft)', border:'1px solid var(--gold-border)', color:'var(--gold)', cursor:'pointer', fontFamily:"'IBM Plex Mono',monospace", fontSize:10, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase' }}>
+        Save QR Image
+      </button>
+      <p style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:10, color:'var(--text-dim)', textAlign:'center', maxWidth:160 }}>
+        Save this QR and show it to staff for quick check-in
+      </p>
+    </div>
+  );
+}
+
+// ── Welcome Toast ─────────────────────────────────────────────────────────────
+function WelcomeToast({ name, onDismiss }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 5000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div onClick={onDismiss}
+      style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', zIndex:80, padding:'14px 28px', borderRadius:14, background:'var(--green-soft)', border:'1px solid var(--green-border)', boxShadow:'0 8px 32px rgba(0,0,0,0.25)', cursor:'pointer', animation:'slideUpToast 0.35s ease both', textAlign:'center', whiteSpace:'nowrap' }}>
+      <p style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:'var(--text-primary)', marginBottom:2 }}>
+        Welcome, {name}! 👋
+      </p>
+      <p style={{ fontFamily:"'Poppins',sans-serif", fontSize:13, color:'var(--green)' }}>
+        You can now enter the library. Select your purpose below.
+      </p>
+    </div>
+  );
+}
+
+
 function EditRequestModal({ profile, existingRequest, onClose }) {
   const MONO  = { fontFamily: "'IBM Plex Mono', monospace" };
   const SERIF = { fontFamily: "'Playfair Display', serif" };
@@ -268,6 +334,17 @@ export default function VisitorKioskPage() {
   const [loading,       setLoading]       = useState(false);
   const [showExit,      setShowExit]      = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showWelcome,   setShowWelcome]   = useState(false);
+  const [showQR,        setShowQR]        = useState(false);
+
+  // Show welcome toast once on first load (session transitions from undefined → null)
+  const prevSessionRef = useRef(undefined);
+  useEffect(() => {
+    if (prevSessionRef.current === undefined && session === null) {
+      setShowWelcome(true);
+    }
+    prevSessionRef.current = session;
+  }, [session]);
 
   // Live edit request status for this user
   const [editRequest, setEditRequest] = useState(null); // null = loading, false = none, obj = exists
@@ -490,9 +567,7 @@ export default function VisitorKioskPage() {
               ) : (
                 <button
                   style={editBtnStyle}
-                  onClick={() => {
-                    if (!hasPending) setShowEditModal(true);
-                  }}>
+                  onClick={() => { if (!hasPending) setShowEditModal(true); }}>
                   {editBtnLabel}
                 </button>
               )}
@@ -500,6 +575,29 @@ export default function VisitorKioskPage() {
                 <p style={{ ...MONO, fontSize: 10, color: 'var(--red)', width: '100%', textAlign: 'center' }}>
                   Rejected: {editRequest.rejectionReason}
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* QR Code — shown only when not checked in */}
+          {session === null && userProfile?.qrToken && (
+            <div style={{ marginTop: 20 }}>
+              {!showQR ? (
+                <div style={{ textAlign: 'center' }}>
+                  <button onClick={() => setShowQR(true)}
+                    style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '8px 18px', borderRadius: 9, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    Show My QR Code
+                  </button>
+                </div>
+              ) : (
+                <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '20px 24px', textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
+                  <p style={{ ...MONO, fontSize: 9, letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 12 }}>My Library QR Code</p>
+                  <QRCodeDisplay value={userProfile.qrToken} size={180} />
+                  <button onClick={() => setShowQR(false)}
+                    style={{ marginTop: 12, ...MONO, fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '6px 14px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    Hide
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -542,10 +640,19 @@ export default function VisitorKioskPage() {
         />
       )}
 
+      {/* Welcome toast — shown once when page first loads */}
+      {showWelcome && (
+        <WelcomeToast
+          name={userProfile?.firstName || 'there'}
+          onDismiss={() => setShowWelcome(false)}
+        />
+      )}
+
       <style>{`
-        @keyframes fadeUp   { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes spin     { to{transform:rotate(360deg)} }
-        @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes fadeUp      { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin        { to{transform:rotate(360deg)} }
+        @keyframes pulseDot    { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes slideUpToast{ from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
       `}</style>
     </div>
   );

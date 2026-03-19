@@ -5,7 +5,6 @@ import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 
-
 const PP = { fontFamily:"'Poppins',sans-serif" };
 const SR = { fontFamily:"'Playfair Display',serif" };
 const MN = { fontFamily:"'IBM Plex Mono',monospace" };
@@ -23,70 +22,90 @@ function StatCard({ label, value, color, sub, onClick }) {
   );
 }
 
-
-
 function getGreeting(firstName) {
   const hour = new Date().getHours();
   const name = firstName || 'there';
   const morning   = ['Good morning', 'Morning'];
   const afternoon = ['Good afternoon', 'Afternoon'];
   const evening   = ['Good evening', 'Evening'];
-  const anytime   = ['Hello', 'Hey', 'Hi', 'Greetings', 'Welcome back', 'Howdy', 'Salutations'];
+  const anytime   = ['Hello', 'Hey', 'Hi', 'Greetings', 'Welcome back', 'Howdy'];
   const timePool  = hour < 12 ? morning : hour < 18 ? afternoon : evening;
   const pool      = [...timePool, ...anytime];
-  const word      = pool[Math.floor(Math.random() * pool.length)];
-  return `${word}, ${name}!`;
+  return `${pool[Math.floor(Math.random() * pool.length)]}, ${name}!`;
 }
 
 export default function StaffDashboard() {
   const { userProfile } = useAuth();
   const navigate = useNavigate();
-
-  const [inLib,   setInLib]   = useState(0);
-  const [recent,  setRecent]  = useState([]);
+  const [inLib,  setInLib]  = useState(0);
+  const [recent, setRecent] = useState([]);
 
   useEffect(() => {
-    const u3 = onSnapshot(query(collection(db,'logger'),where('active','==',true)), s => {
+    const u = onSnapshot(query(collection(db,'logger'),where('active','==',true)), s => {
       setInLib(s.size);
       setRecent(s.docs.map(d=>({id:d.id,...d.data()})).slice(0,8));
     });
-    return () => { u3(); };
+    return u;
   }, []);
 
   const greeting = userProfile ? getGreeting(userProfile.firstName) : 'Staff Dashboard';
 
+  const quickActions = [
+    {
+      label: 'Library Logger',
+      sub:   'View active sessions & history',
+      path:  '/logger',
+      color: 'var(--gold)',
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>,
+    },
+    {
+      label: 'Visitor Kiosk',
+      sub:   'Log visitors in/out by ID or QR',
+      path:  '/staff/kiosk',
+      color: 'var(--green)',
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3"/><path d="M17 17v4"/><path d="M21 14v3h-4"/></svg>,
+    },
+  ];
+
   return (
     <div style={{ animation:'fadeUp 0.3s ease both' }}>
-      <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}} @keyframes pulseDot{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+      <style>{`
+        @keyframes fadeUp    { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulseDot  { 0%,100%{opacity:1} 50%{opacity:0.3} }
+      `}</style>
 
+      {/* Greeting */}
       <div style={{ marginBottom:32 }}>
         <p style={{...PP,fontSize:13,fontWeight:600,color:'var(--gold)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Staff Portal</p>
         <h1 style={{...SR,fontSize:'clamp(24px,4vw,32px)',fontWeight:700,color:'var(--text-primary)',marginBottom:6}}>{greeting}</h1>
         <p style={{...PP,fontSize:15,color:'var(--text-muted)'}}>Library operations at a glance.</p>
-        <div style={{marginTop:16,height:1,background:'linear-gradient(90deg,var(--gold-border),transparent)'}} />
-
+        <div style={{marginTop:16,height:1,background:'linear-gradient(90deg,var(--gold-border),transparent)'}}/>
       </div>
 
+      {/* Live stats */}
       <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Live Stats</p>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:28}}>
         <StatCard label="In Library Now" value={inLib} color="green" sub="Currently checked in" onClick={()=>navigate('/logger')} />
       </div>
 
+      {/* Quick actions */}
       <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-dim)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:12}}>Quick Actions</p>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:12,marginBottom:28}}>
-        {[
-          { label:'Library Logger', sub:'View active sessions', path:'/logger', color:'var(--gold)' },
-        ].map(({ label, sub, path, color }) => (
+        {quickActions.map(({ label, sub, path, color, icon }) => (
           <button key={path} onClick={() => navigate(path)}
-            style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderTop:`3px solid ${color}`, borderRadius:12, padding:'18px 20px', textAlign:'left', cursor:'pointer', transition:'all 0.15s', boxShadow:'var(--shadow-card)' }}
+            style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderTop:`3px solid ${color}`, borderRadius:12, padding:'18px 20px', textAlign:'left', cursor:'pointer', transition:'all 0.15s', boxShadow:'var(--shadow-card)', display:'flex', flexDirection:'column', gap:10 }}
             onMouseEnter={e=>e.currentTarget.style.background='var(--surface-hover)'}
             onMouseLeave={e=>e.currentTarget.style.background='var(--card)'}>
-            <p style={{...PP,fontSize:15,fontWeight:600,color:'var(--text-primary)',marginBottom:4}}>{label}</p>
-            <p style={{...PP,fontSize:13,color:'var(--text-muted)'}}>{sub}</p>
+            <span style={{ color, opacity:0.8 }}>{icon}</span>
+            <div>
+              <p style={{...PP,fontSize:15,fontWeight:600,color:'var(--text-primary)',marginBottom:4}}>{label}</p>
+              <p style={{...PP,fontSize:13,color:'var(--text-muted)'}}>{sub}</p>
+            </div>
           </button>
         ))}
       </div>
 
+      {/* Currently in library */}
       {recent.length > 0 && (
         <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:14, overflow:'hidden', boxShadow:'var(--shadow-card)' }}>
           <div style={{ padding:'14px 20px', borderBottom:'1px solid var(--divider)', display:'flex', alignItems:'center', gap:10 }}>
@@ -103,7 +122,6 @@ export default function StaffDashboard() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

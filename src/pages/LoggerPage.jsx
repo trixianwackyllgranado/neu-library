@@ -64,9 +64,12 @@ function exportHistoryCSV(rows, userMap) {
   const headers = ['Student','ID Number','Course','Purpose','Entry','Exit','Duration','Status'];
   const data = rows.map(r => {
     const u = userMap[r.uid];
+    const name   = u ? `${u.lastName}, ${u.firstName}` : (r.studentName || '—');
+    const idNum  = u?.idNumber ?? r.studentIdNumber ?? '—';
+    const course = u?.course   ?? r.studentCourse   ?? '—';
     const secs = calcDurationSecs(r.entryTime, r.exitTime);
     return [
-      u ? `${u.lastName}, ${u.firstName}` : '—', u?.idNumber ?? '—', u?.course ?? '—',
+      name, idNum, course,
       r.purpose ?? '—', fmtDt(r.entryTime), fmtDt(r.exitTime),
       secs != null ? formatReadable(secs) : '—',
       r.forcedLogout ? 'Force-Exited' : 'Exited',
@@ -473,26 +476,35 @@ export default function LoggerPage() {
                         <tr><td colSpan={7} style={{ ...tdSt, textAlign: 'center', color: 'var(--text-body)', ...S, fontSize: '11px', padding: '24px' }}>No students match your filters.</td></tr>
                       ) : filteredLive.map(s => {
                         const user = userMap[s.uid];
-                        const name = user ? `${user.lastName}, ${user.firstName}` : '—';
+                        // Use live userMap data if available; fall back to snapshot frozen at check-in
+                        const name     = user ? `${user.lastName}, ${user.firstName}` : (s.studentName || '—');
+                        const idNum    = user?.idNumber     ?? s.studentIdNumber ?? '—';
+                        const course   = user?.course       ?? s.studentCourse   ?? '—';
+                        const isDeleted = !user && !!s.studentName;
                         const entryDate = s.entryTime?.toDate?.();
                         return (
                           <tr key={s.id} className="log-row">
                             <td style={tdSt}>
                               <button
                                 onClick={() => navigate('/staff/students', { state: { openStudentId: s.uid } })}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gold)', fontSize: '13px', fontWeight: 600, textAlign: 'left', padding: 0, textDecoration: 'none' }}
-                                onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-                                onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>
+                                style={{ background: 'none', border: 'none', cursor: isDeleted ? 'default' : 'pointer', color: isDeleted ? 'var(--text-muted)' : 'var(--gold)', fontSize: '13px', fontWeight: 600, textAlign: 'left', padding: 0, textDecoration: 'none' }}
+                                onMouseEnter={e => { if (!isDeleted) e.currentTarget.style.textDecoration = 'underline'; }}
+                                onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}>
                                 {name}
                               </button>
+                              {isDeleted && (
+                                <span style={{ ...S, fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', marginLeft: '6px', padding: '2px 6px', borderRadius: '20px', background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', verticalAlign: 'middle' }}>
+                                  Deleted
+                                </span>
+                              )}
                               {s.webSignedOut && (
                                 <span style={{ ...S, fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', marginLeft: '8px', padding: '2px 7px', borderRadius: '20px', background: 'var(--gold-soft)', border: '1px solid rgba(245,158,11,0.25)', color: 'var(--gold)', verticalAlign: 'middle' }}>
                                   Web Signed Out
                                 </span>
                               )}
                             </td>
-                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{user?.idNumber ?? '—'}</td>
-                            <td style={{ ...tdSt, fontSize: '12px', color: 'var(--text-muted)' }}>{user?.course ?? '—'}</td>
+                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{idNum}</td>
+                            <td style={{ ...tdSt, fontSize: '12px', color: 'var(--text-muted)' }}>{course}</td>
                             <td style={tdSt}>
                               <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--badge-gray-bg)', border: '1px solid rgba(100,116,139,0.2)', color: 'var(--text-muted)' }}>
                                 {s.purpose}
@@ -639,19 +651,24 @@ export default function LoggerPage() {
                     <tbody>
                       {filteredHistory.map(r => {
                         const u = userMap[r.uid];
+                        // Fallback to identity snapshot if user was deleted
+                        const name   = u ? `${u.lastName}, ${u.firstName}` : (r.studentName || '—');
+                        const idNum  = u?.idNumber  ?? r.studentIdNumber ?? '—';
+                        const course = u?.course    ?? r.studentCourse   ?? '—';
+                        const isDeleted = !u && !!r.studentName;
                         const secs = calcDurationSecs(r.entryTime, r.exitTime);
                         return (
                           <tr key={r.id} className="log-row">
                             <td style={tdSt}>
                               <button onClick={() => navigate('/staff/students', { state: { openStudentId: r.uid } })}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gold)', fontSize: '13px', fontWeight: 600, textAlign: 'left', padding: 0 }}
-                                onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-                                onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>
-                                {u ? `${u.lastName}, ${u.firstName}` : '—'}
+                                style={{ background: 'none', border: 'none', cursor: isDeleted ? 'default' : 'pointer', color: isDeleted ? 'var(--text-muted)' : 'var(--gold)', fontSize: '13px', fontWeight: 600, textAlign: 'left', padding: 0 }}
+                                onMouseEnter={e => { if (!isDeleted) e.currentTarget.style.textDecoration = 'underline'; }}
+                                onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}>
+                                {name}{isDeleted && <span style={{ ...S, fontSize: '8px', marginLeft: 6, padding: '2px 6px', borderRadius: 20, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', verticalAlign: 'middle' }}>Deleted</span>}
                               </button>
                             </td>
-                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{u?.idNumber ?? '—'}</td>
-                            <td style={{ ...tdSt, fontSize: '12px', color: 'var(--text-muted)' }}>{u?.course ?? '—'}</td>
+                            <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{idNum}</td>
+                            <td style={{ ...tdSt, fontSize: '12px', color: 'var(--text-muted)' }}>{course}</td>
                             <td style={tdSt}>
                               <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--badge-gray-bg)', border: '1px solid rgba(100,116,139,0.2)', color: 'var(--text-muted)' }}>
                                 {r.purpose}

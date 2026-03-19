@@ -17,6 +17,7 @@ const Ico = {
   users:        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>,
   reports:      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
   editRequests: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  kiosk:        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3"/><path d="M17 17v4"/><path d="M21 14v3h-4"/></svg>,
   menu:         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>,
   close:        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
   signout:      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
@@ -106,12 +107,14 @@ export default function AppLayout({ children }) {
   const NAV = {
     visitor: [],
     staff: [
-      { to: '/dashboard', label: 'Dashboard',      icon: Ico.dashboard },
-      { to: '/logger',    label: 'Library Logger', icon: Ico.logger    },
+      { to: '/dashboard',   label: 'Dashboard',      icon: Ico.dashboard },
+      { to: '/logger',      label: 'Library Logger', icon: Ico.logger    },
+      { to: '/staff/kiosk', label: 'Visitor Kiosk',  icon: Ico.kiosk     },
     ],
     admin: [
       { to: '/dashboard',             label: 'Dashboard',      icon: Ico.dashboard,    badge: 0 },
       { to: '/logger',                label: 'Library Logger', icon: Ico.logger,       badge: 0 },
+      { to: '/staff/kiosk',           label: 'Visitor Kiosk',  icon: Ico.kiosk,        badge: 0 },
       { to: '/admin/users',           label: 'User Management',icon: Ico.users,        badge: 0 },
       { to: '/admin/edit-requests',   label: 'Edit Requests',  icon: Ico.editRequests, badge: pendingEditCount },
       { to: '/admin/reports',         label: 'Reports',        icon: Ico.reports,      badge: 0 },
