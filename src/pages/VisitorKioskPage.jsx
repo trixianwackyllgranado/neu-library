@@ -2,7 +2,8 @@
 // Full-screen kiosk for visitors (students & faculty).
 // No sidebar, no dashboard — purpose of visit + log in/out + edit request + QR code.
 import { useState, useEffect, useRef } from 'react';
-import { useAuth, isPrimeAdminEmail } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useLibrarySession } from '../context/LibrarySessionContext';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -338,6 +339,7 @@ export default function VisitorKioskPage() {
   const { userProfile, logout, canSwitchRole, effectiveRole, switchRole } = useAuth();
   const { session, elapsed, checkIn, checkOut } = useLibrarySession();
   const { dark, toggle } = useTheme();
+  const navigate = useNavigate();
 
   // Admin previewing as visitor — read-only mode, no actual check-ins
   const isAdminPreview = canSwitchRole && effectiveRole === 'visitor' && userProfile?.role === 'admin';
@@ -514,7 +516,7 @@ export default function VisitorKioskPage() {
               </span>
             </div>
             <button
-              onClick={() => switchRole('admin')}
+              onClick={() => { switchRole('admin'); navigate('/dashboard'); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '7px 16px', borderRadius: 8,
