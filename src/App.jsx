@@ -5,12 +5,12 @@ import { LibrarySessionProvider } from './context/LibrarySessionContext';
 import { RequireAuth, RequireRole, RequireGuest } from './components/shared/RouteGuard';
 import AppLayout from './components/shared/AppLayout';
 
-import LoginPage          from './pages/LoginPage';
-import RegisterPage       from './pages/RegisterPage';
-import DashboardPage      from './pages/DashboardPage';
-import LoggerPage         from './pages/LoggerPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import DashboardPage from './pages/DashboardPage';
+import LoggerPage from './pages/LoggerPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
-import ReportsPage        from './pages/admin/ReportsPage';
+import ReportsPage from './pages/admin/ReportsPage';
 
 function Layout({ children }) {
   return <AppLayout>{children}</AppLayout>;
@@ -23,7 +23,7 @@ export default function App() {
         <LibrarySessionProvider>
           <Routes>
             {/* Public */}
-            <Route path="/login"    element={<RequireGuest><LoginPage /></RequireGuest>} />
+            <Route path="/login" element={<RequireGuest><LoginPage /></RequireGuest>} />
             <Route path="/register" element={<RequireGuest><RegisterPage /></RequireGuest>} />
 
             {/* All authenticated users → dashboard (role-based rendering inside) */}
