@@ -1,6 +1,6 @@
 // src/pages/LoggerPage.jsx
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   collection, query, where, onSnapshot, getDocs, limit,
   addDoc, updateDoc, doc, serverTimestamp
@@ -218,6 +218,7 @@ const inputSt = {
 
 export default function LoggerPage() {
   const { userProfile, currentUser } = useAuth();
+  const location = useLocation();
   const { session, elapsed, checkIn, checkOut, forceCheckOut } = useLibrarySession();
   const navigate = useNavigate();
 
@@ -227,7 +228,7 @@ export default function LoggerPage() {
   const [liveSessions, setLiveSessions] = useState([]);
   const [userMap,      setUserMap]      = useState({});
   const [confirm,      setConfirm]      = useState(null);
-  const [activeTab,    setActiveTab]    = useState('live');
+  const [activeTab,    setActiveTab]    = useState(location.state?.initialTab || 'live');
   const [callTarget,   setCallTarget]   = useState(null);
   const [activeNotifMap, setActiveNotifMap] = useState({});
 

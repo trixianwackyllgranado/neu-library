@@ -754,7 +754,8 @@ function ProfilePanel({ user, myProfile, pendingEditUids, onClose, showToast, on
 export default function UserManagementPage() {
   const { userProfile: myProfile } = useAuth();
   const location = useLocation();
-  const initRole = location.state?.filterRole || 'all';
+  const initRole        = location.state?.filterRole        || 'all';
+  const initVisitorType = location.state?.filterVisitorType || 'all';
 
   const [users,         setUsers]         = useState([]);
   const [auditLogs,     setAuditLogs]     = useState([]);
@@ -763,9 +764,10 @@ export default function UserManagementPage() {
   const [loading,       setLoading]       = useState(true);
   const [toast,         setToast]         = useState(null);
 
-  const [search,     setSearch]     = useState('');
-  const [roleFilter, setRoleFilter] = useState(initRole);
-  const [sortBy,     setSortBy]     = useState('name');
+  const [search,           setSearch]           = useState('');
+  const [roleFilter,       setRoleFilter]       = useState(initRole);
+  const [visitorTypeFilter, setVisitorTypeFilter] = useState(initVisitorType);
+  const [sortBy,           setSortBy]           = useState('name');
 
   const [auditOpen,         setAuditOpen]         = useState(false);
   const [staffInviteOpen,   setStaffInviteOpen]   = useState(false);
@@ -811,7 +813,9 @@ export default function UserManagementPage() {
         `${u.firstName} ${u.lastName} ${u.idNumber} ${u.email} ${u.course||''} ${u.college||''}`
           .toLowerCase().includes(search.toLowerCase());
       const mr = roleFilter==='all' || u.role===roleFilter;
-      return ms && mr;
+      const mv = visitorTypeFilter==='all' || (u.role==='visitor' && u.visitorType===visitorTypeFilter) ||
+                 (visitorTypeFilter==='student' && u.role==='visitor' && u.visitorType!=='faculty');
+      return ms && mr && mv;
     })
     .sort((a,b) => {
       if(sortBy==='role')    { const o={admin:0,staff:1,visitor:2}; return (o[a.role]??3)-(o[b.role]??3); }
@@ -890,6 +894,17 @@ export default function UserManagementPage() {
         </div>
       </div>
 
+      {visitorTypeFilter !== 'all' && (
+        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+          <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:10, color:'var(--text-dim)', letterSpacing:'0.1em', textTransform:'uppercase' }}>
+            Filtered: {visitorTypeFilter === 'student' ? 'Students only' : 'Faculty only'}
+          </span>
+          <button onClick={() => setVisitorTypeFilter('all')}
+            style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', padding:'3px 10px', borderRadius:6, background:'var(--surface)', border:'1px solid var(--card-border)', color:'var(--text-dim)', cursor:'pointer' }}>
+            Clear ×
+          </button>
+        </div>
+      )}
       {(search || roleFilter!=='all') && (
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
           <p style={{...MN,fontSize:11,color:'var(--text-muted)'}}>

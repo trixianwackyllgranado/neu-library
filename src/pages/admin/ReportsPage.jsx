@@ -1,6 +1,7 @@
 // src/pages/admin/ReportsPage.jsx
 // Cleaned: book catalog and borrowing sections removed — visitor/logger stats only
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import {
@@ -19,20 +20,51 @@ function downloadCSV(filename, headers, rows) {
   URL.revokeObjectURL(url);
 }
 
-function StatCard({ label, value, accent }) {
-  const color = accent === 'red' ? 'var(--red)' : accent === 'gold' ? 'var(--gold)' : accent === 'green' ? 'var(--green)' : 'var(--blue)';
+function StatCard({ label, value, accent, onClick, hint }) {
+  const color = accent === 'red' ? 'var(--red)' : accent === 'gold' ? 'var(--gold)' : accent === 'green' ? 'var(--green)' : accent === 'dim' ? 'var(--text-dim)' : 'var(--blue)';
+  const clickable = !!onClick;
   return (
-    <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderLeft:`3px solid ${color}`, borderRadius:12, padding:'18px 20px', boxShadow:'var(--shadow-card)' }}>
+    <div
+      onClick={onClick}
+      title={hint}
+      style={{
+        background:'var(--card)', border:'1px solid var(--card-border)',
+        borderLeft:`3px solid ${color}`, borderRadius:12, padding:'18px 20px',
+        boxShadow:'var(--shadow-card)', cursor: clickable ? 'pointer' : 'default',
+        transition: 'all 0.15s', position:'relative',
+      }}
+      onMouseEnter={e => { if (clickable) { e.currentTarget.style.background='var(--surface-hover)'; e.currentTarget.style.borderColor='var(--gold-border)'; }}}
+      onMouseLeave={e => { if (clickable) { e.currentTarget.style.background='var(--card)'; e.currentTarget.style.borderColor='var(--card-border)'; }}}
+    >
       <p style={{ fontFamily:"'Poppins',sans-serif", fontSize:11, fontWeight:600, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>{label}</p>
       <p style={{ fontFamily:"'Playfair Display',serif", fontSize:36, fontWeight:700, color:'var(--text-primary)', lineHeight:1 }}>{value}</p>
+      {clickable && (
+        <span style={{ position:'absolute', bottom:10, right:14, fontFamily:"'IBM Plex Mono',monospace", fontSize:9, letterSpacing:'0.1em', color:'var(--text-dim)', textTransform:'uppercase' }}>
+          View →
+        </span>
+      )}
     </div>
   );
 }
 
-function ChartCard({ title, subtitle, children }) {
+function ChartCard({ title, subtitle, children, onClick, hint }) {
+  const clickable = !!onClick;
   return (
-    <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:14, padding:'20px 24px', boxShadow:'var(--shadow-card)' }}>
-      <p style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:'var(--text-primary)', marginBottom: subtitle ? 2 : 16 }}>{title}</p>
+    <div
+      onClick={onClick}
+      title={hint}
+      style={{
+        background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:14,
+        padding:'20px 24px', boxShadow:'var(--shadow-card)',
+        cursor: clickable ? 'pointer' : 'default', transition:'all 0.15s', position:'relative',
+      }}
+      onMouseEnter={e => { if (clickable) { e.currentTarget.style.background='var(--surface-hover)'; e.currentTarget.style.borderColor='var(--gold-border)'; }}}
+      onMouseLeave={e => { if (clickable) { e.currentTarget.style.background='var(--card)'; e.currentTarget.style.borderColor='var(--card-border)'; }}}
+    >
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom: subtitle ? 2 : 16 }}>
+        <p style={{ fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700, color:'var(--text-primary)' }}>{title}</p>
+        {clickable && <span style={{ fontFamily:"'IBM Plex Mono',monospace", fontSize:9, letterSpacing:'0.1em', color:'var(--text-dim)', textTransform:'uppercase', flexShrink:0, marginLeft:8, marginTop:3 }}>View →</span>}
+      </div>
       {subtitle && <p style={{ fontFamily:"'Poppins',sans-serif", fontSize:12, color:'var(--text-dim)', marginBottom:16 }}>{subtitle}</p>}
       {children}
     </div>
@@ -57,6 +89,8 @@ export default function ReportsPage() {
   const [activityUser,    setActivityUser]    = useState('');
   const [studentSearch,   setStudentSearch]   = useState('');
   const [studentDropOpen, setStudentDropOpen] = useState(false);
+
+  const navigate = useNavigate();
 
   const fetchAll = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -255,11 +289,16 @@ export default function ReportsPage() {
           <div>
             <p style={{ ...MN, fontSize:10, letterSpacing:'0.14em', textTransform:'uppercase', color:'var(--text-dim)', marginBottom:12 }}>Users</p>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12 }}>
-              <StatCard label="Total Users"      value={stats.totalUsers}  />
-              <StatCard label="Total Visitors"   value={stats.visitors}    accent="blue"  />
-              <StatCard label="Student Visitors" value={stats.students}    accent="blue"  />
-              <StatCard label="Faculty Visitors" value={stats.faculty}     accent="blue"  />
-              <StatCard label="Staff & Admin"    value={stats.staffAdmins} accent="gold"  />
+              <StatCard label="Total Users"      value={stats.totalUsers}  hint="View all users"
+                onClick={() => navigate('/admin/users', { state: { filterRole: 'all' } })} />
+              <StatCard label="Total Visitors"   value={stats.visitors}    accent="blue"   hint="View all visitors"
+                onClick={() => navigate('/admin/users', { state: { filterRole: 'visitor' } })} />
+              <StatCard label="Student Visitors" value={stats.students}    accent="blue"   hint="View student visitors"
+                onClick={() => navigate('/admin/users', { state: { filterRole: 'visitor', filterVisitorType: 'student' } })} />
+              <StatCard label="Faculty Visitors" value={stats.faculty}     accent="blue"   hint="View faculty visitors"
+                onClick={() => navigate('/admin/users', { state: { filterRole: 'visitor', filterVisitorType: 'faculty' } })} />
+              <StatCard label="Staff & Admin"    value={stats.staffAdmins} accent="gold"   hint="View staff and admins"
+                onClick={() => navigate('/admin/users', { state: { filterRole: 'staff' } })} />
             </div>
           </div>
 
@@ -273,14 +312,16 @@ export default function ReportsPage() {
               </button>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:12 }}>
-              <StatCard label="Total Log-Ins"    value={stats.totalSessions}  accent="blue"  />
-              <StatCard label="Currently Inside" value={stats.activeSessions} accent="green" />
+              <StatCard label="Total Log-Ins"    value={stats.totalSessions}  accent="blue"  hint="View visit history"
+                onClick={() => navigate('/admin/logger', { state: { initialTab: 'history' } })} />
+              <StatCard label="Currently Inside" value={stats.activeSessions} accent="green" hint="View live sessions"
+                onClick={() => navigate('/admin/logger', { state: { initialTab: 'live' } })} />
             </div>
           </div>
 
           {/* Charts */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:16 }}>
-            <ChartCard title="Visitor Log-Ins per Day" subtitle="Last 14 days">
+            <ChartCard title="Visitor Log-Ins per Day" subtitle="Last 14 days" hint="View visit history" onClick={() => navigate('/admin/logger', { state: { initialTab: 'history' } })}>
               <ResponsiveContainer width="100%" height={200}>
                 <LineChart data={sessionsByDay} margin={{ top:4, right:8, left:-16, bottom:0 }}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -292,7 +333,7 @@ export default function ReportsPage() {
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Visit Purpose Distribution">
+            <ChartCard title="Visit Purpose Distribution" hint="View visit history by purpose" onClick={() => navigate('/admin/logger', { state: { initialTab: 'history' } })}>
               {purposeDist.length === 0
                 ? <p style={{ ...PP, fontSize:13, color:'var(--text-dim)', textAlign:'center', padding:'32px 0' }}>No data yet.</p>
                 : (
@@ -310,7 +351,7 @@ export default function ReportsPage() {
             </ChartCard>
 
             {collegeDist.length > 0 && (
-              <ChartCard title="Visitors by College">
+              <ChartCard title="Visitors by College" hint="View visitors in User Management" onClick={() => navigate('/admin/users', { state: { filterRole: 'visitor' } })}>
                 <ResponsiveContainer width="100%" height={Math.max(200, collegeDist.length * 28)}>
                   <BarChart data={collegeDist} layout="vertical" margin={{ top:0, right:16, left:8, bottom:0 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
@@ -324,7 +365,7 @@ export default function ReportsPage() {
             )}
 
             {visitorTypeDist.length > 0 && (
-              <ChartCard title="Student vs Faculty">
+              <ChartCard title="Student vs Faculty" hint="View visitors in User Management" onClick={() => navigate('/admin/users', { state: { filterRole: 'visitor' } })}>
                 <div style={{ display:'flex', flexDirection:'column', gap:12, padding:'8px 0' }}>
                   {visitorTypeDist.map(({ name, value }) => {
                     const total = visitorTypeDist.reduce((a,b) => a + b.value, 0);
