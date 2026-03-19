@@ -336,7 +336,7 @@ function EditRequestModal({ profile, existingRequest, onClose }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function VisitorKioskPage() {
-  const { userProfile, logout, canSwitchRole, effectiveRole, switchRole } = useAuth();
+  const { userProfile, logout, canSwitchRole, effectiveRole, switchRole, refreshProfile } = useAuth();
   const { session, elapsed, checkIn, checkOut } = useLibrarySession();
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
@@ -359,6 +359,7 @@ export default function VisitorKioskPage() {
     if (userProfile?.role !== 'visitor') return;
     const token = generateQRToken();
     setDoc(doc(db, 'users', userProfile.uid), { qrToken: token }, { merge: true })
+      .then(() => refreshProfile?.())
       .catch(console.error);
   }, [userProfile?.uid, userProfile?.qrToken, userProfile?.role]);
 

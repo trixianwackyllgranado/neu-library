@@ -158,6 +158,11 @@ export function AuthProvider({ children }) {
 
   // ── Register (visitor self-registration only) ─────────────────────────────
   const register = async ({ uid, email, firstName, lastName, middleInitial, idNumber, role, visitorType, college, course }) => {
+    // Generate QR token at registration time so it's immediately available
+    const qrToken = (role === 'visitor')
+      ? (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${uid}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`)
+      : null;
+
     await setDoc(doc(db, 'users', uid), {
       uid,
       email:         email.trim().toLowerCase(),
@@ -169,6 +174,7 @@ export function AuthProvider({ children }) {
       visitorType:   role === 'visitor' ? (visitorType || 'student') : null,
       college:       college?.trim().toUpperCase() || null,
       course:        course?.trim().toUpperCase() || null,
+      ...(qrToken ? { qrToken } : {}),
       createdAt:     serverTimestamp(),
     });
     setPendingGoogleUser(null);
