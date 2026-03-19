@@ -2,7 +2,7 @@
 // Full-screen kiosk for visitors (students & faculty).
 // No sidebar, no dashboard — purpose of visit + log in/out + edit request + QR code.
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, isPrimeAdminEmail } from '../context/AuthContext';
 import { useLibrarySession } from '../context/LibrarySessionContext';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -335,9 +335,12 @@ function EditRequestModal({ profile, existingRequest, onClose }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function VisitorKioskPage() {
-  const { userProfile, logout } = useAuth();
+  const { userProfile, logout, canSwitchRole, effectiveRole, switchRole } = useAuth();
   const { session, elapsed, checkIn, checkOut } = useLibrarySession();
   const { dark, toggle } = useTheme();
+
+  // Admin previewing as visitor — read-only mode, no actual check-ins
+  const isAdminPreview = canSwitchRole && effectiveRole === 'visitor' && userProfile?.role === 'admin';
 
   const [purpose,       setPurpose]       = useState('');
   const [error,         setError]         = useState('');
@@ -407,6 +410,7 @@ export default function VisitorKioskPage() {
     : visitorTypeLabel;
 
   const handleCheckIn = async () => {
+    if (isAdminPreview) return; // Admin preview — don't create real log entries
     if (!purpose) { setError('Please select your purpose of visit.'); return; }
     setError(''); setLoading(true);
     try { await checkIn(purpose); }
@@ -467,7 +471,7 @@ export default function VisitorKioskPage() {
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: session ? 'var(--green)' : 'var(--text-dim)', flexShrink: 0, animation: session ? 'pulseDot 2s ease infinite' : 'none' }} />
             <span style={{ ...PP, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{displayName}</span>
             <span style={{ ...MONO, fontSize: 9, color: 'var(--text-dim)' }}>·</span>
-            <span style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)' }}>{roleLabel}</span>
+            <span style={{ ...MONO, fontSize: 9, color: isAdminPreview ? '#60a5fa' : 'var(--text-muted)' }}>{isAdminPreview ? 'Admin Preview' : roleLabel}</span>
           </div>
           {/* Theme */}
           <button onClick={toggle} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--card-border)', background: 'var(--surface)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -485,7 +489,51 @@ export default function VisitorKioskPage() {
       </div>
 
       {/* Main content — fills remaining height, no scroll */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflow: 'hidden', position: 'relative' }}>
+
+        {/* ── Admin Preview Banner + Back to Admin ── */}
+        {isAdminPreview && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20,
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.08) 100%)',
+            borderBottom: '1px solid rgba(59,130,246,0.3)',
+            padding: '10px 20px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 12,
+            animation: 'fadeUp 0.25s ease both',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span style={{ ...PP, fontSize: 12, fontWeight: 600, color: '#60a5fa' }}>
+                Admin Preview Mode
+              </span>
+              <span style={{ ...PP, fontSize: 11, color: 'rgba(96,165,250,0.7)' }}>
+                — This is what visitors see. Check-in is disabled.
+              </span>
+            </div>
+            <button
+              onClick={() => switchRole('admin')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 16px', borderRadius: 8,
+                background: 'rgba(59,130,246,0.2)', border: '1px solid rgba(59,130,246,0.4)',
+                color: '#60a5fa', cursor: 'pointer',
+                ...MN, fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.3)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.2)'; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+              </svg>
+              Back to Admin
+            </button>
+          </div>
+        )}
         <div style={{ width: '100%', maxWidth: 860, display: 'grid', gridTemplateColumns: session !== undefined && userProfile?.role === 'visitor' && session === null && userProfile?.qrToken ? 'minmax(0,1.4fr) minmax(0,1fr)' : '1fr', gap: 12, alignItems: 'start', animation: 'fadeUp 0.3s ease both' }}>
 
           {/* ── LEFT COLUMN: main check-in card ── */}
@@ -559,9 +607,9 @@ export default function VisitorKioskPage() {
                   ))}
                 </div>
 
-                <button onClick={handleCheckIn} disabled={loading || !purpose}
-                  style={{ width: '100%', padding: '12px', borderRadius: 10, background: (purpose && !loading) ? 'var(--green-soft)' : 'var(--surface)', border: `1px solid ${(purpose && !loading) ? 'var(--green-border)' : 'var(--card-border)'}`, color: (purpose && !loading) ? 'var(--green)' : 'var(--text-dim)', cursor: (purpose && !loading) ? 'pointer' : 'not-allowed', ...MONO, fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, opacity: (purpose && !loading) ? 1 : 0.5, transition: 'all 0.15s' }}>
-                  {loading ? 'Logging in…' : 'Log In to Library'}
+                <button onClick={handleCheckIn} disabled={loading || !purpose || isAdminPreview}
+                  style={{ width: '100%', padding: '12px', borderRadius: 10, background: isAdminPreview ? 'rgba(59,130,246,0.08)' : (purpose && !loading) ? 'var(--green-soft)' : 'var(--surface)', border: `1px solid ${isAdminPreview ? 'rgba(59,130,246,0.25)' : (purpose && !loading) ? 'var(--green-border)' : 'var(--card-border)'}`, color: isAdminPreview ? 'rgba(96,165,250,0.6)' : (purpose && !loading) ? 'var(--green)' : 'var(--text-dim)', cursor: (purpose && !loading && !isAdminPreview) ? 'pointer' : 'not-allowed', ...MONO, fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, opacity: (purpose && !loading && !isAdminPreview) ? 1 : 0.5, transition: 'all 0.15s' }}>
+                  {isAdminPreview ? 'Check-in disabled in preview' : loading ? 'Logging in…' : 'Log In to Library'}
                 </button>
               </div>
             </div>
