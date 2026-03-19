@@ -47,10 +47,10 @@ export default function RegisterPage() {
   const [loading,       setLoading]       = useState(false);
   const [done,          setDone]          = useState(false);
 
-  // Staff invite detection — runs once on mount
+  // Invite detection — checks for any pending invite (staff OR admin)
   const [checkingInvite, setCheckingInvite] = useState(true);
-  const [isStaffInvite,  setIsStaffInvite]  = useState(false);
-  const [staffInviteId,  setStaffInviteId]  = useState(null);
+  const [inviteRole,     setInviteRole]     = useState(null);  // null | 'staff' | 'admin'
+  const [inviteId,       setInviteId]       = useState(null);
 
   useEffect(() => {
     if (!email) { setCheckingInvite(false); return; }
@@ -62,8 +62,9 @@ export default function RegisterPage() {
           where('status', '==', 'pending')
         ));
         if (!snap.empty) {
-          setIsStaffInvite(true);
-          setStaffInviteId(snap.docs[0].id);
+          const data = snap.docs[0].data();
+          setInviteRole(data.role || 'staff');
+          setInviteId(snap.docs[0].id);
         }
       } catch (_) {}
       setCheckingInvite(false);
@@ -72,8 +73,12 @@ export default function RegisterPage() {
 
   if (!pendingGoogleUser) return null;
 
+  const isInvited       = !!inviteRole;
   const selectedCollege = COLLEGES.find(c => c.name === college);
   const courses         = selectedCollege?.courses || [];
+
+  const roleColor = inviteRole === 'admin' ? 'var(--red)' : 'var(--gold)';
+  const accentColor = isInvited ? roleColor : 'var(--blue)';
 
   const inputSt = {
     width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)',
@@ -90,7 +95,8 @@ export default function RegisterPage() {
     if (!ID_REGEX.test(idNumber)) { setError('ID Number must be in format YY-NNNNN-NNN.'); return; }
     setLoading(true);
     try {
-      const role = isStaffInvite ? 'staff' : 'visitor';
+      // Invited accounts get their assigned role; everyone else is a visitor
+      const role = isInvited ? inviteRole : 'visitor';
       await register({
         uid:          pendingGoogleUser.uid,
         email,
@@ -103,10 +109,10 @@ export default function RegisterPage() {
         college:      college.trim() || null,
         course:       course.trim() || null,
       });
-      // Mark staff invite as claimed
-      if (isStaffInvite && staffInviteId) {
+      // Mark invite as claimed
+      if (isInvited && inviteId) {
         try {
-          await updateDoc(doc(db, 'staffInvites', staffInviteId), {
+          await updateDoc(doc(db, 'staffInvites', inviteId), {
             status:    'claimed',
             claimedBy: pendingGoogleUser.uid,
             claimedAt: serverTimestamp(),
@@ -141,8 +147,6 @@ export default function RegisterPage() {
     );
   }
 
-  const accentColor = isStaffInvite ? 'var(--gold)' : 'var(--blue)';
-
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, var(--bg-base) 0%, var(--bg-mid) 55%, var(--bg-top) 100%)', display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 3, background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)' }} />
@@ -170,7 +174,6 @@ export default function RegisterPage() {
         <div style={{ width: '100%', maxWidth: 520, animation: 'fadeUp 0.35s ease both' }}>
 
           {checkingInvite ? (
-            /* Verifying invite state */
             <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '48px 32px', textAlign: 'center', boxShadow: 'var(--shadow-modal)' }}>
               <div style={{ width: 28, height: 28, border: '2px solid var(--gold-border)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
               <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)' }}>Verifying your account…</p>
@@ -183,20 +186,28 @@ export default function RegisterPage() {
                 {/* Header */}
                 <div style={{ marginBottom: 24 }}>
                   <p style={{ ...MONO, fontSize: 9, letterSpacing: '0.22em', color: accentColor, textTransform: 'uppercase', marginBottom: 6 }}>
-                    {isStaffInvite ? 'Staff Registration' : 'Visitor Registration'}
+                    {inviteRole === 'admin' ? 'Admin Registration' : isInvited ? 'Staff Registration' : 'Visitor Registration'}
                   </p>
                   <h1 style={{ ...SERIF, fontSize: 26, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Create Your Account</h1>
                   <p style={{ ...PP, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                    {isStaffInvite ? "You've been invited to join as Library Staff." : 'Completing registration for:'}
+                    {inviteRole === 'admin'
+                      ? "You've been added as a Library Administrator."
+                      : isInvited
+                      ? "You've been invited to join as Library Staff."
+                      : 'Completing registration for:'}
                   </p>
                   <p style={{ ...MONO, fontSize: 12, color: 'var(--gold)', marginTop: 4 }}>{email}</p>
                 </div>
 
-                {/* Staff invite banner */}
-                {isStaffInvite && (
-                  <div style={{ background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', borderRadius: 10, padding: '10px 14px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    <p style={{ ...MONO, fontSize: 11, color: 'var(--gold)' }}>Staff invite verified — your account will be registered as Library Staff</p>
+                {/* Invite banner */}
+                {isInvited && (
+                  <div style={{ background: inviteRole === 'admin' ? 'var(--red-soft)' : 'var(--gold-soft)', border: `1px solid ${inviteRole === 'admin' ? 'var(--red-border)' : 'var(--gold-border)'}`, borderRadius: 10, padding: '10px 14px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={roleColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <p style={{ ...MONO, fontSize: 11, color: roleColor }}>
+                      {inviteRole === 'admin'
+                        ? 'Admin invite verified — your account will have full administrator access'
+                        : 'Staff invite verified — your account will be registered as Library Staff'}
+                    </p>
                   </div>
                 )}
 
@@ -208,15 +219,12 @@ export default function RegisterPage() {
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-                  {/* Visitor type — only for non-staff-invite users */}
-                  {!isStaffInvite && (
+                  {/* Visitor type — only for uninvited users */}
+                  {!isInvited && (
                     <div>
                       <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 8, fontWeight: 600 }}>I am a…</label>
                       <div style={{ display: 'flex', gap: 8 }}>
-                        {[
-                          { key: 'student', label: 'Student' },
-                          { key: 'faculty', label: 'Faculty' },
-                        ].map(({ key, label }) => (
+                        {[{ key: 'student', label: 'Student' }, { key: 'faculty', label: 'Faculty' }].map(({ key, label }) => (
                           <button key={key} type="button" onClick={() => setVisitorType(key)}
                             style={{ flex: 1, padding: '9px 8px', borderRadius: 9, cursor: 'pointer', transition: 'all 0.15s', fontSize: 13, fontWeight: 600, fontFamily: "'Poppins', sans-serif",
                               background: visitorType === key ? 'var(--blue-soft)' : 'var(--surface)',
@@ -266,27 +274,23 @@ export default function RegisterPage() {
                   </div>
 
                   {/* College — visitors only */}
-                  {!isStaffInvite && (
+                  {!isInvited && (
                     <div>
                       <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>College</label>
-                      <select
-                        style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', appearance: 'none', cursor: 'pointer' }}
-                        value={college}
-                        onChange={e => { setCollege(e.target.value); setCourse(''); }}>
+                      <select style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', appearance: 'none', cursor: 'pointer' }}
+                        value={college} onChange={e => { setCollege(e.target.value); setCourse(''); }}>
                         <option value="">— Select College —</option>
                         {COLLEGES.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                       </select>
                     </div>
                   )}
 
-                  {/* Course — visitors with college selected */}
-                  {!isStaffInvite && college && courses.length > 0 && (
+                  {/* Course */}
+                  {!isInvited && college && courses.length > 0 && (
                     <div>
                       <label style={{ ...MONO, fontSize: 10, letterSpacing: '0.12em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 6, fontWeight: 600 }}>Course</label>
-                      <select
-                        style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', appearance: 'none', cursor: 'pointer' }}
-                        value={course}
-                        onChange={e => setCourse(e.target.value)}>
+                      <select style={{ width: '100%', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 10, padding: '11px 14px', fontSize: 14, color: 'var(--text-primary)', fontFamily: 'inherit', outline: 'none', appearance: 'none', cursor: 'pointer' }}
+                        value={course} onChange={e => setCourse(e.target.value)}>
                         <option value="">— Select Course —</option>
                         {courses.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>

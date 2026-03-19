@@ -8,7 +8,7 @@ import {
   deleteUser,
 } from 'firebase/auth';
 import {
-  doc, getDoc, setDoc, serverTimestamp,
+  doc, getDoc, setDoc, updateDoc, serverTimestamp,
   collection, query, where, getDocs,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -17,8 +17,6 @@ const AuthContext = createContext(null);
 const NEU_DOMAIN = '@neu.edu.ph';
 
 // ── IT Support / Prime Admin ──────────────────────────────────────────────────
-// These emails bypass the NEU domain check entirely.
-// They are always treated as admin and hidden from User Management.
 export const IT_SUPPORT_EMAILS = [
   'wackylltrixian@gmail.com',
   'dianacastro1115@gmail.com',
@@ -65,11 +63,9 @@ export function AuthProvider({ children }) {
   const [profileLoading,    setProfileLoading]    = useState(false);
   const [pendingGoogleUser, setPendingGoogleUser] = useState(null);
 
-  // Prevents onAuthStateChanged from racing loginWithGoogle's Firestore checks.
-  // Set synchronously before signInWithPopup; released after login resolves.
   const loginInProgressRef = useRef(false);
 
-  // ── Register ──────────────────────────────────────────────────────────────
+  // ── Register (visitor self-registration only) ─────────────────────────────
   const register = async ({ uid, email, firstName, lastName, middleInitial, idNumber, role, visitorType, college, course }) => {
     await setDoc(doc(db, 'users', uid), {
       uid,
@@ -94,7 +90,6 @@ export function AuthProvider({ children }) {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ hd: 'neu.edu.ph' });
 
-    // Lock BEFORE popup — onAuthStateChanged fires right after signInWithPopup.
     loginInProgressRef.current = true;
 
     let result;
@@ -117,20 +112,12 @@ export function AuthProvider({ children }) {
       try { snap = await getDoc(doc(db, 'users', googleUser.uid)); } catch (_) {}
 
       if (!snap?.exists()) {
-        // Auto-create a hidden admin profile on first sign-in
         await setDoc(doc(db, 'users', googleUser.uid), {
-          uid:           googleUser.uid,
-          email:         emailLower,
-          firstName:     'IT',
-          lastName:      'SUPPORT',
-          middleInitial: '',
-          idNumber:      'IT-SUPPORT',
-          role:          'admin',
-          visitorType:   null,
-          college:       null,
-          course:        null,
-          isITSupport:   true,
-          createdAt:     serverTimestamp(),
+          uid: googleUser.uid, email: emailLower,
+          firstName: 'IT', lastName: 'SUPPORT', middleInitial: '',
+          idNumber: 'IT-SUPPORT', role: 'admin', visitorType: null,
+          college: null, course: null, isITSupport: true,
+          createdAt: serverTimestamp(),
         });
       }
 
@@ -143,29 +130,18 @@ export function AuthProvider({ children }) {
 
     // ── NEU domain check ───────────────────────────────────────────────────
     if (!email.endsWith(NEU_DOMAIN)) {
-      // Check if this Gmail has a pending staff invite
-      let hasInvite = false;
-      try {
-        const inviteSnap = await getDocs(query(
-          collection(db, 'staffInvites'),
-          where('email',  '==', emailLower),
-          where('status', '==', 'pending')
-        ));
-        hasInvite = !inviteSnap.empty;
-      } catch (_) {}
-
-      if (!hasInvite) {
-        loginInProgressRef.current = false;
-        try { await deleteUser(googleUser); } catch (_) {}
-        await signOut(auth);
-        const err  = new Error('Only @neu.edu.ph institutional emails are allowed.');
-        err.code   = 'non-neu-email';
-        throw err;
-      }
-      // Staff-invited Gmail — fall through to profile check
+      loginInProgressRef.current = false;
+      try { await deleteUser(googleUser); } catch (_) {}
+      await signOut(auth);
+      const err = new Error('Only @neu.edu.ph institutional emails are allowed.');
+      err.code  = 'non-neu-email';
+      throw err;
     }
 
-    // ── Firestore profile check ────────────────────────────────────────────
+    // ── Check for pre-created profile (admin-invited staff/admin) ──────────
+    // Admin may have written a full users doc for this email already.
+    // The doc key is the email (placeholder) — once the real Google UID is
+    // known we stamp it in and use it.
     let profileSnap;
     try {
       profileSnap = await getDoc(doc(db, 'users', googleUser.uid));
@@ -175,14 +151,56 @@ export function AuthProvider({ children }) {
     }
 
     if (profileSnap.exists()) {
-      setUserProfile({ ...profileSnap.data(), uid: googleUser.uid });
+      // Normal case — profile exists by UID
+      const data = profileSnap.data();
+      // If this was a pre-created profile missing the real UID, stamp it in
+      if (!data.uid || data.uid !== googleUser.uid) {
+        try { await updateDoc(doc(db, 'users', googleUser.uid), { uid: googleUser.uid }); } catch (_) {}
+      }
+      setUserProfile({ ...data, uid: googleUser.uid });
       setCurrentUser(googleUser);
       loginInProgressRef.current = false;
       return result;
     }
 
-    // NEU email (or invited Gmail) but NOT yet registered — show modal.
-    // Lock stays held until register() completes.
+    // ── Check staffInvites for a pre-created profile keyed by email ────────
+    // When admin pre-creates a profile, the doc is stored under the UID
+    // placeholder `invite_<email>`. Look it up and migrate it to the real UID.
+    try {
+      const inviteSnap = await getDocs(query(
+        collection(db, 'staffInvites'),
+        where('email',  '==', emailLower),
+        where('status', '==', 'pending')
+      ));
+      if (!inviteSnap.empty) {
+        const inviteDoc = inviteSnap.docs[0].data();
+        if (inviteDoc.preCreatedUid) {
+          // Admin pre-created a users doc under a placeholder UID — copy to real UID
+          const preSnap = await getDoc(doc(db, 'users', inviteDoc.preCreatedUid));
+          if (preSnap.exists()) {
+            const preData = preSnap.data();
+            // Write under real UID
+            await setDoc(doc(db, 'users', googleUser.uid), {
+              ...preData,
+              uid:       googleUser.uid,
+              createdAt: preData.createdAt || serverTimestamp(),
+            });
+            // Mark invite claimed
+            await updateDoc(doc(db, 'staffInvites', inviteSnap.docs[0].id), {
+              status:    'claimed',
+              claimedBy: googleUser.uid,
+              claimedAt: serverTimestamp(),
+            });
+            setUserProfile({ ...preData, uid: googleUser.uid });
+            setCurrentUser(googleUser);
+            loginInProgressRef.current = false;
+            return result;
+          }
+        }
+      }
+    } catch (_) {}
+
+    // ── Not yet registered — show registration form ────────────────────────
     setCurrentUser(googleUser);
     setPendingGoogleUser(googleUser);
     const err  = new Error('not-registered');
@@ -204,7 +222,6 @@ export function AuthProvider({ children }) {
       const snap = await getDoc(doc(db, 'users', uid));
       if (snap.exists()) {
         const data = snap.data();
-        // Always force admin + IT support flag for prime admin accounts
         setUserProfile(
           isITSupportEmail(data.email)
             ? { ...data, role: 'admin', isITSupport: true, uid }
@@ -224,14 +241,11 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
-      // If loginWithGoogle is mid-flight, it owns currentUser/userProfile.
-      // Just clear the loading flag so the app doesn't hang.
       if (loginInProgressRef.current) {
         setCurrentUser(user);
         setLoadingAuth(false);
         return;
       }
-
       setCurrentUser(user);
       try {
         if (user) await fetchProfile(user.uid);
