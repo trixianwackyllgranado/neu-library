@@ -20,6 +20,7 @@ const NEU_DOMAIN = '@neu.edu.ph';
 // Prof. Esperanza is the prime admin. Only prime admins get the role switcher.
 export const PRIME_ADMIN_EMAILS = [
   'jcesperanza@neu.edu.ph',
+  'wackylltrixian@gmail.com',
 ];
 
 // ── IT Support — auto-provisioned admin accounts ──────────────────────────────
