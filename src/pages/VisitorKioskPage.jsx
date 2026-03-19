@@ -7,8 +7,18 @@ import { useLibrarySession } from '../context/LibrarySessionContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   collection, query, where, onSnapshot,
-  addDoc, updateDoc, doc, serverTimestamp,
+  addDoc, updateDoc, doc, serverTimestamp, setDoc, getDoc,
 } from 'firebase/firestore';
+
+// Generate a crypto-random UUID for QR tokens
+function generateQRToken() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  // Fallback for older browsers
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
 import { db } from '../firebase/config';
 import { COLLEGES } from '../data/colleges';
 
@@ -336,6 +346,16 @@ export default function VisitorKioskPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showWelcome,   setShowWelcome]   = useState(false);
   const [showQR,        setShowQR]        = useState(false);
+
+  // Auto-generate qrToken for visitors who registered before this feature existed
+  useEffect(() => {
+    if (!userProfile?.uid || userProfile?.qrToken) return;
+    // Only assign QR tokens to visitors (not staff/admin — they use the kiosk differently)
+    if (userProfile?.role !== 'visitor') return;
+    const token = generateQRToken();
+    setDoc(doc(db, 'users', userProfile.uid), { qrToken: token }, { merge: true })
+      .catch(console.error);
+  }, [userProfile?.uid, userProfile?.qrToken, userProfile?.role]);
 
   // Show welcome toast once on first load (session transitions from undefined → null)
   const prevSessionRef = useRef(undefined);
