@@ -352,6 +352,13 @@ export default function VisitorKioskPage() {
   const [showWelcome,   setShowWelcome]   = useState(false);
   const [showQR,        setShowQR]        = useState(false);
 
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
   // Auto-generate qrToken for visitors who registered before this feature existed
   useEffect(() => {
     if (!userProfile?.uid || userProfile?.qrToken) return;
