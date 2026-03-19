@@ -441,214 +441,245 @@ export default function VisitorKioskPage() {
     color: hasPending ? 'var(--gold)' : hasApproved ? 'var(--green)' : 'var(--text-muted)',
   };
 
+  // QR lightbox state
+  const [showQRLightbox, setShowQRLightbox] = useState(false);
+
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, var(--bg-base) 0%, var(--bg-mid) 60%, var(--bg-top) 100%)', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* NEU stripe */}
       <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', flexShrink: 0 }} />
 
       {/* Top bar */}
-      <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--divider)', background: 'var(--card)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            <img src="/liblogo.png" alt="NEU" style={{ width: 30, height: 30, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+      <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--divider)', background: 'var(--card)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            <img src="/liblogo.png" alt="NEU" style={{ width: 26, height: 26, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
           </div>
           <div>
             <p style={{ ...MONO, fontSize: '7px', letterSpacing: '0.22em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 1 }}>New Era University</p>
-            <p style={{ ...SERIF, fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Library Visitor Log</p>
+            <p style={{ ...SERIF, fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>Library Visitor Log</p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {/* Visitor info chip */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '6px 14px' }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: session ? 'var(--green)' : 'var(--text-dim)', flexShrink: 0 }} />
-            <span style={{ ...PP, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{displayName}</span>
-            <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>·</span>
-            <span style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)' }}>{roleLabel}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Status + name chip */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '5px 12px' }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: session ? 'var(--green)' : 'var(--text-dim)', flexShrink: 0, animation: session ? 'pulseDot 2s ease infinite' : 'none' }} />
+            <span style={{ ...PP, fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{displayName}</span>
+            <span style={{ ...MONO, fontSize: 9, color: 'var(--text-dim)' }}>·</span>
+            <span style={{ ...MONO, fontSize: 9, color: 'var(--text-muted)' }}>{roleLabel}</span>
           </div>
-
-          {/* Theme toggle */}
-          <button onClick={toggle}
-            style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid var(--card-border)', background: 'var(--surface)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Theme */}
+          <button onClick={toggle} style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid var(--card-border)', background: 'var(--surface)', color: 'var(--gold)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {dark
-              ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-              : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              : <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             }
           </button>
-
           {/* Sign out */}
-          <button onClick={() => setShowExit(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: 'pointer', ...PP, fontSize: 13, fontWeight: 600 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <button onClick={() => setShowExit(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 8, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: 'pointer', ...PP, fontSize: 12, fontWeight: 600 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign Out
           </button>
         </div>
       </div>
 
-      {/* Main content */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'clamp(16px,4vw,40px) 16px' }}>
-        <div style={{ width: '100%', maxWidth: 520, animation: 'fadeUp 0.35s ease both' }}>
+      {/* Main content — fills remaining height, no scroll */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflow: 'hidden' }}>
+        <div style={{ width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 10, animation: 'fadeUp 0.3s ease both' }}>
 
-          {/* Loading state */}
+          {/* Loading */}
           {session === undefined && (
-            <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 20, padding: '48px 32px', textAlign: 'center', boxShadow: 'var(--shadow-modal)' }}>
-              <div style={{ width: 32, height: 32, border: '2px solid var(--gold-border)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-              <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)' }}>Loading your session…</p>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 16, padding: '32px', textAlign: 'center' }}>
+              <div style={{ width: 28, height: 28, border: '2px solid var(--gold-border)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+              <p style={{ ...PP, fontSize: 13, color: 'var(--text-muted)' }}>Loading your session…</p>
             </div>
           )}
 
-          {/* CHECKED IN — timer + check out */}
+          {/* CHECKED IN */}
           {session && (
-            <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-modal)' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden' }}>
               <div style={{ height: 3, background: 'linear-gradient(90deg, var(--green), transparent)' }} />
-              <div style={{ padding: '36px 32px' }}>
-                <div style={{ textAlign: 'center', marginBottom: 28 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--green)', margin: '0 auto 16px', boxShadow: '0 0 0 4px rgba(16,185,129,0.2)', animation: 'pulseDot 2s ease infinite' }} />
-                  <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.22em', color: 'var(--green)', textTransform: 'uppercase', marginBottom: 6 }}>Currently Checked In</p>
-                  <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)', marginBottom: 20 }}>
+              <div style={{ padding: '24px 24px 20px' }}>
+                <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--green)', margin: '0 auto 12px', boxShadow: '0 0 0 4px rgba(16,185,129,0.2)', animation: 'pulseDot 2s ease infinite' }} />
+                  <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.22em', color: 'var(--green)', textTransform: 'uppercase', marginBottom: 4 }}>Currently Checked In</p>
+                  <p style={{ ...PP, fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>
                     Purpose: <strong style={{ color: 'var(--text-primary)' }}>{session.purpose}</strong>
                   </p>
-                  <p style={{ ...MONO, fontSize: 'clamp(36px,10vw,54px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                  <p style={{ ...MONO, fontSize: 'clamp(32px,9vw,48px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                     {formatHHMM(elapsed)}
                   </p>
-                  <p style={{ ...PP, fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
-                    {formatReadable(elapsed)} in library
-                  </p>
+                  <p style={{ ...PP, fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>{formatReadable(elapsed)} in library</p>
                   {session.entryTime?.toDate && (
-                    <p style={{ ...MONO, fontSize: '11px', color: 'var(--text-dim)', marginTop: 6 }}>
+                    <p style={{ ...MONO, fontSize: '10px', color: 'var(--text-dim)', marginTop: 4 }}>
                       Entry: {session.entryTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   )}
                 </div>
-
                 <button onClick={handleCheckOut} disabled={loading}
-                  style={{ width: '100%', padding: '15px', borderRadius: 12, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: loading ? 'not-allowed' : 'pointer', ...MONO, fontSize: '12px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, opacity: loading ? 0.6 : 1, transition: 'all 0.15s' }}
-                  onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'var(--red-border)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--red-soft)'; }}>
+                  style={{ width: '100%', padding: '13px', borderRadius: 10, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: loading ? 'not-allowed' : 'pointer', ...MONO, fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, opacity: loading ? 0.6 : 1, transition: 'all 0.15s' }}>
                   {loading ? 'Logging out…' : 'Log Out of Library'}
                 </button>
               </div>
             </div>
           )}
 
-          {/* NOT CHECKED IN — purpose select + check in */}
+          {/* NOT CHECKED IN */}
           {session === null && (
-            <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-modal)' }}>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 16, overflow: 'hidden' }}>
               <div style={{ height: 3, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
-              <div style={{ padding: '36px 32px' }}>
-
-                <div style={{ textAlign: 'center', marginBottom: 32 }}>
-                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--gold-soft)', border: '2px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', overflow: 'hidden' }}>
-                    <img src="/liblogo.png" alt="NEU" style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+              <div style={{ padding: '20px 24px' }}>
+                <div style={{ textAlign: 'center', marginBottom: 18 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--gold-soft)', border: '2px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', overflow: 'hidden' }}>
+                    <img src="/liblogo.png" alt="NEU" style={{ width: 42, height: 42, objectFit: 'cover', borderRadius: '50%' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
                   </div>
-                  <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.22em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 6 }}>Welcome to</p>
-                  <h1 style={{ ...SERIF, fontSize: 'clamp(22px,5vw,28px)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>NEU Library</h1>
-                  <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)' }}>
-                    Hello, <strong style={{ color: 'var(--text-primary)' }}>{userProfile?.firstName}</strong>! Select your purpose to log your visit.
+                  <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.22em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 4 }}>Welcome to</p>
+                  <h1 style={{ ...SERIF, fontSize: 'clamp(18px,4vw,24px)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>NEU Library</h1>
+                  <p style={{ ...PP, fontSize: 13, color: 'var(--text-muted)' }}>
+                    Hello, <strong style={{ color: 'var(--text-primary)' }}>{userProfile?.firstName}</strong>! Select your purpose.
                   </p>
                 </div>
 
                 {error && (
-                  <div style={{ marginBottom: 16, background: 'var(--red-soft)', border: '1px solid var(--red-border)', borderRadius: 10, padding: '10px 14px' }}>
-                    <p style={{ ...MONO, fontSize: '12px', color: 'var(--red)' }}>{error}</p>
+                  <div style={{ marginBottom: 12, background: 'var(--red-soft)', border: '1px solid var(--red-border)', borderRadius: 8, padding: '8px 12px' }}>
+                    <p style={{ ...MONO, fontSize: '11px', color: 'var(--red)' }}>{error}</p>
                   </div>
                 )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 14 }}>
                   {PURPOSES.map(p => (
                     <button key={p} type="button" onClick={() => { setPurpose(p); setError(''); }}
-                      style={{ padding: '14px 12px', borderRadius: 12, textAlign: 'center', cursor: 'pointer', border: `2px solid ${purpose === p ? 'var(--gold)' : 'var(--card-border)'}`, background: purpose === p ? 'var(--gold-soft)' : 'var(--surface)', color: purpose === p ? 'var(--gold)' : 'var(--text-muted)', ...PP, fontSize: 13, fontWeight: purpose === p ? 600 : 500, transition: 'all 0.15s' }}>
+                      style={{ padding: '10px 8px', borderRadius: 10, textAlign: 'center', cursor: 'pointer', border: `2px solid ${purpose === p ? 'var(--gold)' : 'var(--card-border)'}`, background: purpose === p ? 'var(--gold-soft)' : 'var(--surface)', color: purpose === p ? 'var(--gold)' : 'var(--text-muted)', ...PP, fontSize: 12, fontWeight: purpose === p ? 600 : 500, transition: 'all 0.15s' }}>
                       {p}
                     </button>
                   ))}
                 </div>
 
                 <button onClick={handleCheckIn} disabled={loading || !purpose}
-                  style={{ width: '100%', padding: '15px', borderRadius: 12, background: (purpose && !loading) ? 'var(--green-soft)' : 'var(--surface)', border: `1px solid ${(purpose && !loading) ? 'var(--green-border)' : 'var(--card-border)'}`, color: (purpose && !loading) ? 'var(--green)' : 'var(--text-dim)', cursor: (purpose && !loading) ? 'pointer' : 'not-allowed', ...MONO, fontSize: '12px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, opacity: (purpose && !loading) ? 1 : 0.5, transition: 'all 0.15s' }}
-                  onMouseEnter={e => { if (purpose && !loading) e.currentTarget.style.background = 'rgba(16,185,129,0.25)'; }}
-                  onMouseLeave={e => { if (purpose && !loading) e.currentTarget.style.background = 'var(--green-soft)'; }}>
+                  style={{ width: '100%', padding: '12px', borderRadius: 10, background: (purpose && !loading) ? 'var(--green-soft)' : 'var(--surface)', border: `1px solid ${(purpose && !loading) ? 'var(--green-border)' : 'var(--card-border)'}`, color: (purpose && !loading) ? 'var(--green)' : 'var(--text-dim)', cursor: (purpose && !loading) ? 'pointer' : 'not-allowed', ...MONO, fontSize: '11px', letterSpacing: '0.16em', textTransform: 'uppercase', fontWeight: 700, opacity: (purpose && !loading) ? 1 : 0.5, transition: 'all 0.15s' }}>
                   {loading ? 'Logging in…' : 'Log In to Library'}
                 </button>
               </div>
             </div>
           )}
 
-          {/* ── Bottom row: QR card + Edit Request card side by side ── */}
+          {/* Bottom row: QR + Edit Request */}
           {session !== undefined && userProfile?.role === 'visitor' && (
-            <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: userProfile?.qrToken && session === null ? '1fr 1fr' : '1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: userProfile?.qrToken && session === null ? '1fr 1fr' : '1fr', gap: 10 }}>
 
-              {/* QR Card — only when not checked in and token exists */}
+              {/* QR Card */}
               {session === null && userProfile?.qrToken && (
-                <div style={{ background: 'var(--card)', border: `1px solid ${showQR ? 'var(--gold-border)' : 'var(--card-border)'}`, borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)', transition: 'border-color 0.15s' }}>
+                <div style={{ background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 12, overflow: 'hidden' }}>
                   <div style={{ height: 2, background: 'linear-gradient(90deg, var(--gold), transparent)' }} />
-                  <div style={{ padding: '14px 16px' }}>
-                    <button onClick={() => setShowQR(v => !v)}
-                      style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                      {/* QR icon */}
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: showQR ? 'var(--gold-soft)' : 'var(--surface)', border: `1px solid ${showQR ? 'var(--gold-border)' : 'var(--card-border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={showQR ? 'var(--gold)' : 'var(--text-muted)'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                          <path d="M14 14h3v3m0 4h4m-4 0v-4m4 0v4"/>
-                        </svg>
+                  <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--gold)', textTransform: 'uppercase', fontWeight: 700 }}>My QR Code</p>
+                    {/* Small inline QR preview */}
+                    <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setShowQRLightbox(true)}>
+                      <QRCodeDisplay value={userProfile.qrToken} size={80} />
+                      {/* Enlarge hint overlay */}
+                      <div style={{ position: 'absolute', inset: 0, borderRadius: 6, background: 'rgba(0,0,0,0)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.35)'; e.currentTarget.querySelector('span').style.opacity = '1'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0)'; e.currentTarget.querySelector('span').style.opacity = '0'; }}>
+                        <span style={{ opacity: 0, transition: 'opacity 0.15s', color: '#fff', fontSize: 20 }}>⛶</span>
                       </div>
-                      <span style={{ ...MONO, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: showQR ? 'var(--gold)' : 'var(--text-muted)', fontWeight: 700 }}>
-                        {showQR ? 'Hide QR' : 'My QR Code'}
-                      </span>
-                    </button>
-
-                    {showQR && (
-                      <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, animation: 'fadeUp 0.2s ease both' }}>
-                        <QRCodeDisplay value={userProfile.qrToken} size={140} />
-                        <p style={{ ...MONO, fontSize: 9, color: 'var(--text-dim)', textAlign: 'center' }}>
-                          Show to staff at counter
-                        </p>
-                      </div>
-                    )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+                      <button onClick={() => setShowQRLightbox(true)}
+                        style={{ flex: 1, padding: '6px 0', borderRadius: 7, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: 'pointer', ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        Enlarge
+                      </button>
+                      <button onClick={() => {
+                          import('qrcode').then(QRCode => {
+                            QRCode.toDataURL(userProfile.qrToken, { width: 400, margin: 2 }).then(url => {
+                              Object.assign(document.createElement('a'), { href: url, download: 'neu-library-qr.png' }).click();
+                            });
+                          });
+                        }}
+                        style={{ flex: 1, padding: '6px 0', borderRadius: 7, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer', ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        Save
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* Edit Request Card */}
-              <div style={{ background: 'var(--card)', border: `1px solid ${hasPending ? 'var(--gold-border)' : 'var(--card-border)'}`, borderRadius: 14, overflow: 'hidden', boxShadow: 'var(--shadow-card)', transition: 'border-color 0.15s' }}>
+              <div style={{ background: 'var(--card)', border: `1px solid ${hasPending ? 'var(--gold-border)' : 'var(--card-border)'}`, borderRadius: 12, overflow: 'hidden' }}>
                 <div style={{ height: 2, background: hasPending ? 'linear-gradient(90deg, var(--gold), transparent)' : 'linear-gradient(90deg, var(--card-border), transparent)' }} />
-                <div style={{ padding: '14px 16px' }}>
+                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                   {hasPending ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: 16 }}>⏳</span>
-                      </div>
-                      <span style={{ ...MONO, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 700, textAlign: 'center' }}>Edit Pending</span>
+                    <>
+                      <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--gold)', textTransform: 'uppercase', fontWeight: 700 }}>Edit Pending ⏳</p>
+                      <p style={{ ...PP, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>Your request is under review by admin.</p>
                       <button onClick={handleCancelRequest}
-                        style={{ width: '100%', padding: '7px 10px', borderRadius: 8, cursor: 'pointer', background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', ...MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700 }}>
-                        Cancel
+                        style={{ width: '100%', padding: '6px 0', borderRadius: 7, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: 'pointer', ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                        Cancel Request
                       </button>
-                      {hasRejected && editRequest?.rejectionReason && (
-                        <p style={{ ...MONO, fontSize: 9, color: 'var(--red)', textAlign: 'center' }}>
-                          ✕ {editRequest.rejectionReason}
-                        </p>
-                      )}
-                    </div>
+                    </>
+                  ) : hasApproved ? (
+                    <>
+                      <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--green)', textTransform: 'uppercase', fontWeight: 700 }}>Edit Approved ✓</p>
+                      <p style={{ ...PP, fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>Your info has been updated.</p>
+                    </>
                   ) : (
-                    <button onClick={() => setShowEditModal(true)}
-                      style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                      onMouseEnter={e => { e.currentTarget.querySelector('div').style.background = 'var(--gold-soft)'; e.currentTarget.querySelector('div').style.borderColor = 'var(--gold-border)'; }}
-                      onMouseLeave={e => { e.currentTarget.querySelector('div').style.background = 'var(--surface)'; e.currentTarget.querySelector('div').style.borderColor = 'var(--card-border)'; }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--card-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
-                      </div>
-                      <span style={{ ...MONO, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, textAlign: 'center' }}>Request Info Update</span>
-                    </button>
+                    <>
+                      <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.16em', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 700 }}>Info Update</p>
+                      {hasRejected && editRequest?.rejectionReason && (
+                        <p style={{ ...MONO, fontSize: 9, color: 'var(--red)', textAlign: 'center' }}>✕ {editRequest.rejectionReason}</p>
+                      )}
+                      <button onClick={() => setShowEditModal(true)}
+                        style={{ width: '100%', padding: '6px 0', borderRadius: 7, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer', ...MONO, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--gold-soft)'; e.currentTarget.style.borderColor = 'var(--gold-border)'; e.currentTarget.style.color = 'var(--gold)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--card-border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}>
+                        Request Info Update
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
-
             </div>
           )}
         </div>
       </div>
+
+      {/* QR Lightbox — fullscreen modal with large QR */}
+      {showQRLightbox && userProfile?.qrToken && (
+        <div onClick={() => setShowQRLightbox(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', padding: 24, cursor: 'pointer', animation: 'fadeUp 0.2s ease both' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: 'var(--card)', border: '1px solid var(--gold-border)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.6)', cursor: 'default', animation: 'fadeUp 0.22s ease both' }}>
+            <div style={{ height: 3, background: 'linear-gradient(90deg,var(--gold),transparent)' }} />
+            <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <div>
+                <p style={{ ...MONO, fontSize: '8px', letterSpacing: '0.22em', color: 'var(--gold)', textTransform: 'uppercase', textAlign: 'center', marginBottom: 4 }}>My Library QR Code</p>
+                <p style={{ ...SERIF, fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', textAlign: 'center', marginBottom: 2 }}>{displayName}</p>
+                <p style={{ ...MONO, fontSize: 10, color: 'var(--text-muted)', textAlign: 'center' }}>{userProfile?.idNumber}</p>
+              </div>
+              <QRCodeDisplay value={userProfile.qrToken} size={260} />
+              <p style={{ ...PP, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', maxWidth: 260 }}>
+                Show this QR to staff at the counter for instant check-in. Tap anywhere outside to close.
+              </p>
+              <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                <button onClick={() => {
+                    import('qrcode').then(QRCode => {
+                      QRCode.toDataURL(userProfile.qrToken, { width: 600, margin: 2 }).then(url => {
+                        Object.assign(document.createElement('a'), { href: url, download: `neu-library-qr-${userProfile.idNumber || 'code'}.png` }).click();
+                      });
+                    });
+                  }}
+                  style={{ flex: 1, padding: '11px', borderRadius: 10, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: 'pointer', ...MONO, fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                  ↓ Save QR Image
+                </button>
+                <button onClick={() => setShowQRLightbox(false)}
+                  style={{ padding: '11px 18px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer', ...PP, fontSize: 13 }}>
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sign out confirmation modal */}
       {showExit && (

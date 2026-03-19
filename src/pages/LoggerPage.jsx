@@ -254,11 +254,21 @@ export default function LoggerPage() {
 
   useEffect(() => {
     if (!isStaff) return;
-    return onSnapshot(query(collection(db, 'notifications'), where('resolved', '==', false)), snap => {
-      const map = {};
-      snap.docs.forEach(d => { map[d.data().toUid] = { id: d.id, ...d.data() }; });
-      setActiveNotifMap(map);
-    });
+    // Listen for unresolved notifications — fail gracefully if rules block it
+    const unsub = onSnapshot(
+      query(collection(db, 'notifications'), where('resolved', '==', false)),
+      snap => {
+        const map = {};
+        snap.docs.forEach(d => { map[d.data().toUid] = { id: d.id, ...d.data() }; });
+        setActiveNotifMap(map);
+      },
+      err => {
+        // Rules may not allow listing all notifications — silently ignore,
+        // the Call button will still work (writes are separate from reads)
+        console.warn('Notifications listener:', err.code);
+      }
+    );
+    return unsub;
   }, [isStaff]);
 
   useEffect(() => {
@@ -695,7 +705,7 @@ export default function LoggerPage() {
         )}
 
         {callTarget && (
-          <CallModal student={callTarget} sentByName={sentByName} sentByUid={currentUser?.uid} onClose={() => setCallTarget(null)} />
+          <CallModal student={callTarget} sentByName={sentByName} sentByUid={currentUser?.uid ?? userProfile?.uid} onClose={() => setCallTarget(null)} />
         )}
         {confirm && (
           <ConfirmDialog title={confirm.title} message={confirm.message}

@@ -399,10 +399,11 @@ export default function StaffKioskPage() {
         <p style={{...PP,fontSize:14,color:'var(--text-muted)'}}>Type a visitor's ID number, scan their QR code, or enter their email to log them in or out.</p>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1.2fr) minmax(0,1fr)', gap:24, alignItems:'start' }}>
+      {/* ── Two-column layout: Manual entry left, QR scanner right ── */}
+      <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1.4fr)', gap:20, alignItems:'start' }}>
 
-        {/* ── LEFT: Input panel ── */}
-        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        {/* ── LEFT: Manual ID / email entry ── */}
+        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
           {/* Result flash */}
           {result && <ResultFlash result={result} onDismiss={() => setResult(null)} />}
@@ -415,38 +416,34 @@ export default function StaffKioskPage() {
             </div>
           )}
 
-          {/* Manual input form */}
+          {/* Manual input */}
           <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:14, padding:20, boxShadow:'var(--shadow-card)' }}>
             <p style={{...MN,fontSize:10,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:14}}>Manual Entry</p>
             <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:12 }}>
               <div>
                 <label style={{...MN,fontSize:9,letterSpacing:'0.14em',color:'var(--text-muted)',textTransform:'uppercase',display:'block',marginBottom:6,fontWeight:600}}>
-                  ID Number, QR Token, or Email
+                  ID Number or Email
                 </label>
                 <input
                   style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:9, padding:'12px 14px', fontSize:15, color:'var(--text-primary)', fontFamily:"'IBM Plex Mono',monospace", outline:'none', boxSizing:'border-box', letterSpacing:'0.06em' }}
                   placeholder="24-12345-678"
                   value={inputFmt}
                   onChange={e => {
-                    // Auto-format if it looks like an ID number
                     const raw = e.target.value;
                     const digitsOnly = raw.replace(/\D/g,'');
                     if (digitsOnly.length > 0 && digitsOnly.length <= 10 && /^\d+$/.test(raw.replace(/-/g,''))) {
                       const fmt = formatId(raw);
-                      setInputFmt(fmt);
-                      setInputVal(fmt);
+                      setInputFmt(fmt); setInputVal(fmt);
                     } else {
-                      setInputFmt(raw);
-                      setInputVal(raw);
+                      setInputFmt(raw); setInputVal(raw);
                     }
                     setError('');
                   }}
                   onFocus={e => { e.currentTarget.style.borderColor = 'var(--gold)'; }}
                   onBlur={e =>  { e.currentTarget.style.borderColor = 'var(--input-border)'; }}
-                  autoFocus
-                  autoComplete="off"
+                  autoFocus autoComplete="off"
                 />
-                <p style={{...MN,fontSize:10,color:'var(--text-dim)',marginTop:4}}>Accepts: ID number · 32-char QR token · @neu.edu.ph email</p>
+                <p style={{...MN,fontSize:10,color:'var(--text-dim)',marginTop:4}}>ID number · QR token · @neu.edu.ph email</p>
               </div>
               <button type="submit" disabled={loading || !inputVal.trim()}
                 style={{ width:'100%', padding:13, borderRadius:10,
@@ -465,15 +462,21 @@ export default function StaffKioskPage() {
               </button>
             </form>
           </div>
+        </div>
 
-          {/* QR Scanner */}
-          <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:14, padding:20, boxShadow:'var(--shadow-card)' }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14 }}>
-              <p style={{...MN,fontSize:10,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-dim)'}}>QR Code Scanner</p>
+        {/* ── RIGHT: QR Scanner (primary action) ── */}
+        <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:14, overflow:'hidden', boxShadow:'var(--shadow-card)' }}>
+          <div style={{ height:3, background:'linear-gradient(90deg,var(--gold),transparent)' }} />
+          <div style={{ padding:20 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+              <div>
+                <p style={{...MN,fontSize:10,letterSpacing:'0.16em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>QR Code Scanner</p>
+                <p style={{...PP,fontSize:12,color:'var(--text-muted)'}}>Scan a visitor's QR code to log them in or out instantly.</p>
+              </div>
               <button
                 onClick={isScanning ? stopScanner : startScanner}
                 disabled={scanState === 'starting' || scanState === 'stopping'}
-                style={{ padding:'7px 16px', borderRadius:8, cursor:'pointer', transition:'all 0.15s', ...MN, fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase',
+                style={{ padding:'9px 18px', borderRadius:9, cursor:'pointer', transition:'all 0.15s', ...MN, fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', flexShrink:0,
                   background: isScanning ? 'var(--red-soft)' : 'var(--green-soft)',
                   border:     `1px solid ${isScanning ? 'var(--red-border)' : 'var(--green-border)'}`,
                   color:      isScanning ? 'var(--red)' : 'var(--green)',
@@ -489,67 +492,20 @@ export default function StaffKioskPage() {
               </div>
             )}
 
-            <div id="qr-kiosk-reader" style={{ width:'100%', minHeight: isScanning ? 240 : 0, overflow:'hidden', borderRadius:10, background:'var(--surface)' }} />
+            <div id="qr-kiosk-reader" style={{ width:'100%', minHeight: isScanning ? 300 : 0, overflow:'hidden', borderRadius:10, background:'var(--surface)' }} />
 
             {!isScanning && (
-              <div style={{ padding:'24px 0', textAlign:'center' }}>
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin:'0 auto 10px', display:'block' }}>
-                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3"/><path d="M17 17v4"/><path d="M21 14v3h-4"/>
-                </svg>
-                <p style={{...MN,fontSize:11,color:'var(--text-dim)'}}>Camera off — press Start Scanner to scan visitor QR codes</p>
+              <div style={{ padding:'40px 24px', textAlign:'center' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'var(--surface)', border:'2px dashed var(--card-border)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3"/><path d="M17 17v4"/><path d="M21 14v3h-4"/>
+                  </svg>
+                </div>
+                <p style={{...MN,fontSize:11,color:'var(--text-dim)',marginBottom:4}}>Camera is off</p>
+                <p style={{...PP,fontSize:12,color:'var(--text-muted)'}}>Press Start Scanner to activate the camera and scan visitor QR codes.</p>
               </div>
             )}
           </div>
-        </div>
-
-        {/* ── RIGHT: Currently in library ── */}
-        <div style={{ background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:14, overflow:'hidden', boxShadow:'var(--shadow-card)' }}>
-          <div style={{ padding:'14px 18px', borderBottom:'1px solid var(--divider)', display:'flex', alignItems:'center', gap:10 }}>
-            <span style={{ width:8, height:8, borderRadius:'50%', background:'var(--green)', display:'inline-block', flexShrink:0 }} />
-            <p style={{...PP,fontSize:14,fontWeight:600,color:'var(--text-primary)'}}>Currently in Library</p>
-            <span style={{ ...MN, fontSize:10, fontWeight:700, padding:'2px 9px', borderRadius:20, background:'var(--green-soft)', border:'1px solid var(--green-border)', color:'var(--green)', marginLeft:'auto' }}>
-              {liveSessions.length}
-            </span>
-          </div>
-
-          {liveSessions.length === 0 ? (
-            <div style={{ padding:'32px 18px', textAlign:'center' }}>
-              <p style={{...PP,fontSize:13,color:'var(--text-muted)'}}>No visitors currently inside.</p>
-            </div>
-          ) : (
-            <div style={{ overflowY:'auto', maxHeight:520 }}>
-              <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                <thead style={{ position:'sticky', top:0, background:'var(--thead-bg)' }}>
-                  <tr>
-                    {['Visitor','ID','Entry','Duration'].map(h=>(
-                      <th key={h} style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-muted)',padding:'10px 14px',textAlign:'left',fontWeight:600,borderBottom:'1px solid var(--divider)'}}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {liveSessions.map(s => {
-                    const u      = userMap[s.uid];
-                    const name   = u ? `${u.lastName}, ${u.firstName}` : (s.studentName || '—');
-                    const idNum  = u?.idNumber ?? s.studentIdNumber ?? '—';
-                    return (
-                      <tr key={s.id}
-                        onMouseEnter={e=>e.currentTarget.style.background='var(--row-hover-bg)'}
-                        onMouseLeave={e=>e.currentTarget.style.background='transparent'}
-                        style={{ borderBottom:'1px solid var(--row-border)', transition:'background 0.1s' }}>
-                        <td style={{ padding:'10px 14px' }}>
-                          <p style={{...PP,fontSize:12,fontWeight:600,color:'var(--text-primary)'}}>{name}</p>
-                          <p style={{...MN,fontSize:10,color:'var(--text-muted)',marginTop:1}}>{s.purpose}</p>
-                        </td>
-                        <td style={{ padding:'10px 14px', ...MN, fontSize:11, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{idNum}</td>
-                        <td style={{ padding:'10px 14px', ...MN, fontSize:11, color:'var(--text-muted)', whiteSpace:'nowrap' }}>{fmtTime(s.entryTime)}</td>
-                        <td style={{ padding:'10px 14px', ...MN, fontSize:11, color:'var(--text-dim)' }}><LiveDur entryTime={s.entryTime}/></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       </div>
 
