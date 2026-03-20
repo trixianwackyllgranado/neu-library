@@ -1,7 +1,12 @@
 // src/context/TutorialContext.jsx
-// Floating page tutorial — ONLY for prime admin emails (Prof. Esperanza + wackylltrixian).
-// Always active by default (not tied to account age). Can be toggled off via a switch.
-// State is persisted per-user in Firestore `tutorialPrefs/{uid}`.
+// Floating page tutorial — ONLY for prime admin emails.
+// ── Persistence model ──
+//   - Global on/off toggle: persisted in Firestore (survives logout)
+//   - Per-page "Got it": session-only (React state). Resets on:
+//       * Page reload / browser refresh
+//       * Sign out and sign back in
+//       * Toggling guides off then on again
+// This means the ? button always comes back next session — it's a reference tool, not a one-time onboarding.
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -12,18 +17,19 @@ const TutorialContext = createContext(null);
 export function TutorialProvider({ children }) {
   const { userProfile, effectiveRole } = useAuth();
   const [tutorialEnabled, setTutorialEnabled] = useState(true);
-  const [dismissedPages, setDismissedPages]   = useState({});
   const [loading, setLoading]                 = useState(true);
+
+  // ── Session-only dismissed pages (NOT persisted to Firestore) ─────────────
+  const [dismissedPages, setDismissedPages] = useState({});
 
   const uid   = userProfile?.uid;
   const email = userProfile?.email;
   const role  = effectiveRole || userProfile?.role;
 
-  // Only prime admins get the tutorial feature
   const hasTutorialAccess = !!email && isPrimeAdminEmail(email);
   const isStaffOrAdmin    = role === 'admin' || role === 'staff';
 
-  // ── Load tutorial prefs from Firestore ────────────────────────────────────
+  // ── Load only the global toggle from Firestore ────────────────────────────
   useEffect(() => {
     if (!uid || !hasTutorialAccess) {
       setTutorialEnabled(false);
@@ -31,21 +37,17 @@ export function TutorialProvider({ children }) {
       return;
     }
 
+    // Reset session dismissals on mount (new session = fresh start)
+    setDismissedPages({});
+
     (async () => {
       try {
         const prefSnap = await getDoc(doc(db, 'tutorialPrefs', uid));
         if (prefSnap.exists()) {
           const data = prefSnap.data();
-          if (data.enabled === false) {
-            setTutorialEnabled(false);
-          } else {
-            setTutorialEnabled(true);
-          }
-          setDismissedPages(data.dismissedPages || {});
+          setTutorialEnabled(data.enabled !== false); // default ON
         } else {
-          // First time — tutorial is ON by default
           setTutorialEnabled(true);
-          setDismissedPages({});
         }
       } catch (err) {
         console.error('[TutorialContext] Error loading prefs:', err);
@@ -56,11 +58,15 @@ export function TutorialProvider({ children }) {
     })();
   }, [uid, hasTutorialAccess]);
 
-  // ── Toggle tutorial on/off (persisted) ────────────────────────────────────
+  // ── Toggle on/off (persisted to Firestore) ────────────────────────────────
   const toggleTutorial = useCallback(async () => {
     if (!uid) return;
     const next = !tutorialEnabled;
     setTutorialEnabled(next);
+
+    // When turning back ON, reset all session dismissals so everything reappears
+    if (next) setDismissedPages({});
+
     try {
       await setDoc(doc(db, 'tutorialPrefs', uid), {
         enabled: next,
@@ -69,20 +75,12 @@ export function TutorialProvider({ children }) {
     } catch (_) {}
   }, [uid, tutorialEnabled]);
 
-  // ── Dismiss a single page ─────────────────────────────────────────────────
-  const dismissPage = useCallback(async (pageKey) => {
-    if (!uid) return;
-    const next = { ...dismissedPages, [pageKey]: true };
-    setDismissedPages(next);
-    try {
-      await setDoc(doc(db, 'tutorialPrefs', uid), {
-        dismissedPages: next,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-    } catch (_) {}
-  }, [uid, dismissedPages]);
+  // ── Dismiss a single page (session-only, no Firestore write) ──────────────
+  const dismissPage = useCallback((pageKey) => {
+    setDismissedPages(prev => ({ ...prev, [pageKey]: true }));
+  }, []);
 
-  // ── Dismiss all pages at once ─────────────────────────────────────────────
+  // ── Dismiss all = turn off globally ───────────────────────────────────────
   const dismissAll = useCallback(async () => {
     if (!uid) return;
     setTutorialEnabled(false);
@@ -94,7 +92,7 @@ export function TutorialProvider({ children }) {
     } catch (_) {}
   }, [uid]);
 
-  // ── Reset (re-enable + clear dismissed pages) ─────────────────────────────
+  // ── Reset everything (for testing) ────────────────────────────────────────
   const resetTutorial = useCallback(async () => {
     if (!uid) return;
     setTutorialEnabled(true);
@@ -102,7 +100,6 @@ export function TutorialProvider({ children }) {
     try {
       await setDoc(doc(db, 'tutorialPrefs', uid), {
         enabled: true,
-        dismissedPages: {},
         resetAt: serverTimestamp(),
       }, { merge: true });
     } catch (_) {}
