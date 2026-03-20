@@ -164,7 +164,7 @@ function WelcomeToast({ name, onDismiss }) {
 function CheckInSuccessToast({ purpose, onDismiss }) {
   const [visible, setVisible] = useState(true);
   useEffect(() => {
-    const t = setTimeout(() => { setVisible(false); setTimeout(onDismiss, 400); }, 4000);
+    const t = setTimeout(() => { setVisible(false); setTimeout(onDismiss, 400); }, 7000);
     return () => clearTimeout(t);
   }, []);
   return (
@@ -209,8 +209,13 @@ function CheckInSuccessToast({ purpose, onDismiss }) {
       <p style={{ fontFamily: "'Poppins',sans-serif", fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
         Purpose: <strong style={{ color: 'var(--green)' }}>{purpose}</strong>
       </p>
-      <p style={{ fontFamily: "'Poppins',sans-serif", fontSize: 11, color: 'var(--text-dim)', marginTop: 12 }}>
-        Your session timer has started. Tap to dismiss.
+      <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--card-border)' }}>
+        <p style={{ fontFamily: "'Poppins',sans-serif", fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          Your session has started. You can <strong style={{ color: 'var(--text-primary)' }}>leave this screen on</strong>, close the app, or even sign out — your library visit stays active. Just <strong style={{ color: 'var(--green)' }}>check out when you leave</strong> the library.
+        </p>
+      </div>
+      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: 'var(--text-dim)', marginTop: 10, letterSpacing: '0.04em' }}>
+        Tap anywhere to dismiss
       </p>
     </div>
   );

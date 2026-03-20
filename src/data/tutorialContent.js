@@ -166,7 +166,7 @@ const TUTORIAL_CONTENT = {
     purpose: 'This is your personal library check-in screen — works on your phone, tablet, or laptop. Use it to log yourself in and out of the library, with or without internet.',
     howItWorks: 'You have two ways to check in:\n\n' +
       'Option A — Self-service on your device: Open this page on your phone while connected to the internet. Tap "Check In," pick your purpose, and you\'re logged in. Tap "Check Out" before you leave.\n\n' +
-      'Option B — QR code (works offline): Your QR code was generated when you first registered. Screenshot it and save it to your phone\'s gallery. Next time you\'re at the library with no internet, just show that saved screenshot to staff at the counter — they scan it and you\'re checked in without typing anything.\n\n' +
+      'Option B — QR code (works offline): Your QR code was generated when you first registered. Press the "SAVE QR CODE" button to save it to your phone\'s gallery. Next time you\'re at the library with no internet, just show that saved screenshot to staff at the counter — they scan it and you\'re checked in without typing anything.\n\n' +
       'Your QR never changes, so save it once and use it forever.',
     scenario: 'Your mobile data is weak near the library. No problem — you already saved your QR screenshot weeks ago. You show it to staff, they scan it in seconds, and you\'re checked in. When leaving, you show it again for checkout. Zero typing, no internet needed on your end.',
     instructions: [
