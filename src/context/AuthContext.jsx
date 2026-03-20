@@ -9,7 +9,7 @@ import {
 } from 'firebase/auth';
 import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp,
-  collection, query, where, getDocs,
+  collection, query, where, getDocs, onSnapshot,
 } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
@@ -107,6 +107,25 @@ export function AuthProvider({ children }) {
   // Track when a user is "online" inside the web app (regardless of kiosk check-in).
   // We write a heartbeat to Firestore every 60s and mark offline on unload.
   const presenceRef = useRef(null);
+
+  // ── Real-time block listener ──────────────────────────────────────────────
+  // Watches the user's Firestore doc for blocked: true while they're signed in.
+  // If an admin blocks them mid-session, they get force-signed-out immediately.
+  useEffect(() => {
+    if (!currentUser?.uid || !userProfile?.email) return;
+    // Skip block enforcement for prime admins / IT support
+    if (isAdminBypassEmail(userProfile.email)) return;
+
+    const unsub = onSnapshot(doc(db, 'users', currentUser.uid), (snap) => {
+      if (!snap.exists()) return;
+      if (snap.data().blocked) {
+        signOut(auth).catch(() => {});
+        setUserProfile(null);
+        setCurrentUser(null);
+      }
+    });
+    return unsub;
+  }, [currentUser?.uid, userProfile?.email]);
 
   useEffect(() => {
     if (!userProfile?.uid) return;

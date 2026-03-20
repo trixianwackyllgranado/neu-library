@@ -727,33 +727,64 @@ function ProfilePanel({ user, myProfile, pendingEditUids, onClose, showToast, on
           </div>
 
           {canChange && (
-            <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <p style={{...MN,fontSize:10,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)'}}>Actions</p>
-              <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                {user.role==='visitor' && (
-                  <button onClick={()=>{setRoleAction('staff');setReason('');}}
-                    style={{padding:'7px 14px',borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
-                    ↑ Promote to Staff
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',borderBottom:'1px solid var(--card-border)',paddingBottom:8}}>Actions</p>
+
+              {/* Row 1: Role actions */}
+              {(user.role==='visitor' || user.role==='staff') && (
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  <p style={{...MN,fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--text-dim)',opacity:0.6}}>Role</p>
+                  <div style={{display:'flex',gap:8}}>
+                    {user.role==='visitor' && (
+                      <button onClick={()=>{setRoleAction('staff');setReason('');}}
+                        style={{flex:1,padding:'9px 14px',borderRadius:8,background:'var(--gold-soft)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
+                        ↑ Promote to Staff
+                      </button>
+                    )}
+                    {user.role==='staff' && (
+                      <button onClick={()=>{setRoleAction('visitor');setReason('');}}
+                        style={{flex:1,padding:'9px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
+                        ↓ Demote to Visitor
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Row 2: Edit actions */}
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                <p style={{...MN,fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',color:'var(--text-dim)',opacity:0.6}}>Edit</p>
+                <div style={{display:'flex',gap:8}}>
+                  <button onClick={()=>onEditProfile({uid:user.id,profile:user})}
+                    style={{flex:1,padding:'9px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
+                    Edit Profile
                   </button>
-                )}
-                {user.role==='staff' && (
-                  <button onClick={()=>{setRoleAction('visitor');setReason('');}}
-                    style={{padding:'7px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--card-border)',color:'var(--text-muted)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
-                    ↓ Demote to Visitor
+                  <button onClick={()=>onEditName({uid:user.id,profile:user})}
+                    style={{flex:1,padding:'9px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--green-border)',color:'var(--green)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
+                    Edit Name
                   </button>
-                )}
-                <button onClick={()=>onEditProfile({uid:user.id,profile:user})}
-                  style={{padding:'7px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--gold-border)',color:'var(--gold)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
-                  Edit Profile
-                </button>
-                <button onClick={()=>onEditName({uid:user.id,profile:user})}
-                  style={{padding:'7px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--green-border)',color:'var(--green)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
-                  Edit Name
-                </button>
+                </div>
+              </div>
+
+              {/* Row 3: Block/Unblock — separated as a danger zone */}
+              <div style={{display:'flex',flexDirection:'column',gap:6,paddingTop:4,borderTop:'1px solid var(--card-border)'}}>
+                <p style={{...MN,fontSize:9,letterSpacing:'0.1em',textTransform:'uppercase',color:user.blocked?'var(--gold)':'var(--red)',opacity:0.8}}>
+                  {user.blocked ? 'Account Restricted' : 'Danger Zone'}
+                </p>
                 <button onClick={()=>onBlockToggle(user)}
-                  style={{padding:"7px 14px",borderRadius:8,background:"var(--surface)",border:user.blocked ? "1px solid var(--gold-border)" : "1px solid var(--red-border)",color:user.blocked ? "var(--gold)" : "var(--red)",...MN,fontSize:10,fontWeight:700,cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.08em"}}>
-                  {user.blocked ? "Unblock" : "Block"}
+                  style={{width:'100%',padding:'9px 14px',borderRadius:8,
+                    background: user.blocked ? 'var(--gold-soft)' : 'color-mix(in srgb, var(--red) 10%, transparent)',
+                    border: user.blocked ? '1px solid var(--gold-border)' : '1px solid var(--red-border)',
+                    color: user.blocked ? 'var(--gold)' : 'var(--red)',
+                    ...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em',
+                    textAlign:'center'}}>
+                  {user.blocked ? '✓ Unblock Account' : '⊘ Block Account'}
                 </button>
+                {user.blocked && (
+                  <p style={{...MN,fontSize:9,color:'var(--text-dim)',opacity:0.7,textAlign:'center'}}>
+                    This user cannot log in or check into the library.
+                  </p>
+                )}
               </div>
 
               {roleAction && (

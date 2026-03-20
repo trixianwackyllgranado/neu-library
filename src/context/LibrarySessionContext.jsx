@@ -48,7 +48,25 @@ export function LibrarySessionProvider({ children }) {
     })();
   }, [userProfile?.uid]);
 
-  // Real-time listener for the current user's active session
+  // ── Real-time block watcher ──────────────────────────────────────────────
+  // If the user gets blocked while they have an active library session,
+  // force-close the session immediately so they can't stay checked in.
+  useEffect(() => {
+    if (!userProfile?.uid) return;
+    const unsub = onSnapshot(doc(db, 'users', userProfile.uid), (snap) => {
+      if (!snap.exists()) return;
+      if (snap.data().blocked && session?.id) {
+        updateDoc(doc(db, 'logger', session.id), {
+          active: false,
+          exitTime: serverTimestamp(),
+          forcedLogout: true,
+        }).catch(() => {});
+      }
+    });
+    return unsub;
+  }, [userProfile?.uid, session?.id]);
+
+    // Real-time listener for the current user's active session
   useEffect(() => {
     if (!userProfile?.uid) { setSession(null); return; }
 
