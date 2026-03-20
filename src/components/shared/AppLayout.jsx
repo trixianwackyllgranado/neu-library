@@ -193,6 +193,7 @@ export default function AppLayout({ children }) {
       { to: '/logger',                label: 'Library Logger', icon: Ico.logger,       badge: 0 },
       { to: '/staff/kiosk',           label: 'Visitor Kiosk',  icon: Ico.kiosk,        badge: 0 },
       { to: '/admin/users',           label: 'User Management',icon: Ico.users,        badge: 0 },
+      { to: '/staff/records',         label: 'Student Records', icon: Ico.users,        badge: 0 },
       { to: '/admin/edit-requests',   label: 'Edit Requests',  icon: Ico.editRequests, badge: pendingEditCount },
       { to: '/admin/reports',         label: 'Reports',        icon: Ico.reports,      badge: 0 },
     ],

@@ -91,7 +91,7 @@ export default function StudentRecordsPage() {
   const [borrowStatusFilter, setBorrowStatusFilter] = useState('all');
 
   useEffect(() => {
-    const q = query(collection(db, 'users'), where('role', '==', 'student'));
+    const q = query(collection(db, 'users'), where('role', '==', 'visitor'));
     const unsub = onSnapshot(q, snap => {
       setStudents(
         snap.docs.map(d => ({ id: d.id, ...d.data() }))
