@@ -187,11 +187,12 @@ export default function ReportsPage() {
       ['Name', 'ID Number', 'Visitor Type', 'College', 'Purpose', 'Entry Time', 'Exit Time', 'Status'],
       sessions.map(s => {
         const u = userMap[s.uid];
+        const name    = u ? `${u.lastName}, ${u.firstName}` : (s.studentName || '—');
+        const idNum   = u?.idNumber   || s.studentIdNumber || '—';
+        const college = u?.college    || s.studentCollege  || '—';
+        const vType   = u?.visitorType === 'faculty' ? 'Faculty' : 'Student';
         return [
-          u ? `${u.lastName}, ${u.firstName}` : '—',
-          u?.idNumber || '—',
-          u?.visitorType === 'faculty' ? 'Faculty' : 'Student',
-          u?.college || '—',
+          name, idNum, vType, college,
           s.purpose || '',
           fmtDt(s.entryTime),
           s.active ? 'Still Inside' : fmtDt(s.exitTime),

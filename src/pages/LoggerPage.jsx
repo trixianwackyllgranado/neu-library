@@ -345,27 +345,31 @@ export default function LoggerPage() {
   // ── STAFF / ADMIN VIEW ───────────────────────────────────────────────────
   if (isStaff) {
     const uniquePurposes = [...new Set(liveSessions.map(s => s.purpose).filter(Boolean))].sort();
-    const uniqueCourses  = [...new Set(liveSessions.map(s => userMap[s.uid]?.course).filter(Boolean))].sort();
+    const uniqueCourses  = [...new Set(liveSessions.map(s => userMap[s.uid]?.course || s.studentCourse).filter(Boolean))].sort();
     const histPurposes   = [...new Set(history.map(r => r.purpose).filter(Boolean))].sort();
-    const histCourses    = [...new Set(history.map(r => userMap[r.uid]?.course).filter(Boolean))].sort();
+    const histCourses    = [...new Set(history.map(r => userMap[r.uid]?.course || r.studentCourse).filter(Boolean))].sort();
 
     const filteredLive = liveSessions.filter(s => {
       const u = userMap[s.uid];
-      const name = u ? `${u.lastName} ${u.firstName}`.toLowerCase() : '';
+      const name = u ? `${u.lastName} ${u.firstName}`.toLowerCase() : (s.studentName || '').toLowerCase();
+      const idNum = u?.idNumber || s.studentIdNumber || '';
+      const course = u?.course || s.studentCourse || '';
       return (
-        (!logSearch  || name.includes(logSearch.toLowerCase()) || (u?.idNumber || '').includes(logSearch)) &&
+        (!logSearch  || name.includes(logSearch.toLowerCase()) || idNum.includes(logSearch)) &&
         (!logPurpose || s.purpose === logPurpose) &&
-        (!logCourse  || (u?.course ?? '') === logCourse)
+        (!logCourse  || course === logCourse)
       );
     });
 
     const filteredHistory = history.filter(r => {
       const u = userMap[r.uid];
-      const name = u ? `${u.lastName} ${u.firstName}`.toLowerCase() : '';
+      const name = u ? `${u.lastName} ${u.firstName}`.toLowerCase() : (r.studentName || '').toLowerCase();
+      const idNum = u?.idNumber || r.studentIdNumber || '';
+      const course = u?.course || r.studentCourse || '';
       return (
-        (!histSearch  || name.includes(histSearch.toLowerCase()) || (u?.idNumber || '').includes(histSearch)) &&
+        (!histSearch  || name.includes(histSearch.toLowerCase()) || idNum.includes(histSearch)) &&
         (!histPurpose || r.purpose === histPurpose) &&
-        (!histCourse  || (u?.course ?? '') === histCourse) &&
+        (!histCourse  || course === histCourse) &&
         inRange(r.entryTime, histDate) &&
         (histStatus === 'all' || (histStatus === 'forced' ? r.forcedLogout : !r.forcedLogout))
       );

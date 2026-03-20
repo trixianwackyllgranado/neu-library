@@ -382,7 +382,7 @@ export default function QRLoggerPage() {
     setConfirmLoad(true);
     const { idNumber, student } = purposeForId;
     try {
-      await addDoc(collection(db, 'logger'), { uid: student.id, purpose, entryTime: serverTimestamp(), active: true, scannedBy: userProfile?.uid || null });
+      await addDoc(collection(db, 'logger'), { uid: student.id, purpose, entryTime: serverTimestamp(), active: true, scannedBy: userProfile?.uid || null, studentName: `${student.lastName}, ${student.firstName}`, studentIdNumber: student.idNumber || '', studentCourse: student.course || '', studentCollege: student.college || '' });
       if (!unmountedRef.current) {
         processingRef.current = false; cooldownRef.current = {};
         setPurposeForId(null); setConfirmLoad(false);
@@ -415,7 +415,7 @@ export default function QRLoggerPage() {
         await updateDoc(doc(db, 'logger', sessSnap.docs[0].id), { active: false, exitTime: serverTimestamp() });
         setManualMsg({ ok: true, text: `${student.lastName}, ${student.firstName} checked OUT.` });
       } else {
-        await addDoc(collection(db, 'logger'), { uid: student.id, purpose: manualPurpose, entryTime: serverTimestamp(), active: true, scannedBy: userProfile?.uid || null, manual: true });
+        await addDoc(collection(db, 'logger'), { uid: student.id, purpose: manualPurpose, entryTime: serverTimestamp(), active: true, scannedBy: userProfile?.uid || null, manual: true, studentName: `${student.lastName}, ${student.firstName}`, studentIdNumber: student.idNumber || '', studentCourse: student.course || '', studentCollege: student.college || '' });
         setManualMsg({ ok: true, text: `${student.lastName}, ${student.firstName} checked IN — ${manualPurpose}.` });
       }
       setManualId(''); setManualFormat(''); setManualPurpose('');

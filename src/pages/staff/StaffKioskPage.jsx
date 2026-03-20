@@ -29,14 +29,18 @@ function formatId(raw) {
 }
 
 function formatInput(raw) {
-  if (raw.includes('@')) return { display: raw, value: raw };
+  // Returns { display, value, isEmail }
+  // For email mode: display = username only (no suffix in input), value = full email
+  if (raw.includes('@')) {
+    // User typed @ themselves — leave as-is
+    return { display: raw, value: raw, isEmail: false };
+  }
   if (/[a-zA-Z]/.test(raw)) {
     const username = raw.replace(/@.*/g, '');
-    const display = username ? `${username}@neu.edu.ph` : '';
-    return { display, value: display };
+    return { display: username, value: username ? `${username}@neu.edu.ph` : '', isEmail: !!username };
   }
   const fmt = formatId(raw);
-  return { display: fmt, value: fmt };
+  return { display: fmt, value: fmt, isEmail: false };
 }
 function fmtTime(ts) {
   if (!ts) return '—';
@@ -435,20 +439,32 @@ export default function StaffKioskPage() {
                 <label style={{...MN,fontSize:9,letterSpacing:'0.14em',color:'var(--text-muted)',textTransform:'uppercase',display:'block',marginBottom:6,fontWeight:600}}>
                   ID Number or Email
                 </label>
-                <input
-                  style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:9, padding:'12px 14px', fontSize:15, color:'var(--text-primary)', fontFamily:"'IBM Plex Mono',monospace", outline:'none', boxSizing:'border-box', letterSpacing:'0.06em' }}
-                  placeholder="24-12345-678"
-                  value={inputFmt}
-                  onChange={e => {
-                    const raw = e.target.value;
-                    const { display, value } = formatInput(raw);
-                    setInputFmt(display); setInputVal(value);
-                    setError('');
-                  }}
-                  autoFocus autoComplete="off"
-                  onFocus={e => { e.currentTarget.style.borderColor = 'var(--gold)'; }}
-                  onBlur={e =>  { e.currentTarget.style.borderColor = 'var(--input-border)'; }}
-                />
+                <div style={{ position:'relative' }}>
+                  <input
+                    style={{ width:'100%', background:'var(--input-bg)', border:'1px solid var(--input-border)', borderRadius:9, padding:'12px 14px', fontSize:15, color:'var(--text-primary)', fontFamily:"'IBM Plex Mono',monospace", outline:'none', boxSizing:'border-box', letterSpacing:'0.06em' }}
+                    placeholder="24-12345-678"
+                    value={inputFmt}
+                    onChange={e => {
+                      const raw = e.target.value;
+                      const { display, value, isEmail } = formatInput(raw);
+                      setInputFmt(display); setInputVal(value);
+                      setError('');
+                    }}
+                    autoFocus autoComplete="off"
+                    onFocus={e => { e.currentTarget.style.borderColor = 'var(--gold)'; }}
+                    onBlur={e =>  { e.currentTarget.style.borderColor = 'var(--input-border)'; }}
+                  />
+                  {/* Ghost suffix — shows @neu.edu.ph visually without putting it in the input value */}
+                  {inputVal.endsWith('@neu.edu.ph') && !inputFmt.includes('@') && (
+                    <span style={{
+                      position:'absolute', top:'50%', transform:'translateY(-50%)',
+                      left: `calc(14px + ${inputFmt.length}ch)`,
+                      fontFamily:"'IBM Plex Mono',monospace", fontSize:15,
+                      color:'var(--text-dim)', pointerEvents:'none', letterSpacing:'0.06em',
+                      whiteSpace:'nowrap',
+                    }}>@neu.edu.ph</span>
+                  )}
+                </div>
                 <p style={{...MN,fontSize:10,color:'var(--text-dim)',marginTop:4}}>ID number · QR token · @neu.edu.ph email</p>
               </div>
               <button type="submit" disabled={loading || !inputVal.trim()}
