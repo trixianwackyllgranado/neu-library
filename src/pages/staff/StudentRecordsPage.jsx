@@ -15,7 +15,7 @@ function exportCSV(students) {
   const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url  = URL.createObjectURL(blob);
-  Object.assign(document.createElement('a'), { href: url, download: 'students.csv' }).click();
+  Object.assign(document.createElement('a'), { href: url, download: 'visitors.csv' }).click();
   URL.revokeObjectURL(url);
 }
 
@@ -195,8 +195,8 @@ export default function StudentRecordsPage() {
         {/* Header */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1">
-            <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{color:"var(--text-muted)"}}>Student Records</p>
-            <h1 className="page-title">Student Profile</h1>
+            <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{color:"var(--text-muted)"}}>Visitor Records</p>
+            <h1 className="page-title">Visitor Profile</h1>
           </div>
           {isAdmin && (
             <button className="btn-secondary shrink-0 text-[10px]" onClick={() => exportCSV(students)}>
@@ -206,7 +206,7 @@ export default function StudentRecordsPage() {
         </div>
 
         <div className="mb-4 flex gap-3">
-          <input className="input flex-1 max-w-md" placeholder="Search students…"
+          <input className="input flex-1 max-w-md" placeholder="Search visitors…"
             value={search} onChange={e => setSearch(e.target.value)} />
           <button className="btn-ghost text-xs" onClick={() => { setSelected(null); setDetail(null); }}>
             ← Back to List
@@ -223,7 +223,7 @@ export default function StudentRecordsPage() {
               </p>
               <p className="text-sm mt-0.5" style={{color:"var(--text-muted)"}}>{s.email}</p>
             </div>
-            <span className="badge-green badge">Student</span>
+            <span className="badge-green badge" style={{textTransform:"capitalize"}}>{s.visitorType || "visitor"}</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
             <Info label="Course"          value={s.course} />
@@ -432,7 +432,7 @@ export default function StudentRecordsPage() {
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="font-mono text-[10px] tracking-widest uppercase mb-1" style={{color:"var(--text-muted)"}}>Records</p>
-          <h1 className="page-title">Student Records</h1>
+          <h1 className="page-title">Visitor Records</h1>
         </div>
         {isAdmin && (
           <button className="btn-secondary shrink-0 text-[10px]" onClick={() => exportCSV(students)}>
@@ -476,16 +476,16 @@ export default function StudentRecordsPage() {
         {/* Result count */}
         {(search || filterCourse || filterCollege || filterYear) && (
           <p className="text-xs font-mono" style={{color:"var(--text-muted)"}}>
-            Showing <strong style={{color:"var(--text-primary)"}}>{filtered.length}</strong> of {students.length} students
+            Showing <strong style={{color:"var(--text-primary)"}}>{filtered.length}</strong> of {students.length} visitors
           </p>
         )}
       </div>
 
       <div className="card p-0 overflow-hidden">
         {loading ? (
-          <p className="text-sm font-mono p-6" style={{color:"var(--text-muted)"}}>Loading students…</p>
+          <p className="text-sm font-mono p-6" style={{color:"var(--text-muted)"}}>Loading visitors…</p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm p-6" style={{color:"var(--text-muted)"}}>No students found.</p>
+          <p className="text-sm p-6" style={{color:"var(--text-muted)"}}>No visitors found.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px]">
