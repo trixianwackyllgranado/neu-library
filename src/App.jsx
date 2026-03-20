@@ -15,6 +15,7 @@ import UserManagementPage  from './pages/admin/UserManagementPage';
 import ReportsPage         from './pages/admin/ReportsPage';
 import EditRequestsPage    from './pages/admin/EditRequestsPage';
 import StaffKioskPage      from './pages/staff/StaffKioskPage';
+import StudentRecordsPage  from './pages/staff/StudentRecordsPage';
 import { useAuth }         from './context/AuthContext';
 
 function Layout({ children }) {
@@ -55,6 +56,14 @@ export default function App() {
                 <RequireAuth>
                   <RequireRole roles={['staff','admin']}>
                     <Layout><StaffKioskPage /></Layout>
+                  </RequireRole>
+                </RequireAuth>
+              } />
+
+              <Route path="/staff/records" element={
+                <RequireAuth>
+                  <RequireRole roles={['staff','admin']}>
+                    <Layout><StudentRecordsPage /></Layout>
                   </RequireRole>
                 </RequireAuth>
               } />

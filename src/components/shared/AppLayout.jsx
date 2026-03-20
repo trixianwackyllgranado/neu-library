@@ -180,9 +180,10 @@ export default function AppLayout({ children }) {
   const NAV = {
     visitor: [],
     staff: [
-      { to: '/dashboard',   label: 'Dashboard',      icon: Ico.dashboard },
-      { to: '/logger',      label: 'Library Logger', icon: Ico.logger    },
-      { to: '/staff/kiosk', label: 'Visitor Kiosk',  icon: Ico.kiosk     },
+      { to: '/dashboard',      label: 'Dashboard',       icon: Ico.dashboard },
+      { to: '/logger',         label: 'Library Logger',  icon: Ico.logger    },
+      { to: '/staff/kiosk',    label: 'Visitor Kiosk',   icon: Ico.kiosk     },
+      { to: '/staff/records',  label: 'Student Records', icon: Ico.users     },
     ],
     admin: [
       { to: '/dashboard',             label: 'Dashboard',      icon: Ico.dashboard,    badge: 0 },
