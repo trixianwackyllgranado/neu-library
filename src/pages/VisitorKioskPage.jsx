@@ -359,29 +359,6 @@ export default function VisitorKioskPage() {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
-  // Block admins and staff from opening the visitor kiosk on mobile
-  // They should only access it on a proper desktop/tablet kiosk station
-  const isAdminOrStaff = userProfile?.role === 'admin' || userProfile?.role === 'staff';
-  if (isAdminOrStaff && isMobile && !isAdminPreview) {
-    return (
-      <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
-        <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', position: 'absolute', top: 0, left: 0, right: 0 }} />
-        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--red-soft)', border: '1px solid var(--red-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, color: 'var(--red)' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-        </div>
-        <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.2em', color: 'var(--red)', textTransform: 'uppercase', marginBottom: 8 }}>Mobile Access Restricted</p>
-        <h2 style={{ ...SERIF, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Desktop Only</h2>
-        <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.7, maxWidth: 300, marginBottom: 28 }}>
-          The Visitor Kiosk is designed for use on a library counter station. Please open it on a desktop or tablet computer.
-        </p>
-        <button onClick={() => navigate('/dashboard')}
-          style={{ padding: '12px 28px', borderRadius: 10, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: 'pointer', ...MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-          ← Back to Dashboard
-        </button>
-      </div>
-    );
-  }
-
   // Auto-generate qrToken for visitors who registered before this feature existed
   useEffect(() => {
     if (!userProfile?.uid || userProfile?.qrToken) return;
@@ -480,6 +457,29 @@ export default function VisitorKioskPage() {
 
   // QR lightbox state
   const [showQRLightbox, setShowQRLightbox] = useState(false);
+
+  // Block admins and staff from opening the visitor kiosk on mobile
+  // They should only access it on a proper desktop/tablet kiosk station
+  const isAdminOrStaff = userProfile?.role === 'admin' || userProfile?.role === 'staff';
+  if (isAdminOrStaff && isMobile && !isAdminPreview) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 32, textAlign: 'center' }}>
+        <div style={{ height: '3px', background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#e67e22 25%,#e67e22 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)', position: 'absolute', top: 0, left: 0, right: 0 }} />
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--red-soft)', border: '1px solid var(--red-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, color: 'var(--red)' }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </div>
+        <p style={{ ...MONO, fontSize: '9px', letterSpacing: '0.2em', color: 'var(--red)', textTransform: 'uppercase', marginBottom: 8 }}>Mobile Access Restricted</p>
+        <h2 style={{ ...SERIF, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>Desktop Only</h2>
+        <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.7, maxWidth: 300, marginBottom: 28 }}>
+          The Visitor Kiosk is designed for use on a library counter station. Please open it on a desktop or tablet computer.
+        </p>
+        <button onClick={() => navigate('/dashboard')}
+          style={{ padding: '12px 28px', borderRadius: 10, background: 'var(--gold-soft)', border: '1px solid var(--gold-border)', color: 'var(--gold)', cursor: 'pointer', ...MONO, fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          ← Back to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg-base)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>

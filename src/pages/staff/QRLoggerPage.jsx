@@ -26,6 +26,10 @@ function formatDur(entryTs) {
   const m    = Math.floor((secs % 3600) / 60);
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
+function wipeQrDom() {
+  try { const el = document.getElementById('qr-staff-reader'); if (el) el.innerHTML = ''; } catch (_) {}
+}
+
 function formatId(raw) {
   const d = raw.replace(/\D/g, '').slice(0, 10);
   if (d.length <= 2) return d;
@@ -340,7 +344,7 @@ export default function QRLoggerPage() {
       try { old.clear(); } catch (_) {}
     }
     // Wipe the DOM node so Html5Qrcode gets a clean slate
-    try { const el = document.getElementById('qr-staff-reader'); if (el) el.innerHTML = ''; } catch (_) {}
+    wipeQrDom();
     if (unmountedRef.current) return;
     await new Promise(r => setTimeout(r, 100));
     const scanner = new Html5Qrcode('qr-staff-reader', { verbose: false });
@@ -369,7 +373,7 @@ export default function QRLoggerPage() {
       await new Promise(r => setTimeout(r, 100));
       try { sc.clear(); } catch (_) {}
     }
-    try { const el = document.getElementById('qr-staff-reader'); if (el) el.innerHTML = ''; } catch (_) {}
+    wipeQrDom();
     if (!unmountedRef.current) setScannerState('idle');
   }, []);
 
