@@ -1,6 +1,7 @@
 // src/components/shared/ChangePasswordModal.jsx
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { SuccessIcon } from './AnimatedIcons';
 
 const PP = { fontFamily: "'Poppins', sans-serif" };
 const SR = { fontFamily: "'Playfair Display', serif" };
@@ -84,8 +85,8 @@ export default function ChangePasswordModal({ onClose, adminReset = false }) {
           )}
           {success ? (
             <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--green-soft)', border: '1px solid var(--green-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px', color: 'var(--green)' }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                <SuccessIcon size={56} />
               </div>
               <p style={{ ...PP, fontSize: 15, fontWeight: 600, color: 'var(--green)', marginBottom: 4 }}>Password Updated</p>
               <p style={{ ...PP, fontSize: 13, color: 'var(--text-muted)' }}>Your new password is active.</p>

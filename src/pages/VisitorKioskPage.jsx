@@ -112,19 +112,49 @@ function QRCodeDisplay({ value, size = 160 }) {
 
 // ── Welcome Toast ─────────────────────────────────────────────────────────────
 function WelcomeToast({ name, onDismiss }) {
+  const [visible, setVisible] = useState(true);
   useEffect(() => {
-    const t = setTimeout(onDismiss, 5000);
+    const t = setTimeout(() => { setVisible(false); setTimeout(onDismiss, 400); }, 4500);
     return () => clearTimeout(t);
   }, []);
   return (
-    <div onClick={onDismiss}
-      style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', zIndex:80, padding:'14px 28px', borderRadius:14, background:'var(--green-soft)', border:'1px solid var(--green-border)', boxShadow:'0 8px 32px rgba(0,0,0,0.25)', cursor:'pointer', animation:'slideUpToast 0.35s ease both', textAlign:'center', whiteSpace:'nowrap' }}>
-      <p style={{ fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700, color:'var(--text-primary)', marginBottom:2 }}>
-        Welcome, {name}! 👋
-      </p>
-      <p style={{ fontFamily:"'Poppins',sans-serif", fontSize:13, color:'var(--green)' }}>
-        You can now enter the library. Select your purpose below.
-      </p>
+    <div
+      onClick={() => { setVisible(false); setTimeout(onDismiss, 300); }}
+      style={{
+        position: 'fixed', bottom: 20, left: '50%', zIndex: 80,
+        transform: 'translateX(-50%)',
+        width: 'min(360px, calc(100vw - 32px))',
+        padding: '18px 22px',
+        borderRadius: 16,
+        background: 'var(--card)',
+        border: '1px solid var(--green-border)',
+        boxShadow: '0 12px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(16,185,129,0.08)',
+        cursor: 'pointer',
+        animation: visible ? 'welcomeIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' : 'welcomeOut 0.3s ease forwards',
+        display: 'flex', alignItems: 'center', gap: 14,
+      }}
+    >
+      {/* Animated check icon */}
+      <div style={{
+        width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
+        background: 'var(--green-soft)', border: '1.5px solid var(--green-border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M7 12.5l3.5 3.5L17 9" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            strokeDasharray="20" strokeDashoffset="20">
+            <animate attributeName="stroke-dashoffset" from="20" to="0" dur="0.4s" begin="0.2s" fill="freeze" />
+          </path>
+        </svg>
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ fontFamily: "'Playfair Display',serif", fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: 2 }}>
+          Welcome, {name}!
+        </p>
+        <p style={{ fontFamily: "'Poppins',sans-serif", fontSize: 12, color: 'var(--green)', lineHeight: 1.4 }}>
+          Select your purpose below to check in.
+        </p>
+      </div>
     </div>
   );
 }
@@ -792,24 +822,68 @@ export default function VisitorKioskPage() {
 
       {/* Sign out confirmation modal */}
       {showExit && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', padding: 16 }}>
-          <div style={{ width: '100%', maxWidth: 400, background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--shadow-modal)' }}>
+        <div onClick={e => { if (e.target === e.currentTarget) setShowExit(false); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', padding: 16, animation: 'modalBgIn 0.2s ease both' }}>
+          <div style={{ width: '100%', maxWidth: 400, background: 'var(--card)', border: '1px solid var(--card-border)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-modal)', animation: 'modalCardIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both' }}>
             <div style={{ height: 3, background: 'linear-gradient(90deg,#c0392b 0%,#c0392b 25%,#f39c12 25%,#f39c12 50%,#27ae60 50%,#27ae60 75%,#2980b9 75%,#2980b9 100%)' }} />
-            <div style={{ padding: 28 }}>
-              <h2 style={{ ...SERIF, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>
+            <div style={{ padding: '28px 24px', textAlign: 'center' }}>
+              {/* Animated icon */}
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%', margin: '0 auto 18px',
+                background: session ? 'var(--gold-soft)' : 'var(--red-soft)',
+                border: `1.5px solid ${session ? 'var(--gold-border)' : 'var(--red-border)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+                  {session ? (
+                    <>
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        strokeDasharray="30" strokeDashoffset="30">
+                        <animate attributeName="stroke-dashoffset" from="30" to="0" dur="0.4s" fill="freeze" />
+                      </path>
+                      <polyline points="16 17 21 12 16 7" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        strokeDasharray="20" strokeDashoffset="20">
+                        <animate attributeName="stroke-dashoffset" from="20" to="0" dur="0.3s" begin="0.2s" fill="freeze" />
+                      </polyline>
+                      <line x1="21" y1="12" x2="9" y2="12" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round"
+                        strokeDasharray="12" strokeDashoffset="12">
+                        <animate attributeName="stroke-dashoffset" from="12" to="0" dur="0.25s" begin="0.35s" fill="freeze" />
+                      </line>
+                    </>
+                  ) : (
+                    <>
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        strokeDasharray="30" strokeDashoffset="30">
+                        <animate attributeName="stroke-dashoffset" from="30" to="0" dur="0.4s" fill="freeze" />
+                      </path>
+                      <polyline points="16 17 21 12 16 7" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        strokeDasharray="20" strokeDashoffset="20">
+                        <animate attributeName="stroke-dashoffset" from="20" to="0" dur="0.3s" begin="0.2s" fill="freeze" />
+                      </polyline>
+                      <line x1="21" y1="12" x2="9" y2="12" stroke="var(--red)" strokeWidth="2" strokeLinecap="round"
+                        strokeDasharray="12" strokeDashoffset="12">
+                        <animate attributeName="stroke-dashoffset" from="12" to="0" dur="0.25s" begin="0.35s" fill="freeze" />
+                      </line>
+                    </>
+                  )}
+                </svg>
+              </div>
+              <h2 style={{ ...SERIF, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, lineHeight: 1.25 }}>
                 {session ? 'Still Checked In' : 'Sign Out?'}
               </h2>
-              <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.6 }}>
-                {session ? 'You are still checked in to the library. Signing out will keep your visit logged.' : 'Are you sure you want to sign out?'}
+              <p style={{ ...PP, fontSize: 14, color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.65 }}>
+                {session ? 'You are still checked in. Signing out will keep your visit logged.' : 'Are you sure you want to sign out of your account?'}
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <button onClick={handleSignOut} disabled={loading}
-                  style={{ padding: 13, borderRadius: 10, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: 'pointer', ...PP, fontSize: 14, fontWeight: 600 }}>
-                  {loading ? 'Signing out…' : 'Sign Out'}
-                </button>
+              <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setShowExit(false)}
-                  style={{ padding: 13, borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer', ...PP, fontSize: 14 }}>
+                  style={{ flex: 1, padding: 13, borderRadius: 12, background: 'var(--surface)', border: '1px solid var(--card-border)', color: 'var(--text-muted)', cursor: 'pointer', ...PP, fontSize: 13, fontWeight: 500, transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; }}>
                   Cancel
+                </button>
+                <button onClick={handleSignOut} disabled={loading}
+                  style={{ flex: 1, padding: 13, borderRadius: 12, background: 'var(--red-soft)', border: '1px solid var(--red-border)', color: 'var(--red)', cursor: loading ? 'not-allowed' : 'pointer', ...PP, fontSize: 13, fontWeight: 600, opacity: loading ? 0.6 : 1, transition: 'all 0.15s' }}>
+                  {loading ? 'Signing out...' : 'Sign Out'}
                 </button>
               </div>
             </div>
@@ -835,10 +909,14 @@ export default function VisitorKioskPage() {
       )}
 
       <style>{`
-        @keyframes fadeUp      { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes spin        { to{transform:rotate(360deg)} }
-        @keyframes pulseDot    { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        @keyframes slideUpToast{ from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+        @keyframes fadeUp       { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin         { to{transform:rotate(360deg)} }
+        @keyframes pulseDot     { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        @keyframes slideUpToast { from{opacity:0;transform:translateX(-50%) translateY(20px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+        @keyframes welcomeIn    { from{opacity:0;transform:translateX(-50%) translateY(24px) scale(0.95)} to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)} }
+        @keyframes welcomeOut   { to{opacity:0;transform:translateX(-50%) translateY(12px) scale(0.97)} }
+        @keyframes modalBgIn    { from{opacity:0} to{opacity:1} }
+        @keyframes modalCardIn  { from{opacity:0;transform:translateY(20px) scale(0.96)} to{opacity:1;transform:none} }
       `}</style>
     </div>
   );
