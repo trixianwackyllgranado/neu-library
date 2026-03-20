@@ -218,5 +218,6 @@ const TUTORIAL_CONTENT = {
       'Note: You cannot borrow new books if you have overdue items.',
     ],
   },
+};
 
 export default TUTORIAL_CONTENT;
