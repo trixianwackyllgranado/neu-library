@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLibrarySession } from '../context/LibrarySessionContext';
 import { useTheme } from '../context/ThemeContext';
+import FloatingTutorial from '../components/shared/FloatingTutorial';
 import {
   collection, query, where, onSnapshot,
   addDoc, updateDoc, doc, serverTimestamp, setDoc, getDoc,
@@ -1053,6 +1054,8 @@ export default function VisitorKioskPage() {
           />
         </>
       )}
+
+      <FloatingTutorial pageKey="visitor-dashboard" />
 
       <style>{`
         @keyframes fadeUp       { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
