@@ -143,7 +143,8 @@ const TUTORIAL_CONTENT = {
     ],
   },
 
-  borrowing: {
+  // ── Staff/Admin: Borrowing Management ────────────────────────────────────
+  'borrowing-staff': {
     title: 'Borrowing Management',
     icon: '📖',
     purpose: 'Track all book borrowing transactions — who borrowed what, when it\'s due, and overdue items. Process checkouts and returns from this page.',
@@ -153,9 +154,69 @@ const TUTORIAL_CONTENT = {
       'View all active borrows sorted by due date.',
       'Process returns by finding the borrow record and marking it returned.',
       'Overdue items are highlighted in red with days overdue.',
-      'Extend due dates for approved extensions.',
+      'Use the Remind button on overdue entries to notify the student.',
     ],
   },
-};
+
+  // ── Student-facing pages ──────────────────────────────────────────────────
+
+  'visitor-kiosk': {
+    title: 'Visitor Self-Service Kiosk',
+    icon: '📱',
+    purpose: 'This is your personal library check-in screen. Use it to log your visit, track how long you\'ve been in the library, and manage your library session.',
+    howItWorks: 'Tap "Check In" when you arrive and select your reason for visiting. The timer starts automatically. When you leave, tap "Check Out" so your visit is properly recorded.',
+    scenario: 'You arrive at the library to study for an exam. Open the kiosk, tap "Check In," select "Study," and your session begins. When you\'re done, tap "Check Out" before you leave.',
+    instructions: [
+      'Tap "Check In" when you arrive at the library.',
+      'Select your purpose of visit (Study, Research, Return Book, etc.).',
+      'Your visit timer starts automatically — you can see how long you\'ve been here.',
+      'Tap "Check Out" when you\'re leaving so your visit is logged correctly.',
+      'Show your QR code to staff at the counter for faster check-in.',
+    ],
+  },
+
+  'student-dashboard': {
+    title: 'Your Dashboard',
+    icon: '🏠',
+    purpose: 'This is your personal library home screen. See your active borrows, overdue books, pending requests, and your current library session at a glance.',
+    howItWorks: 'The dashboard updates in real time. Your borrow stats are shown at the top, your QR code is available for staff scanning, and you can see whether you\'re currently checked in to the library.',
+    scenario: 'Before heading to the library, check your dashboard to see if any books are overdue and how many you still have borrowed. This helps you plan what to return.',
+    instructions: [
+      'Check the stat cards at the top for your borrow activity.',
+      'Your library QR code is always available — show it to staff for quick check-in.',
+      'If you have overdue books, they\'ll be highlighted in red — return them soon!',
+      'Use "View All" under Recent Borrows to see your full borrowing history.',
+    ],
+  },
+
+  catalog: {
+    title: 'Book Catalog',
+    icon: '📚',
+    purpose: 'Browse the library\'s full book collection. Search by title, author, or ISBN, and request to borrow any available book.',
+    howItWorks: 'Search or browse the catalog to find books. Each listing shows availability — how many copies are in stock. If copies are available, you can submit a borrow request which staff will approve.',
+    scenario: 'You need a specific textbook for your class. Search its title in the catalog, check that copies are available, and click "Request Borrow." Staff will process it within the day.',
+    instructions: [
+      'Use the search bar to find books by title, author, or ISBN.',
+      'Filter by category to browse books in your field.',
+      'Green number = copies available. Red = all copies are out.',
+      'Click "Request Borrow" to submit a borrow request.',
+      'Check "My Borrows" to track the status of your request.',
+    ],
+  },
+
+  borrowing: {
+    title: 'My Borrows',
+    icon: '📖',
+    purpose: 'Track all your borrowed books — active loans, pending requests, returned books, and overdue items. Manage your borrowing history from here.',
+    howItWorks: 'Your borrow requests appear as "Pending" until staff approves them. Once approved, they become "Active." Return books at the library counter and staff will mark them returned here.',
+    scenario: 'You submitted a borrow request yesterday. Open My Borrows to check if it\'s been approved. Once approved, visit the library counter to collect your book.',
+    instructions: [
+      'Pending tab — borrow requests waiting for staff approval.',
+      'Active tab — books you currently have borrowed.',
+      'Overdue tab — books past their due date (return these immediately!).',
+      'Returned tab — your full borrowing history.',
+      'Note: You cannot borrow new books if you have overdue items.',
+    ],
+  },
 
 export default TUTORIAL_CONTENT;

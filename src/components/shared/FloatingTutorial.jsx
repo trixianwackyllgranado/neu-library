@@ -20,7 +20,7 @@ export default function FloatingTutorial({ pageKey }) {
   const btnRef = useRef(null);
 
   const content = TUTORIAL_CONTENT[pageKey] || null;
-  const shouldRender = hasTutorialAccess && tutorialEnabled && content && !isPageDismissed(pageKey);
+  const shouldRender = tutorialActive && content && !isPageDismissed(pageKey);
 
   // ── All hooks MUST be above this line — no early returns before hooks ──────
 
@@ -132,18 +132,6 @@ export default function FloatingTutorial({ pageKey }) {
                 <p style={{ ...MN, fontSize: 9, letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 2 }}>Page Guide</p>
                 <p style={{ ...SR, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{content.title}</p>
               </div>
-            </div>
-            {/* Exclusive notice */}
-            <div style={{
-              marginTop: 8,
-              padding: '8px 10px',
-              background: 'rgba(59,130,246,0.08)',
-              border: '1px solid rgba(59,130,246,0.2)',
-              borderRadius: 8,
-            }}>
-              <p style={{ ...MN, fontSize: 9, color: '#60a5fa', lineHeight: 1.5, letterSpacing: '0.04em' }}>
-                This guide is exclusive to you as the system administrator. Regular staff and students cannot see this. You can turn it off anytime using the sidebar toggle.
-              </p>
             </div>
           </div>
 

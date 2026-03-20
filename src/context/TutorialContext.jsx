@@ -10,7 +10,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { useAuth, isPrimeAdminEmail } from './AuthContext';
+import { useAuth } from './AuthContext';
 
 const TutorialContext = createContext(null);
 
@@ -26,7 +26,7 @@ export function TutorialProvider({ children }) {
   const email = userProfile?.email;
   const role  = effectiveRole || userProfile?.role;
 
-  const hasTutorialAccess = !!email && isPrimeAdminEmail(email);
+  const hasTutorialAccess = !!uid; // available to all signed-in users
   const isStaffOrAdmin    = role === 'admin' || role === 'staff';
 
   // ── Load only the global toggle from Firestore ────────────────────────────
@@ -109,7 +109,7 @@ export function TutorialProvider({ children }) {
     return !tutorialEnabled || !!dismissedPages[pageKey];
   }, [tutorialEnabled, dismissedPages]);
 
-  const tutorialActive = hasTutorialAccess && tutorialEnabled && isStaffOrAdmin;
+  const tutorialActive = hasTutorialAccess && tutorialEnabled;
 
   return (
     <TutorialContext.Provider value={{
