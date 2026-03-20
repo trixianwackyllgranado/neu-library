@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
+import { WarningIcon, ErrorIcon } from '../components/shared/AnimatedIcons';
+
 const MONO  = { fontFamily: "'IBM Plex Mono', monospace" };
 const SERIF = { fontFamily: "'Playfair Display', serif" };
 const PP    = { fontFamily: "'Poppins', sans-serif" };
@@ -23,33 +25,41 @@ function Modal({ title, message, onClose, variant = 'error', actionLabel = 'OK',
   const accent       = variant === 'warn' ? 'var(--gold)' : 'var(--red)';
   const accentSoft   = variant === 'warn' ? 'var(--gold-soft)' : 'var(--red-soft)';
   const accentBorder = variant === 'warn' ? 'var(--gold-border)' : 'var(--red-border)';
+  const Icon = variant === 'warn' ? WarningIcon : ErrorIcon;
+
   return (
-    <div style={{ position:'fixed', inset:0, zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.72)', backdropFilter:'blur(4px)', padding:16 }}>
-      <div style={{ width:'100%', maxWidth:400, background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:18, overflow:'hidden', boxShadow:'var(--shadow-modal)', animation:'fadeUp 0.2s ease both' }}>
+    <div onClick={e => { if (e.target === e.currentTarget) onClose?.(); }}
+      style={{ position:'fixed', inset:0, zIndex:100, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(0,0,0,0.72)', backdropFilter:'blur(6px)', padding:16, animation:'modalFadeIn 0.2s ease both' }}>
+      <div style={{ width:'100%', maxWidth:400, background:'var(--card)', border:'1px solid var(--card-border)', borderRadius:20, overflow:'hidden', boxShadow:'var(--shadow-modal)', animation:'modalSlideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both' }}>
         <div style={{ height:3, background:`linear-gradient(90deg, ${accent}, transparent)` }} />
-        <div style={{ padding:'28px 28px 24px' }}>
-          <div style={{ width:48, height:48, borderRadius:'50%', background:accentSoft, border:`1px solid ${accentBorder}`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
-            {variant === 'warn'
-              ? <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            }
+        <div style={{ padding:'32px 28px 28px', textAlign:'center' }}>
+          <div style={{ display:'flex', justifyContent:'center', marginBottom:20 }}>
+            <Icon size={60} />
           </div>
-          <h2 style={{ ...SERIF, fontSize:20, fontWeight:700, color:'var(--text-primary)', textAlign:'center', marginBottom:10 }}>{title}</h2>
-          <p  style={{ ...PP, fontSize:14, color:'var(--text-muted)', textAlign:'center', lineHeight:1.7, marginBottom:22 }}>{message}</p>
+          <h2 style={{ ...SERIF, fontSize:22, fontWeight:700, color:'var(--text-primary)', marginBottom:10, lineHeight:1.25 }}>{title}</h2>
+          <p style={{ ...PP, fontSize:14, color:'var(--text-muted)', lineHeight:1.7, marginBottom:24 }}>{message}</p>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             <button onClick={onClose}
-              style={{ width:'100%', padding:'12px', borderRadius:10, background:accentSoft, border:`1px solid ${accentBorder}`, color:accent, cursor:'pointer', ...MONO, fontSize:'11px', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700 }}>
+              style={{ width:'100%', padding:'13px', borderRadius:12, background:accentSoft, border:`1px solid ${accentBorder}`, color:accent, cursor:'pointer', ...MONO, fontSize:'11px', letterSpacing:'0.14em', textTransform:'uppercase', fontWeight:700, transition:'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.opacity='0.85'; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity='1'; }}>
               {actionLabel}
             </button>
             {secondaryLabel && (
               <button onClick={onSecondary}
-                style={{ width:'100%', padding:'12px', borderRadius:10, background:'var(--surface)', border:'1px solid var(--card-border)', color:'var(--text-muted)', cursor:'pointer', ...MONO, fontSize:'11px', letterSpacing:'0.14em', textTransform:'uppercase' }}>
+                style={{ width:'100%', padding:'12px', borderRadius:12, background:'var(--surface)', border:'1px solid var(--card-border)', color:'var(--text-muted)', cursor:'pointer', ...MONO, fontSize:'11px', letterSpacing:'0.14em', textTransform:'uppercase', transition:'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background='var(--surface-hover)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background='var(--surface)'; }}>
                 {secondaryLabel}
               </button>
             )}
           </div>
         </div>
       </div>
+      <style>{`
+        @keyframes modalFadeIn  { from{opacity:0} to{opacity:1} }
+        @keyframes modalSlideUp { from{opacity:0;transform:translateY(20px) scale(0.96)} to{opacity:1;transform:none} }
+      `}</style>
     </div>
   );
 }
