@@ -600,7 +600,7 @@ function StaffInviteModal({ invites, myProfile, onClose, showToast }) {
 }
 
 // ── Profile Panel ─────────────────────────────────────────────────────────────
-function ProfilePanel({ user, myProfile, pendingEditUids, onClose, showToast, onEditProfile, onEditName }) {
+function ProfilePanel({ user, myProfile, pendingEditUids, onClose, showToast, onEditProfile, onEditName, onBlockToggle }) {
   const [roleAction, setRoleAction] = useState(null);
   const [reason,     setReason]     = useState('');
   const [saving,     setSaving]     = useState(false);
@@ -750,6 +750,10 @@ function ProfilePanel({ user, myProfile, pendingEditUids, onClose, showToast, on
                   style={{padding:'7px 14px',borderRadius:8,background:'var(--surface)',border:'1px solid var(--green-border)',color:'var(--green)',...MN,fontSize:10,fontWeight:700,cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.08em'}}>
                   Edit Name
                 </button>
+                <button onClick={()=>onBlockToggle(user)}
+                  style={{padding:"7px 14px",borderRadius:8,background:"var(--surface)",border:user.blocked ? "1px solid var(--gold-border)" : "1px solid var(--red-border)",color:user.blocked ? "var(--gold)" : "var(--red)",...MN,fontSize:10,fontWeight:700,cursor:"pointer",textTransform:"uppercase",letterSpacing:"0.08em"}}>
+                  {user.blocked ? "Unblock" : "Block"}
+                </button>
               </div>
 
               {roleAction && (
@@ -851,6 +855,8 @@ export default function UserManagementPage() {
       const ms = !search ||
         `${u.firstName} ${u.lastName} ${u.idNumber} ${u.email} ${u.course||''} ${u.college||''}`
           .toLowerCase().includes(search.toLowerCase());
+      if (roleFilter === 'blocked') return ms && !!u.blocked;
+      if (u.blocked) return false; // hide blocked from all other tabs
       const mr = roleFilter==='all' || u.role===roleFilter;
       const mv = visitorTypeFilter==='all' || (u.role==='visitor' && u.visitorType===visitorTypeFilter) ||
                  (visitorTypeFilter==='student' && u.role==='visitor' && u.visitorType!=='faculty');
@@ -863,14 +869,39 @@ export default function UserManagementPage() {
     });
 
   const counts = {
-    all:     visibleUsers.length,
-    visitor: visibleUsers.filter(u=>u.role==='visitor').length,
-    staff:   visibleUsers.filter(u=>u.role==='staff').length,
-    admin:   visibleUsers.filter(u=>u.role==='admin').length,
+    all:     visibleUsers.filter(u=>!u.blocked).length,
+    visitor: visibleUsers.filter(u=>u.role==='visitor'&&!u.blocked).length,
+    staff:   visibleUsers.filter(u=>u.role==='staff'&&!u.blocked).length,
+    admin:   visibleUsers.filter(u=>u.role==='admin'&&!u.blocked).length,
+    blocked: visibleUsers.filter(u=>u.blocked).length,
   };
 
-  const ROLE_TABS = [{key:'all',label:'All'},{key:'visitor',label:'Visitors'},{key:'staff',label:'Staff'},{key:'admin',label:'Admins'}];
+  const ROLE_TABS = [{key:'all',label:'All'},{key:'visitor',label:'Visitors'},{key:'staff',label:'Staff'},{key:'admin',label:'Admins'},{key:'blocked',label:'Blocked'}];
   const showToast = (msg, ok) => { setToast({msg,ok}); setTimeout(()=>setToast(null),4500); };
+
+  const handleBlockToggle = async (user) => {
+    if (!user?.id) return;
+    const nowBlocked = !user.blocked;
+    try {
+      await updateDoc(doc(db, 'users', user.id), {
+        blocked: nowBlocked,
+        blockedAt: nowBlocked ? serverTimestamp() : null,
+        blockedBy: nowBlocked ? myProfile?.uid : null,
+      });
+      await addDoc(collection(db, 'adminAuditLogs'), {
+        activityType: nowBlocked ? 'block' : 'unblock',
+        adminUid: myProfile?.uid,
+        adminName: `${myProfile?.lastName}, ${myProfile?.firstName}`,
+        targetUid: user.id,
+        targetName: `${user.lastName}, ${user.firstName}`,
+        timestamp: serverTimestamp(),
+      });
+      showToast(`${user.lastName}, ${user.firstName} has been ${nowBlocked ? 'blocked' : 'unblocked'}.`, true);
+      setSelectedUser(null);
+    } catch (e) {
+      showToast('Failed to update block status.', false);
+    }
+  };
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:24,animation:'fadeUp 0.3s ease both'}}>
@@ -924,8 +955,8 @@ export default function UserManagementPage() {
               }}>
               {t.label}
               <span style={{fontSize:9,padding:'1px 7px',borderRadius:10,
-                background:t.key==='admin'?'var(--badge-red-bg)':t.key==='staff'?'var(--badge-gold-bg)':t.key==='visitor'?'var(--badge-green-bg)':'var(--surface)',
-                color:t.key==='admin'?'var(--badge-red-text)':t.key==='staff'?'var(--badge-gold-text)':t.key==='visitor'?'var(--badge-green-text)':'var(--text-dim)',
+                background:t.key==='admin'?'var(--badge-red-bg)':t.key==='staff'?'var(--badge-gold-bg)':t.key==='visitor'?'var(--badge-green-bg)':t.key==='blocked'?'var(--red-soft)':'var(--surface)',
+                color:t.key==='admin'?'var(--badge-red-text)':t.key==='staff'?'var(--badge-gold-text)':t.key==='visitor'?'var(--badge-green-text)':t.key==='blocked'?'var(--red)':'var(--text-dim)',
                 border:'1px solid transparent',
               }}>{counts[t.key]}</span>
             </button>
@@ -990,6 +1021,9 @@ export default function UserManagementPage() {
                         {pendingEditUids.has(u.id) && (
                           <span title="Pending edit request" style={{width:7,height:7,borderRadius:'50%',background:'var(--gold)',flexShrink:0,display:'inline-block'}}/>
                         )}
+                        {u.blocked && (
+                          <span style={{...MN,fontSize:8,padding:'2px 7px',borderRadius:10,background:'var(--red-soft)',border:'1px solid var(--red-border)',color:'var(--red)',letterSpacing:'0.1em',textTransform:'uppercase',flexShrink:0}}>Blocked</span>
+                        )}
                       </div>
                     </td>
                     <td style={{padding:'13px 16px',...MN,fontSize:12,color:'var(--text-body)'}}>{u.idNumber||'—'}</td>
@@ -1015,6 +1049,7 @@ export default function UserManagementPage() {
           onClose={()=>setSelectedUser(null)} showToast={showToast}
           onEditProfile={t=>{setEditProfileTarget(t);setSelectedUser(null);}}
           onEditName={t=>{setEditNameTarget(t);setSelectedUser(null);}}
+          onBlockToggle={handleBlockToggle}
         />
       )}
       {editProfileTarget && (

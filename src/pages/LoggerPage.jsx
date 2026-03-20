@@ -345,35 +345,27 @@ export default function LoggerPage() {
   // ── STAFF / ADMIN VIEW ───────────────────────────────────────────────────
   if (isStaff) {
     const uniquePurposes = [...new Set(liveSessions.map(s => s.purpose).filter(Boolean))].sort();
-    const uniqueCourses  = [...new Set(liveSessions.map(s => userMap[s.uid]?.course || s.studentCourse).filter(Boolean))].sort();
+    const uniqueCourses  = [...new Set(liveSessions.map(s => userMap[s.uid]?.course).filter(Boolean))].sort();
     const histPurposes   = [...new Set(history.map(r => r.purpose).filter(Boolean))].sort();
-    const histCourses    = [...new Set(history.map(r => userMap[r.uid]?.course || r.studentCourse).filter(Boolean))].sort();
+    const histCourses    = [...new Set(history.map(r => userMap[r.uid]?.course).filter(Boolean))].sort();
 
     const filteredLive = liveSessions.filter(s => {
       const u = userMap[s.uid];
-      // Hide entries with no user doc AND no snapshot — orphaned with no recoverable data
-      if (!u && !s.studentName?.trim()) return false;
-      const name = u ? `${u.lastName} ${u.firstName}`.toLowerCase() : (s.studentName || '').toLowerCase();
-      const idNum = u?.idNumber || s.studentIdNumber || '';
-      const course = u?.course || s.studentCourse || '';
+      const name = u ? `${u.lastName} ${u.firstName}`.toLowerCase() : '';
       return (
-        (!logSearch  || name.includes(logSearch.toLowerCase()) || idNum.includes(logSearch)) &&
+        (!logSearch  || name.includes(logSearch.toLowerCase()) || (u?.idNumber || '').includes(logSearch)) &&
         (!logPurpose || s.purpose === logPurpose) &&
-        (!logCourse  || course === logCourse)
+        (!logCourse  || (u?.course ?? '') === logCourse)
       );
     });
 
     const filteredHistory = history.filter(r => {
       const u = userMap[r.uid];
-      // Hide entries with no user doc AND no snapshot — orphaned with no recoverable data
-      if (!u && !r.studentName?.trim()) return false;
-      const name = u ? `${u.lastName} ${u.firstName}`.toLowerCase() : (r.studentName || '').toLowerCase();
-      const idNum = u?.idNumber || r.studentIdNumber || '';
-      const course = u?.course || r.studentCourse || '';
+      const name = u ? `${u.lastName} ${u.firstName}`.toLowerCase() : '';
       return (
-        (!histSearch  || name.includes(histSearch.toLowerCase()) || idNum.includes(histSearch)) &&
+        (!histSearch  || name.includes(histSearch.toLowerCase()) || (u?.idNumber || '').includes(histSearch)) &&
         (!histPurpose || r.purpose === histPurpose) &&
-        (!histCourse  || course === histCourse) &&
+        (!histCourse  || (u?.course ?? '') === histCourse) &&
         inRange(r.entryTime, histDate) &&
         (histStatus === 'all' || (histStatus === 'forced' ? r.forcedLogout : !r.forcedLogout))
       );
@@ -505,7 +497,7 @@ export default function LoggerPage() {
                           <tr key={s.id} className="log-row">
                             <td style={tdSt}>
                               <button
-                                onClick={() => navigate('/staff/students', { state: { openStudentId: s.uid } })}
+                                onClick={() => navigate('/staff/records', { state: { openStudentId: s.uid } })}
                                 style={{ background: 'none', border: 'none', cursor: isDeleted ? 'default' : 'pointer', color: isDeleted ? 'var(--text-muted)' : 'var(--gold)', fontSize: '13px', fontWeight: 600, textAlign: 'left', padding: 0, textDecoration: 'none' }}
                                 onMouseEnter={e => { if (!isDeleted) e.currentTarget.style.textDecoration = 'underline'; }}
                                 onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}>
@@ -679,7 +671,7 @@ export default function LoggerPage() {
                         return (
                           <tr key={r.id} className="log-row">
                             <td style={tdSt}>
-                              <button onClick={() => navigate('/staff/students', { state: { openStudentId: r.uid } })}
+                              <button onClick={() => navigate('/staff/records', { state: { openStudentId: r.uid } })}
                                 style={{ background: 'none', border: 'none', cursor: isDeleted ? 'default' : 'pointer', color: isDeleted ? 'var(--text-muted)' : 'var(--gold)', fontSize: '13px', fontWeight: 600, textAlign: 'left', padding: 0 }}
                                 onMouseEnter={e => { if (!isDeleted) e.currentTarget.style.textDecoration = 'underline'; }}
                                 onMouseLeave={e => { e.currentTarget.style.textDecoration = 'none'; }}>
@@ -688,18 +680,18 @@ export default function LoggerPage() {
                             </td>
                             <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{idNum}</td>
                             <td style={{ ...tdSt, fontSize: '12px', color: 'var(--text-muted)' }}>{course}</td>
-                            <td style={tdSt}>
-                              <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--badge-gray-bg)', border: '1px solid rgba(100,116,139,0.2)', color: 'var(--text-muted)' }}>
+                            <td style={{...tdSt, maxWidth: 140}}>
+                              <span title={r.purpose} style={{ ...S, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--badge-gray-bg)', border: '1px solid rgba(100,116,139,0.2)', color: 'var(--text-muted)', display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {r.purpose}
                               </span>
                             </td>
                             <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{fmtDt(r.entryTime)}</td>
                             <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{fmtDt(r.exitTime)}</td>
                             <td style={{ ...tdSt, ...S, fontSize: '11px', color: 'var(--text-muted)' }}>{secs != null ? formatReadable(secs) : '—'}</td>
-                            <td style={tdSt}>
+                            <td style={{...tdSt, minWidth: 80}}>
                               {r.forcedLogout
-                                ? <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--red-soft)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--red)' }}>Force-Exited</span>
-                                : <span style={{ ...S, fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', background: 'var(--surface)', border: '1px solid rgba(100,116,139,0.15)', color: 'var(--text-dim)' }}>Exited</span>
+                                ? <span style={{ ...S, fontSize: '9px', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '20px', background: 'var(--red-soft)', border: '1px solid rgba(239,68,68,0.25)', color: 'var(--red)', whiteSpace: 'nowrap' }}>Force-Exit</span>
+                                : <span style={{ ...S, fontSize: '9px', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '20px', background: 'var(--surface)', border: '1px solid rgba(100,116,139,0.15)', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>Exited</span>
                               }
                             </td>
                           </tr>

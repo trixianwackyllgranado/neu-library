@@ -310,6 +310,14 @@ export function AuthProvider({ children }) {
 
     if (profileSnap.exists()) {
       const data = profileSnap.data();
+      // ── Blocked user check ────────────────────────────────────────────
+      if (data.blocked) {
+        loginInProgressRef.current = false;
+        try { await signOut(auth); } catch (_) {}
+        const err = new Error('Your account has been blocked. Please contact the library administrator.');
+        err.code = 'account-blocked';
+        throw err;
+      }
       if (!data.uid || data.uid !== googleUser.uid) {
         try { await updateDoc(doc(db, 'users', googleUser.uid), { uid: googleUser.uid }); } catch (_) {}
       }
