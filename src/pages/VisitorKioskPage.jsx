@@ -211,7 +211,7 @@ function CheckInSuccessToast({ purpose, onDismiss }) {
       </p>
       <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--card-border)' }}>
         <p style={{ fontFamily: "'Poppins',sans-serif", fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          Your session has started. You can <strong style={{ color: 'var(--text-primary)' }}>leave this screen on</strong>, close the app, or even sign out — your library visit stays active. Just <strong style={{ color: 'var(--green)' }}>check out when you leave</strong> the library.
+          Your session has started. You can <strong style={{ color: 'var(--text-primary)' }}>leave this screen on</strong>, close the app, or even sign out — your library visit stays active.<strong style={{ color: 'var(--green)' }}>ONLY check out when you leave</strong> the library.
         </p>
       </div>
       <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 10, color: 'var(--text-dim)', marginTop: 10, letterSpacing: '0.04em' }}>
