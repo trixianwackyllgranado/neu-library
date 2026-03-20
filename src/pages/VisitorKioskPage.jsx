@@ -159,6 +159,62 @@ function WelcomeToast({ name, onDismiss }) {
   );
 }
 
+// ── Check-In Success Toast ───────────────────────────────────────────────────
+function CheckInSuccessToast({ purpose, onDismiss }) {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => { setVisible(false); setTimeout(onDismiss, 400); }, 4000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div
+      onClick={() => { setVisible(false); setTimeout(onDismiss, 300); }}
+      style={{
+        position: 'fixed', top: '50%', left: '50%', zIndex: 90,
+        transform: 'translate(-50%, -50%)',
+        width: 'min(340px, calc(100vw - 40px))',
+        padding: '32px 28px',
+        borderRadius: 20,
+        background: 'var(--card)',
+        border: '1px solid var(--green-border)',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(45,212,168,0.1)',
+        cursor: 'pointer',
+        textAlign: 'center',
+        animation: visible ? 'checkInPopIn 0.45s cubic-bezier(0.34,1.56,0.64,1) both' : 'checkInPopOut 0.3s ease forwards',
+      }}
+    >
+      {/* Animated checkmark circle */}
+      <div style={{
+        width: 64, height: 64, borderRadius: '50%', margin: '0 auto 18px',
+        background: 'var(--green-soft)', border: '2px solid var(--green-border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="var(--green)" strokeWidth="1.5" strokeDasharray="63" strokeDashoffset="63" opacity="0.4">
+            <animate attributeName="stroke-dashoffset" from="63" to="0" dur="0.5s" fill="freeze" />
+          </circle>
+          <path d="M7 12.5l3.5 3.5L17 9" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            strokeDasharray="20" strokeDashoffset="20">
+            <animate attributeName="stroke-dashoffset" from="20" to="0" dur="0.35s" begin="0.3s" fill="freeze" />
+          </path>
+        </svg>
+      </div>
+      <p style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9, letterSpacing: '0.2em', color: 'var(--green)', textTransform: 'uppercase', marginBottom: 8 }}>
+        Checked In Successfully
+      </p>
+      <p style={{ fontFamily: "'Playfair Display',serif", fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.25, marginBottom: 8 }}>
+        You're in the library!
+      </p>
+      <p style={{ fontFamily: "'Poppins',sans-serif", fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+        Purpose: <strong style={{ color: 'var(--green)' }}>{purpose}</strong>
+      </p>
+      <p style={{ fontFamily: "'Poppins',sans-serif", fontSize: 11, color: 'var(--text-dim)', marginTop: 12 }}>
+        Your session timer has started. Tap to dismiss.
+      </p>
+    </div>
+  );
+}
+
 
 function EditRequestModal({ profile, existingRequest, onClose }) {
   const MONO  = { fontFamily: "'IBM Plex Mono', monospace" };
@@ -381,6 +437,8 @@ export default function VisitorKioskPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showWelcome,   setShowWelcome]   = useState(false);
   const [showQR,        setShowQR]        = useState(false);
+  const [showCheckInSuccess, setShowCheckInSuccess] = useState(false);
+  const [checkedInPurpose, setCheckedInPurpose] = useState('');
 
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 640);
   useEffect(() => {
@@ -450,10 +508,14 @@ export default function VisitorKioskPage() {
     : visitorTypeLabel;
 
   const handleCheckIn = async () => {
-    if (isAdminPreview) return; // Admin preview — don't create real log entries
+    if (isAdminPreview) return;
     if (!purpose) { setError('Please select your purpose of visit.'); return; }
     setError(''); setLoading(true);
-    try { await checkIn(purpose); }
+    try {
+      await checkIn(purpose);
+      setCheckedInPurpose(purpose);
+      setShowCheckInSuccess(true);
+    }
     catch { setError('Failed to check in. Please try again.'); }
     finally { setLoading(false); }
   };
@@ -908,6 +970,18 @@ export default function VisitorKioskPage() {
         />
       )}
 
+      {/* Check-in success popup — centered overlay */}
+      {showCheckInSuccess && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 85, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', animation: 'modalBgIn 0.2s ease both' }}
+            onClick={() => setShowCheckInSuccess(false)} />
+          <CheckInSuccessToast
+            purpose={checkedInPurpose}
+            onDismiss={() => setShowCheckInSuccess(false)}
+          />
+        </>
+      )}
+
       <style>{`
         @keyframes fadeUp       { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin         { to{transform:rotate(360deg)} }
@@ -917,6 +991,8 @@ export default function VisitorKioskPage() {
         @keyframes welcomeOut   { to{opacity:0;transform:translateX(-50%) translateY(12px) scale(0.97)} }
         @keyframes modalBgIn    { from{opacity:0} to{opacity:1} }
         @keyframes modalCardIn  { from{opacity:0;transform:translateY(20px) scale(0.96)} to{opacity:1;transform:none} }
+        @keyframes checkInPopIn { from{opacity:0;transform:translate(-50%,-50%) scale(0.85)} to{opacity:1;transform:translate(-50%,-50%) scale(1)} }
+        @keyframes checkInPopOut{ to{opacity:0;transform:translate(-50%,-50%) scale(0.9)} }
       `}</style>
     </div>
   );
