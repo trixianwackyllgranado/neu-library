@@ -112,7 +112,10 @@ function NavItem({ to, label, icon, collapsed, onClick, badge }) {
 }
 
 // ── Map pathname to tutorial page key ────────────────────────────────────────
-function getPageKey(pathname) {
+function getPageKey(pathname, role) {
+  // Visitors see a different dashboard tutorial
+  if (pathname === '/dashboard' && role === 'visitor') return 'visitor-dashboard';
+
   const map = {
     '/dashboard':            'dashboard',
     '/logger':               'logger',
@@ -199,7 +202,7 @@ export default function AppLayout({ children }) {
   const SIDEBAR_W = collapsed ? 60 : 224;
 
   // Determine tutorial page key
-  const tutorialPageKey = getPageKey(location.pathname);
+  const tutorialPageKey = getPageKey(location.pathname, role);
 
   const sidebar = (mob = false) => (
     <div style={{ width: mob ? 256 : SIDEBAR_W, height: '100%', background: 'var(--card)', borderRight: '1px solid var(--divider)', display: 'flex', flexDirection: 'column', transition: 'width 0.2s ease', overflow: 'hidden', flexShrink: 0 }}>

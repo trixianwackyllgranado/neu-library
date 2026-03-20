@@ -35,7 +35,7 @@ const TUTORIAL_CONTENT = {
     icon: '🖥️',
     purpose: 'This is the counter kiosk that staff operate on a shared screen. Visitors approach the desk and staff checks them in or out by typing their ID number or scanning their QR.',
     howItWorks: 'Type a visitor\'s student ID, scan their QR code, or search by email. The system finds their account and either checks them in (if not active) or checks them out (if already active). Identity details are frozen at check-in time.',
-    scenario: 'A student walks up to the library counter. Ask for their ID number, type it in, select a purpose, and hit "Check In." When they leave, the same process checks them out automatically.',
+    scenario: 'A student walks up to the library counter. Ask for their ID number, type it in, select a purpose, and hit "Check In." When they leave, the same process checks them out automatically. QR do the same but faster for regular visitors.',
     instructions: [
       'Enter the student\'s ID number in the search field.',
       'If found, their name and details appear for confirmation.',
@@ -158,20 +158,24 @@ const TUTORIAL_CONTENT = {
     ],
   },
 
-  // ── Student-facing pages ──────────────────────────────────────────────────
+  // ── Visitor/Student-facing pages ─────────────────────────────────────────
 
-  'visitor-kiosk': {
-    title: 'Visitor Self-Service Kiosk',
+  'visitor-dashboard': {
+    title: 'Your Library Screen',
     icon: '📱',
-    purpose: 'This is your personal library check-in screen. Use it to log your visit, track how long you\'ve been in the library, and manage your library session.',
-    howItWorks: 'Tap "Check In" when you arrive and select your reason for visiting. The timer starts automatically. When you leave, tap "Check Out" so your visit is properly recorded.',
-    scenario: 'You arrive at the library to study for an exam. Open the kiosk, tap "Check In," select "Study," and your session begins. When you\'re done, tap "Check Out" before you leave.',
+    purpose: 'This is your personal library check-in screen — works on your phone, tablet, or laptop. Use it to log yourself in and out of the library, with or without internet.',
+    howItWorks: 'You have two ways to check in:\n\n' +
+      'Option A — Self-service on your device: Open this page on your phone while connected to the internet. Tap "Check In," pick your purpose, and you\'re logged in. Tap "Check Out" before you leave.\n\n' +
+      'Option B — QR code (works offline): Your QR code was generated when you first registered. Screenshot it and save it to your phone\'s gallery. Next time you\'re at the library with no internet, just show that saved screenshot to staff at the counter — they scan it and you\'re checked in without typing anything.\n\n' +
+      'Your QR never changes, so save it once and use it forever.',
+    scenario: 'Your mobile data is weak near the library. No problem — you already saved your QR screenshot weeks ago. You show it to staff, they scan it in seconds, and you\'re checked in. When leaving, you show it again for checkout. Zero typing, no internet needed on your end.',
     instructions: [
-      'Tap "Check In" when you arrive at the library.',
-      'Select your purpose of visit (Study, Research, Return Book, etc.).',
-      'Your visit timer starts automatically — you can see how long you\'ve been here.',
-      'Tap "Check Out" when you\'re leaving so your visit is logged correctly.',
-      'Show your QR code to staff at the counter for faster check-in.',
+      'With internet on your device: tap "Check In" on this page and select your visit purpose.',
+      'To save your QR: screenshot the QR code shown on this screen and save it to your photos.',
+      'At the counter with no internet: open your saved QR screenshot and show it to staff.',
+      'Staff scans it from your screen — no need to type your ID number.',
+      'Tap "Check Out" (or show your QR again at the counter) when leaving.',
+      'Your full visit history and timer are always visible here when you\'re online.',
     ],
   },
 
