@@ -673,18 +673,57 @@ function ProfilePanel({ user, myProfile, pendingEditUids, onClose, showToast, on
         {/* Body */}
         <div style={{overflowY:'auto',flex:1,padding:'18px 20px',display:'flex',flexDirection:'column',gap:16}}>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-            {[
-              {label:'Email',        value:user.email,                                                   full:true},
-              {label:'Visitor Type', value:user.visitorType||(user.role!=='visitor'?'—':'Student')              },
-              {label:'College',      value:user.college||user.department||'—'                                   },
-              {label:'Course',       value:user.course||'—'                                                     },
-              {label:'Joined',       value:fmt(user.createdAt)                                                  },
-            ].map(({label,value,full})=>(
-              <div key={label} style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px',gridColumn:full?'1 / -1':undefined}}>
-                <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>{label}</p>
-                <p style={{...PP,fontSize:13,color:'var(--text-primary)',wordBreak:'break-all'}}>{value||'—'}</p>
+            {/* Email — always shown */}
+            <div style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px',gridColumn:'1 / -1'}}>
+              <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>Email</p>
+              <p style={{...PP,fontSize:13,color:'var(--text-primary)',wordBreak:'break-all'}}>{user.email||'—'}</p>
+            </div>
+
+            {/* Visitor-only fields */}
+            {user.role==='visitor' && <>
+              <div style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px'}}>
+                <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>Visitor Type</p>
+                <p style={{...PP,fontSize:13,color:'var(--text-primary)'}}>{user.visitorType||'Student'}</p>
               </div>
-            ))}
+              <div style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px'}}>
+                <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>College</p>
+                <p style={{...PP,fontSize:13,color:'var(--text-primary)'}}>{user.college||user.department||'—'}</p>
+              </div>
+              <div style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px',gridColumn:'1 / -1'}}>
+                <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>Course</p>
+                <p style={{...PP,fontSize:13,color:'var(--text-primary)'}}>{user.course||'—'}</p>
+              </div>
+            </>}
+
+            {/* Staff-only fields */}
+            {user.role==='staff' && <>
+              <div style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px'}}>
+                <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>Department</p>
+                <p style={{...PP,fontSize:13,color:'var(--text-primary)'}}>{user.college||user.department||'Library Staff'}</p>
+              </div>
+              <div style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px'}}>
+                <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>Staff ID</p>
+                <p style={{...PP,fontSize:13,color:'var(--text-primary)'}}>{user.idNumber||'—'}</p>
+              </div>
+            </>}
+
+            {/* Admin-only fields */}
+            {user.role==='admin' && <>
+              <div style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px'}}>
+                <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>Access Level</p>
+                <p style={{...PP,fontSize:13,color:'var(--text-primary)'}}>Administrator</p>
+              </div>
+              <div style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px'}}>
+                <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>Admin ID</p>
+                <p style={{...PP,fontSize:13,color:'var(--text-primary)'}}>{user.idNumber||'—'}</p>
+              </div>
+            </>}
+
+            {/* Joined — always shown */}
+            <div style={{background:'var(--surface)',border:'1px solid var(--card-border)',borderRadius:10,padding:'10px 12px'}}>
+              <p style={{...MN,fontSize:9,letterSpacing:'0.14em',textTransform:'uppercase',color:'var(--text-dim)',marginBottom:3}}>Joined</p>
+              <p style={{...PP,fontSize:13,color:'var(--text-primary)'}}>{fmt(user.createdAt)||'—'}</p>
+            </div>
           </div>
 
           {canChange && (
