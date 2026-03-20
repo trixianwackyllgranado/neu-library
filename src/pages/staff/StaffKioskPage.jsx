@@ -27,6 +27,17 @@ function formatId(raw) {
   if (d.length <= 7) return `${d.slice(0,2)}-${d.slice(2)}`;
   return `${d.slice(0,2)}-${d.slice(2,7)}-${d.slice(7)}`;
 }
+
+function formatInput(raw) {
+  if (raw.includes('@')) return { display: raw, value: raw };
+  if (/[a-zA-Z]/.test(raw)) {
+    const username = raw.replace(/@.*/g, '');
+    const display = username ? `${username}@neu.edu.ph` : '';
+    return { display, value: display };
+  }
+  const fmt = formatId(raw);
+  return { display: fmt, value: fmt };
+}
 function fmtTime(ts) {
   if (!ts) return '—';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
@@ -430,18 +441,13 @@ export default function StaffKioskPage() {
                   value={inputFmt}
                   onChange={e => {
                     const raw = e.target.value;
-                    const digitsOnly = raw.replace(/\D/g,'');
-                    if (digitsOnly.length > 0 && digitsOnly.length <= 10 && /^\d+$/.test(raw.replace(/-/g,''))) {
-                      const fmt = formatId(raw);
-                      setInputFmt(fmt); setInputVal(fmt);
-                    } else {
-                      setInputFmt(raw); setInputVal(raw);
-                    }
+                    const { display, value } = formatInput(raw);
+                    setInputFmt(display); setInputVal(value);
                     setError('');
                   }}
+                  autoFocus autoComplete="off"
                   onFocus={e => { e.currentTarget.style.borderColor = 'var(--gold)'; }}
                   onBlur={e =>  { e.currentTarget.style.borderColor = 'var(--input-border)'; }}
-                  autoFocus autoComplete="off"
                 />
                 <p style={{...MN,fontSize:10,color:'var(--text-dim)',marginTop:4}}>ID number · QR token · @neu.edu.ph email</p>
               </div>
