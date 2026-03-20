@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, useRef } from 'react';
 import {
   collection, query, where, onSnapshot,
   addDoc, updateDoc, doc, serverTimestamp,
+  getDocs, limit, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from './AuthContext';
@@ -16,6 +17,36 @@ export function LibrarySessionProvider({ children }) {
 
   // Ref to prevent concurrent checkIn calls (spam protection)
   const checkInFlight = useRef(false);
+
+  // On mount: deduplicate any existing active sessions — keep earliest, close the rest
+  // This cleans up duplicates created by multi-device race conditions
+  useEffect(() => {
+    if (!userProfile?.uid) return;
+    (async () => {
+      const snap = await getDocs(
+        query(collection(db, 'logger'),
+          where('uid',    '==', userProfile.uid),
+          where('active', '==', true)
+        )
+      );
+      if (snap.size <= 1) return; // no duplicates
+      // Sort by entryTime ascending — keep the first (earliest), close the rest
+      const sorted = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          const ta = a.entryTime?.toMillis?.() ?? 0;
+          const tb = b.entryTime?.toMillis?.() ?? 0;
+          return ta - tb;
+        });
+      const batch = writeBatch(db);
+      sorted.slice(1).forEach(s => {
+        batch.update(doc(db, 'logger', s.id), {
+          active: false, exitTime: serverTimestamp(), forcedLogout: true,
+        });
+      });
+      await batch.commit();
+    })();
+  }, [userProfile?.uid]);
 
   // Real-time listener for the current user's active session
   useEffect(() => {
@@ -54,22 +85,34 @@ export function LibrarySessionProvider({ children }) {
   }, [session]);
 
   const checkIn = async (purpose) => {
-    // Block if: no user, already have a session, or a checkIn is already in flight
     if (!userProfile?.uid) return;
-    if (session !== null && session !== undefined) return; // session exists or still loading
-    if (checkInFlight.current) return; // debounce rapid clicks
+    if (session !== null && session !== undefined) return;
+    if (checkInFlight.current) return;
 
     checkInFlight.current = true;
     try {
+      // Atomic guard: query for any existing active session for this uid
+      // before writing — prevents duplicate sessions from multi-device race conditions
+      const existingSnap = await getDocs(
+        query(collection(db, 'logger'),
+          where('uid',    '==', userProfile.uid),
+          where('active', '==', true),
+          limit(1)
+        )
+      );
+      if (!existingSnap.empty) return; // already checked in on another device
+
       await addDoc(collection(db, 'logger'), {
-        uid:       userProfile.uid,
+        uid:             userProfile.uid,
         purpose,
-        entryTime: serverTimestamp(),
-        active:    true,
+        entryTime:       serverTimestamp(),
+        active:          true,
+        studentName:     `${userProfile.lastName}, ${userProfile.firstName}`,
+        studentIdNumber: userProfile.idNumber || '',
+        studentCourse:   userProfile.course   || '',
+        studentCollege:  userProfile.college  || '',
       });
     } finally {
-      // Keep the lock for a moment so the snapshot has time to update
-      // before any subsequent call could slip through
       setTimeout(() => { checkInFlight.current = false; }, 2000);
     }
   };

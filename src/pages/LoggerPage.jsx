@@ -351,6 +351,8 @@ export default function LoggerPage() {
 
     const filteredLive = liveSessions.filter(s => {
       const u = userMap[s.uid];
+      // Hide entries with no user doc AND no snapshot — orphaned with no recoverable data
+      if (!u && !s.studentName?.trim()) return false;
       const name = u ? `${u.lastName} ${u.firstName}`.toLowerCase() : (s.studentName || '').toLowerCase();
       const idNum = u?.idNumber || s.studentIdNumber || '';
       const course = u?.course || s.studentCourse || '';
@@ -363,6 +365,8 @@ export default function LoggerPage() {
 
     const filteredHistory = history.filter(r => {
       const u = userMap[r.uid];
+      // Hide entries with no user doc AND no snapshot — orphaned with no recoverable data
+      if (!u && !r.studentName?.trim()) return false;
       const name = u ? `${u.lastName} ${u.firstName}`.toLowerCase() : (r.studentName || '').toLowerCase();
       const idNum = u?.idNumber || r.studentIdNumber || '';
       const course = u?.course || r.studentCourse || '';

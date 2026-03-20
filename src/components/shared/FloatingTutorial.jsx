@@ -127,7 +127,7 @@ export default function FloatingTutorial({ pageKey }) {
           {/* Header */}
           <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--divider)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <span style={{ fontSize: 20 }}>{content.icon}</span>
+              <span style={{ display: "flex", alignItems: "center", color: "var(--gold)" }} dangerouslySetInnerHTML={{ __html: content.icon }} />
               <div style={{ flex: 1 }}>
                 <p style={{ ...MN, fontSize: 9, letterSpacing: '0.2em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 2 }}>Page Guide</p>
                 <p style={{ ...SR, fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>{content.title}</p>
