@@ -155,12 +155,6 @@ export default function ReportsPage() {
       .map(([name, value]) => ({ name: name.replace('College of ',''), value }));
   })();
 
-  // Visitor type breakdown (student vs faculty)
-  const visitorTypeDist = [
-    { name: 'Students', value: stats.students },
-    { name: 'Faculty',  value: stats.faculty  },
-  ].filter(d => d.value > 0);
-
   // Visitor activity tab
   const visitorUsers = users
     .filter(u => u.role === 'visitor')
@@ -320,9 +314,10 @@ export default function ReportsPage() {
           </div>
 
           {/* Charts */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))', gap:16 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            {/* Line chart — full width */}
             <ChartCard title="Visitor Log-Ins per Day" subtitle="Last 14 days" hint="View visit history" onClick={() => navigate('/admin/logger', { state: { initialTab: 'history' } })}>
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={sessionsByDay} margin={{ top:4, right:8, left:-16, bottom:0 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" tick={{ fontSize:10 }} />
@@ -333,58 +328,40 @@ export default function ReportsPage() {
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="Visit Purpose Distribution" hint="View visit history by purpose" onClick={() => navigate('/admin/logger', { state: { initialTab: 'history' } })}>
-              {purposeDist.length === 0
-                ? <p style={{ ...PP, fontSize:13, color:'var(--text-dim)', textAlign:'center', padding:'32px 0' }}>No data yet.</p>
-                : (
-                  <ResponsiveContainer width="100%" height={200}>
-                    <BarChart data={purposeDist} layout="vertical" margin={{ top:0, right:16, left:8, bottom:0 }}>
+            {/* Bar charts — side by side */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(300px,1fr))', gap:16 }}>
+              <ChartCard title="Visit Purpose Distribution" hint="View visit history by purpose" onClick={() => navigate('/admin/logger', { state: { initialTab: 'history' } })}>
+                {purposeDist.length === 0
+                  ? <p style={{ ...PP, fontSize:13, color:'var(--text-dim)', textAlign:'center', padding:'32px 0' }}>No data yet.</p>
+                  : (
+                    <ResponsiveContainer width="100%" height={Math.max(180, purposeDist.length * 32)}>
+                      <BarChart data={purposeDist} layout="vertical" margin={{ top:0, right:16, left:8, bottom:0 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize:10 }} allowDecimals={false} />
+                        <YAxis dataKey="name" type="category" tick={{ fontSize:10 }} width={120} />
+                        <Tooltip />
+                        <Bar dataKey="value" name="Visits" fill="var(--gold)" radius={[0,3,3,0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )
+                }
+              </ChartCard>
+
+              {collegeDist.length > 0 && (
+                <ChartCard title="Visitors by College" hint="View visitors in User Management" onClick={() => navigate('/admin/users', { state: { filterRole: 'visitor' } })}>
+                  <ResponsiveContainer width="100%" height={Math.max(220, collegeDist.length * 32)}>
+                    <BarChart data={collegeDist} layout="vertical" margin={{ top:0, right:16, left:0, bottom:0 }}>
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" tick={{ fontSize:10 }} allowDecimals={false} />
-                      <YAxis dataKey="name" type="category" tick={{ fontSize:10 }} width={120} />
+                      <YAxis dataKey="name" type="category" tick={{ fontSize:9 }} width={150} interval={0} />
                       <Tooltip />
-                      <Bar dataKey="value" name="Visits" fill="var(--gold)" radius={[0,3,3,0]} />
+                      <Bar dataKey="value" name="Visitors" fill="var(--blue)" radius={[0,3,3,0]} />
                     </BarChart>
                   </ResponsiveContainer>
-                )
-              }
-            </ChartCard>
+                </ChartCard>
+              )}
+            </div>
 
-            {collegeDist.length > 0 && (
-              <ChartCard title="Visitors by College" hint="View visitors in User Management" onClick={() => navigate('/admin/users', { state: { filterRole: 'visitor' } })}>
-                <ResponsiveContainer width="100%" height={Math.max(200, collegeDist.length * 28)}>
-                  <BarChart data={collegeDist} layout="vertical" margin={{ top:0, right:16, left:8, bottom:0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize:10 }} allowDecimals={false} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize:10 }} width={130} />
-                    <Tooltip />
-                    <Bar dataKey="value" name="Visitors" fill="var(--blue)" radius={[0,3,3,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            )}
-
-            {visitorTypeDist.length > 0 && (
-              <ChartCard title="Student vs Faculty" hint="View visitors in User Management" onClick={() => navigate('/admin/users', { state: { filterRole: 'visitor' } })}>
-                <div style={{ display:'flex', flexDirection:'column', gap:12, padding:'8px 0' }}>
-                  {visitorTypeDist.map(({ name, value }) => {
-                    const total = visitorTypeDist.reduce((a,b) => a + b.value, 0);
-                    const pct = total > 0 ? Math.round((value/total)*100) : 0;
-                    return (
-                      <div key={name}>
-                        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                          <span style={{ ...PP, fontSize:13, color:'var(--text-body)' }}>{name}</span>
-                          <span style={{ ...MN, fontSize:12, color:'var(--text-muted)' }}>{value} ({pct}%)</span>
-                        </div>
-                        <div style={{ height:8, borderRadius:4, background:'var(--surface)' }}>
-                          <div style={{ height:'100%', width:`${pct}%`, background: name==='Faculty' ? 'var(--blue)' : 'var(--gold)', borderRadius:4, transition:'width 0.5s ease' }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </ChartCard>
-            )}
           </div>
         </div>
       )}
